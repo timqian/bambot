@@ -111,7 +111,7 @@ export default function Home() {
             <span className="sr-only">X</span>
           </Link>
           <Link
-            href="https://discord.gg/bambot"
+            href="https://discord.gg/Fq2gvSMyRJ"
             target="_blank"
             rel="noopener noreferrer"
             className="text-green-600 hover:text-green-700 transition-colors"
