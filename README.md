@@ -4,6 +4,9 @@
   </picture>
 </p>
 
+
+[![](https://badgen.net/static/chat/on%20discord?icon=discord)](https://discord.gg/Fq2gvSMyRJ)  [![](https://badgen.net/static/chat/on%20wechat?color=green)](https://i.v2ex.co/1U6OSqswl.jpeg) [![](https://badgen.net/static/follow/on%20twitter?icon=twitter)](https://x.com/tim_qian)
+
 # Bambot
 Open source, low-cost humanoid robot (~$300)
 
