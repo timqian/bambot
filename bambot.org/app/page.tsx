@@ -29,6 +29,7 @@ export default function Home() {
       community: "Join our growing robot community! 🌱",
       footer: "Built with ❤️ by timqian © 2025",
       languageToggle: "Switch to Chinese",
+      actionLink: "https://www.youtube.com/watch?v=-G2fEaSIRuM",
     },
     zh: {
       title: "你好，我是 Bambot 👋",
@@ -38,6 +39,7 @@ export default function Home() {
       community: "加入我们的机器人社区! 🌱",
       footer: "Built with ❤️ by timqian © 2025",
       languageToggle: "切换到英文",
+      actionLink: "https://www.bilibili.com/video/BV1K7XVYWEGF/",
     },
   }
 
@@ -75,9 +77,11 @@ export default function Home() {
 
         <div className="flex flex-wrap justify-center gap-4 mb-8">
           <a href="https://github.com/timqian/bambot"><Button className="bg-green-600 hover:bg-green-700">{t.buildButton}</Button></a>
-          <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50">
-            {t.actionButton}
-          </Button>
+          <a href={t.actionLink} target="_blank" rel="noopener noreferrer">
+            <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50">
+              {t.actionButton}
+            </Button>
+          </a>
         </div>
 
         <p className="text-lg text-green-600 font-medium mb-4">{t.community}</p>
