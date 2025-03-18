@@ -31,7 +31,7 @@ export default function Home() {
       languageToggle: "Switch to Chinese",
     },
     zh: {
-      title: "你好，我是小竹机器人 👋",
+      title: "你好，我是 Bambot 👋",
       subtitle: "一个开源、低成本的（~¥2000）人形机器人",
       buildButton: "自己动手制作! 🛠️",
       actionButton: "查看演示 ✨",
