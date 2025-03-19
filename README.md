@@ -21,4 +21,4 @@ Open source, low-cost humanoid robot (~$300). Inspired by [lerobot](https://gith
 
 ## Demo Video
 
-<a href="https://www.youtube.com/watch?v=-G2fEaSIRuM"> <img alt="Bambot, open source, low-cost humanoid \($300\)" src="https://github.com/user-attachments/assets/bc9536e2-1fa6-4cb5-99f3-15a794bf09cf" width="600" style="height:auto;" ></a>
+<a href="https://x.com/Tim_Qian/status/1901952877243122014"> <img alt="Bambot, open source, low-cost humanoid \($300\)" src="https://github.com/user-attachments/assets/bc9536e2-1fa6-4cb5-99f3-15a794bf09cf" width="600" style="height:auto;" ></a>

@@ -29,7 +29,7 @@ export default function Home() {
       community: "Join our growing robot community! 🌱",
       footer: "Built with ❤️ by timqian © 2025",
       languageToggle: "Switch to Chinese",
-      actionLink: "https://www.youtube.com/watch?v=-G2fEaSIRuM",
+      actionLink: "https://x.com/Tim_Qian/status/1901952877243122014",
     },
     zh: {
       title: "你好，我是 Bambot 👋",
