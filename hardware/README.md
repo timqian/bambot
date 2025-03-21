@@ -42,7 +42,7 @@ Basically, it is 1 [SO-100 arm](https://github.com/TheRobotStudio/SO-ARM100/blob
 - Screwdriver 
 
 ## Build bambot
-
+> unfinished
 Once the you get all the 3d printed parts and the electronics, you can start build bambot
 
 1. Find border port
