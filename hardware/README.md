@@ -45,15 +45,11 @@ Basically, it is 1 [SO-100 arm](https://github.com/TheRobotStudio/SO-ARM100/blob
 - (MacBook + iPhone) or (PC + camera module)
 - Screwdriver 
 
-## Build bambot
-> unfinished
+## Build and Play with Bambot
 
-Once the you get all the 3d printed parts and the electronics, you can start build bambot
+Once you have all the 3D printed parts and electronic components, you can start building and using Bambot.
 
-1. Find border port
-2. Set IDs for servos
-3. Assemble bambot and teleop
-4. Record dataset and train
+Use [this repository](https://github.com/timqian/lerobot-bambot) and follow the guide there to begin playing with Bambot!
 
 
 ## Footnotes
