@@ -34,6 +34,7 @@ Basically, it is 1 [SO-100 arm](https://github.com/TheRobotStudio/SO-ARM100/blob
 - 1000 mm 5264 wire: 2
 - Type C to DC wire: 1
 - 3D print the body part of bambot
+- Another PC
 
 ## Other tools needed
 
@@ -43,6 +44,7 @@ Basically, it is 1 [SO-100 arm](https://github.com/TheRobotStudio/SO-ARM100/blob
 
 ## Build bambot
 > unfinished
+
 Once the you get all the 3d printed parts and the electronics, you can start build bambot
 
 1. Find border port
