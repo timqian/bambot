@@ -39,6 +39,8 @@ Basically, it is 1 [SO-100 arm](https://github.com/TheRobotStudio/SO-ARM100/blob
 - 3D print the body part of bambot
 - Another PC
 
+> Teleop using joycon is coming soon, stay tuned
+
 ## Other tools needed
 
 - 20000mAH Power bank, (with type c port support USB PD)
