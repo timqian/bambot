@@ -66,12 +66,12 @@ export default function Home() {
         <h1 className="text-4xl md:text-6xl font-bold mb-6 text-green-700">{t.title}</h1>
         <p className="text-xl md:text-2xl mb-8 max-w-2xl text-gray-600">{t.subtitle}</p>
 
-        <div className="relative w-full max-w-lg aspect-square mb-8">
+        <div className="relative w-full max-w-lg aspect-square mb-8 group">
           <Image
             src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/ceea02b714f82b5f87a1c2222d609e87.JPG-LgPzJpt4vTIfIjNfUDKcyr27yDbaT4.jpeg"
             alt="BamBot - A green robotic assistant holding a sunflower and a basket"
             fill
-            className="object-contain"
+            className="object-contain transition-transform duration-300 ease-in-out group-hover:rotate-3"
             priority
           />
         </div>
