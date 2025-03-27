@@ -9,7 +9,7 @@
 https://github.com/timqian/bambot/releases/tag/v0.0.0
 
 ### Play with parts on tinkerCAD:
-<a align="center" href="https://www.tinkercad.com/things/ibgLfMl1NYQ-bambot-001/edit?returnTo=https%3A%2F%2Fwww.tinkercad.com%2Fdashboard&sharecode=0OJJCyBXGfZVmhbO7UAPepBQcxOqAml9bJ-FNzxP9qw"><img width="1254" alt="Bambot 3D Printed Parts and Assembly" src="https://github.com/user-attachments/assets/461102e7-2507-42bd-9d0a-aed78d18ca40" />
+<a align="center" href="https://www.tinkercad.com/things/ibgLfMl1NYQ-bambot-v0?sharecode=G9wKm5paH5_7YgA9Ykcv6GNS6HnqqBd3j6XwO5-DSlo"><img width="1254" alt="Bambot 3D Printed Parts and Assembly" src="https://github.com/user-attachments/assets/461102e7-2507-42bd-9d0a-aed78d18ca40" />
 
 ## Electronic Components
 
