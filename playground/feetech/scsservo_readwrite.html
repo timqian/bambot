@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SCServo Position Read/Write</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    #log {
+      border: 1px solid #ccc;
+      padding: 10px;
+      height: 300px;
+      overflow-y: auto;
+      background-color: #f5f5f5;
+      margin-top: 20px;
+      font-family: monospace;
+      font-size: 14px;
+    }
+    .controls {
+      margin: 20px 0;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    button {
+      padding: 8px 16px;
+      cursor: pointer;
+      background-color: #4285f4;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+    button:hover {
+      background-color: #3367d6;
+    }
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    input, select {
+      padding: 8px;
+      width: 120px;
+    }
+    label {
+      margin-right: 5px;
+    }
+    .result-success {
+      color: #008000;
+      font-weight: bold;
+    }
+    .result-error {
+      color: #ff0000;
+      font-weight: bold;
+    }
+    .position-display {
+      display: flex;
+      flex-direction: column;
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #f0f8ff;
+      border: 1px solid #add8e6;
+      border-radius: 4px;
+    }
+    .position-slider {
+      width: 100%;
+      margin: 10px 0;
+    }
+    .position-value {
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+      margin: 10px 0;
+    }
+    .status-panel {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+    .status-item {
+      background-color: #f0f0f0;
+      padding: 10px;
+      border-radius: 4px;
+      width: 48%;
+    }
+  </style>
+</head>
+<body>
+  <h1>SCServo Position Read/Write</h1>
+  <p>This page uses Web Serial API to connect to a SCServo controller and control servo position.</p>
+  
+  <div class="controls">
+    <button id="connect">Connect to Serial Port</button>
+    <span id="connectionStatus">Not connected</span>
+    
+    <label for="baudrate">Baud Rate:</label>
+    <select id="baudrate">
+      <option value="9600">9600</option>
+      <option value="19200">19200</option>
+      <option value="38400">38400</option>
+      <option value="57600">57600</option>
+      <option value="115200">115200</option>
+      <option value="1000000" selected>1000000</option>
+    </select>
+  </div>
+  
+  <div class="controls">
+    <label for="protocolEnd">Protocol End:</label>
+    <select id="protocolEnd">
+      <option value="0">STS/SMS (0)</option>
+      <option value="1" selected>SCS (1)</option>
+    </select>
+    
+    <label for="servoid">Servo ID:</label>
+    <input type="number" id="servoid" min="1" max="253" value="1">
+  </div>
+  
+  <div class="position-display">
+    <h3>Position Control</h3>
+    <div class="controls">
+      <label for="positionMin">Min Position:</label>
+      <input type="number" id="positionMin" min="0" max="4095" value="100">
+      
+      <label for="positionMax">Max Position:</label>
+      <input type="number" id="positionMax" min="0" max="4095" value="4000">
+      
+      <label for="speed">Speed:</label>
+      <input type="number" id="speed" min="0" max="2000" value="0">
+      
+      <label for="acceleration">Acceleration:</label>
+      <input type="number" id="acceleration" min="0" max="254" value="0">
+    </div>
+    
+    <div class="position-value" id="currentPosition">Position: --</div>
+    
+    <input type="range" min="0" max="4000" value="100" class="position-slider" id="positionSlider">
+    
+    <div class="controls">
+      <button id="readPosition" disabled>Read Position</button>
+      <button id="writeMinPosition" disabled>Go To Min</button>
+      <button id="writeMaxPosition" disabled>Go To Max</button>
+      <button id="setPosition" disabled>Set Position</button>
+      <button id="torqueOff" disabled>Torque OFF</button>
+    </div>
+    
+    <div class="status-panel">
+      <div class="status-item">
+        <strong>Goal Position:</strong> <span id="goalPosition">--</span>
+      </div>
+      <div class="status-item">
+        <strong>Present Speed:</strong> <span id="presentSpeed">--</span>
+      </div>
+    </div>
+  </div>
+  
+  <div id="log"></div>
+  
+  <script type="module">
+    import { 
+      PortHandler, 
+      PacketHandler, 
+      COMM_SUCCESS,
+      COMM_RX_FAIL,
+      COMM_RX_CORRUPT,
+      SCS_LOWORD,
+      SCS_HIWORD,
+      SCS_TOHOST,
+      SCS_MAKEWORD,
+      SCS_MAKEDWORD,
+      PKT_PARAMETER0
+    } from './scsservo_sdk.mjs';
+    
+    // Control table addresses (from read_write.py)
+    const ADDR_SCS_TORQUE_ENABLE = 40;
+    const ADDR_SCS_GOAL_ACC = 41;
+    const ADDR_SCS_GOAL_POSITION = 42;
+    const ADDR_SCS_GOAL_SPEED = 46;
+    const ADDR_SCS_PRESENT_POSITION = 56;
+    
+    // Default settings
+    const SCS_MOVING_STATUS_THRESHOLD = 20;
+    
+    // Check if Web Serial API is supported
+    if (!navigator.serial) {
+      log('Web Serial API is not supported in this browser. Try Chrome or Edge.');
+      document.getElementById('connect').disabled = true;
+    }
+    
+    // Elements
+    const connectBtn = document.getElementById('connect');
+    const readPositionBtn = document.getElementById('readPosition');
+    const writeMinPositionBtn = document.getElementById('writeMinPosition');
+    const writeMaxPositionBtn = document.getElementById('writeMaxPosition');
+    const setPositionBtn = document.getElementById('setPosition');
+    const torqueOffBtn = document.getElementById('torqueOff');
+    const servoIdInput = document.getElementById('servoid');
+    const protocolEndSelect = document.getElementById('protocolEnd');
+    const baudrateSelect = document.getElementById('baudrate');
+    const connectionStatus = document.getElementById('connectionStatus');
+    const positionSlider = document.getElementById('positionSlider');
+    const currentPositionDisplay = document.getElementById('currentPosition');
+    const goalPositionDisplay = document.getElementById('goalPosition');
+    const presentSpeedDisplay = document.getElementById('presentSpeed');
+    const positionMinInput = document.getElementById('positionMin');
+    const positionMaxInput = document.getElementById('positionMax');
+    const speedInput = document.getElementById('speed');
+    const accelerationInput = document.getElementById('acceleration');
+    const logElement = document.getElementById('log');
+    
+    // Variables
+    let portHandler = new PortHandler();
+    let packetHandler = new PacketHandler(parseInt(protocolEndSelect.value));
+    let isReading = false;
+    let currentPosition = 0;
+    let lastGoalPosition = 0;
+    
+    // Update packet handler when protocol end changes
+    protocolEndSelect.addEventListener('change', () => {
+      packetHandler = new PacketHandler(parseInt(protocolEndSelect.value));
+      log(`Protocol End changed to: ${protocolEndSelect.value} (${protocolEndSelect.value == 0 ? 'STS/SMS' : 'SCS'})`);
+    });
+    
+    // Update position slider range when min/max values change
+    positionMinInput.addEventListener('change', updateSliderRange);
+    positionMaxInput.addEventListener('change', updateSliderRange);
+    
+    function updateSliderRange() {
+      const min = parseInt(positionMinInput.value);
+      const max = parseInt(positionMaxInput.value);
+      
+      positionSlider.min = min;
+      positionSlider.max = max;
+      
+      if (parseInt(positionSlider.value) < min) {
+        positionSlider.value = min;
+      } else if (parseInt(positionSlider.value) > max) {
+        positionSlider.value = max;
+      }
+      
+      log(`Position range updated: ${min} - ${max}`);
+    }
+    
+    // Update position value when slider changes
+    positionSlider.addEventListener('input', () => {
+      goalPositionDisplay.textContent = positionSlider.value;
+    });
+    
+    // Connect to serial port
+    connectBtn.addEventListener('click', async () => {
+      if (!portHandler.isOpen) {
+        try {
+          log('Requesting port...');
+          
+          // Request port from user
+          const success = await portHandler.requestPort();
+          if (!success) {
+            log('Failed to select port');
+            return;
+          }
+          
+          // Set baud rate
+          const baudrate = parseInt(baudrateSelect.value);
+          log(`Setting baud rate to ${baudrate}...`);
+          portHandler.setBaudRate(baudrate);
+          
+          // Open the port
+          log('Opening port...');
+          const opened = await portHandler.openPort();
+          if (!opened) {
+            log('Failed to open port');
+            return;
+          }
+          
+          connectionStatus.textContent = 'Connected';
+          connectBtn.textContent = 'Disconnect';
+          readPositionBtn.disabled = false;
+          writeMinPositionBtn.disabled = false;
+          writeMaxPositionBtn.disabled = false;
+          setPositionBtn.disabled = false;
+          torqueOffBtn.disabled = false;
+          
+          log('Port opened successfully');
+          
+          // Set initial acceleration and speed
+          await setAcceleration();
+          await setSpeed();
+          
+          // Read initial position
+          await readPosition();
+          
+        } catch (error) {
+          log(`Error: ${error.message}`);
+        }
+      } else {
+        // Disconnect
+        try {
+          await portHandler.closePort();
+          connectionStatus.textContent = 'Not connected';
+          connectBtn.textContent = 'Connect to Serial Port';
+          readPositionBtn.disabled = true;
+          writeMinPositionBtn.disabled = true;
+          writeMaxPositionBtn.disabled = true;
+          setPositionBtn.disabled = true;
+          torqueOffBtn.disabled = true;
+          log('Port closed');
+        } catch (error) {
+          log(`Error closing port: ${error.message}`);
+        }
+      }
+    });
+    
+    // Set acceleration
+    async function setAcceleration() {
+      const servoId = parseInt(servoIdInput.value);
+      const acceleration = parseInt(accelerationInput.value);
+      
+      if (isNaN(servoId) || isNaN(acceleration)) {
+        log('Invalid servo ID or acceleration value');
+        return false;
+      }
+      
+      try {
+        log(`Setting acceleration to ${acceleration}`);
+        
+        // Write 1 byte for acceleration
+        const [result, error] = await write1ByteTxRx(packetHandler, portHandler, servoId, ADDR_SCS_GOAL_ACC, acceleration);
+        
+        if (result !== COMM_SUCCESS) {
+          log(`<span class="result-error">Failed to set acceleration: ${packetHandler.getTxRxResult(result)}</span>`);
+          return false;
+        } else if (error !== 0) {
+          log(`<span class="result-error">Servo error: ${packetHandler.getRxPacketError(error)}</span>`);
+          return false;
+        }
+        
+        log(`<span class="result-success">Successfully set acceleration to ${acceleration}</span>`);
+        return true;
+      } catch (error) {
+        log(`Error setting acceleration: ${error.message}`);
+        return false;
+      }
+    }
+    
+    // Set speed
+    async function setSpeed() {
+      const servoId = parseInt(servoIdInput.value);
+      const speed = parseInt(speedInput.value);
+      
+      if (isNaN(servoId) || isNaN(speed)) {
+        log('Invalid servo ID or speed value');
+        return false;
+      }
+      
+      try {
+        log(`Setting speed to ${speed}`);
+        
+        // Write 2 bytes for speed
+        const [result, error] = await write2ByteTxRx(packetHandler, portHandler, servoId, ADDR_SCS_GOAL_SPEED, speed);
+        
+        if (result !== COMM_SUCCESS) {
+          log(`<span class="result-error">Failed to set speed: ${packetHandler.getTxRxResult(result)}</span>`);
+          return false;
+        } else if (error !== 0) {
+          log(`<span class="result-error">Servo error: ${packetHandler.getRxPacketError(error)}</span>`);
+          return false;
+        }
+        
+        log(`<span class="result-success">Successfully set speed to ${speed}</span>`);
+        return true;
+      } catch (error) {
+        log(`Error setting speed: ${error.message}`);
+        return false;
+      }
+    }
+    
+    // Read position button click
+    readPositionBtn.addEventListener('click', async () => {
+      await readPosition();
+    });
+    
+    // Read position
+    async function readPosition() {
+      const servoId = parseInt(servoIdInput.value);
+      
+      if (isNaN(servoId)) {
+        log('Invalid servo ID');
+        return;
+      }
+      
+      if (isReading) {
+        return;
+      }
+      
+      isReading = true;
+      try {
+        log(`Reading position from servo ID: ${servoId}...`);
+        
+        // Read 4 bytes from present position (returns position and speed)
+        const [positionSpeed, result, error] = await read4ByteTxRx(packetHandler, portHandler, servoId, ADDR_SCS_PRESENT_POSITION);
+        
+        if (result !== COMM_SUCCESS) {
+          log(`<span class="result-error">Failed to read position: ${packetHandler.getTxRxResult(result)}</span>`);
+        } else if (error !== 0) {
+          log(`<span class="result-error">Servo error: ${packetHandler.getRxPacketError(error)}</span>`);
+        } else {
+          // Extract position and speed
+          const position = SCS_LOWORD(positionSpeed);
+          const speed = SCS_HIWORD(positionSpeed);
+          
+          currentPosition = position;
+          currentPositionDisplay.textContent = `Position: ${position}`;
+          presentSpeedDisplay.textContent = SCS_TOHOST(speed, 15);
+          
+          log(`<span class="result-success">Position: ${position}, Speed: ${SCS_TOHOST(speed, 15)}</span>`);
+        }
+      } catch (error) {
+        log(`Error reading position: ${error.message}`);
+      } finally {
+        isReading = false;
+      }
+    }
+    
+    // Write min position button click
+    writeMinPositionBtn.addEventListener('click', async () => {
+      const minPosition = parseInt(positionMinInput.value);
+      positionSlider.value = minPosition;
+      goalPositionDisplay.textContent = minPosition;
+      await writePosition(minPosition);
+    });
+    
+    // Write max position button click
+    writeMaxPositionBtn.addEventListener('click', async () => {
+      const maxPosition = parseInt(positionMaxInput.value);
+      positionSlider.value = maxPosition;
+      goalPositionDisplay.textContent = maxPosition;
+      await writePosition(maxPosition);
+    });
+    
+    // Set position button click
+    setPositionBtn.addEventListener('click', async () => {
+      const position = parseInt(positionSlider.value);
+      await writePosition(position);
+    });
+    
+    // Write position
+    async function writePosition(position) {
+      const servoId = parseInt(servoIdInput.value);
+      
+      if (isNaN(servoId) || isNaN(position)) {
+        log('Invalid servo ID or position value');
+        return false;
+      }
+      
+      try {
+        // Update acceleration and speed if they changed
+        await setAcceleration();
+        await setSpeed();
+        
+        log(`Setting position to ${position}`);
+        
+        // Write 2 bytes for position
+        const [result, error] = await write2ByteTxRx(packetHandler, portHandler, servoId, ADDR_SCS_GOAL_POSITION, position);
+        
+        if (result !== COMM_SUCCESS) {
+          log(`<span class="result-error">Failed to set position: ${packetHandler.getTxRxResult(result)}</span>`);
+          return false;
+        } else if (error !== 0) {
+          log(`<span class="result-error">Servo error: ${packetHandler.getRxPacketError(error)}</span>`);
+          return false;
+        }
+        
+        lastGoalPosition = position;
+        goalPositionDisplay.textContent = position;
+        log(`<span class="result-success">Successfully set position to ${position}</span>`);
+        
+        // Wait for servo to reach position
+        await waitForPosition(position);
+        
+        return true;
+      } catch (error) {
+        log(`Error setting position: ${error.message}`);
+        return false;
+      }
+    }
+    
+    // Wait for servo to reach position
+    async function waitForPosition(goalPosition) {
+      const servoId = parseInt(servoIdInput.value);
+      let reachedPosition = false;
+      let attempts = 0;
+      const maxAttempts = 50; // Prevent infinite loop
+      
+      while (!reachedPosition && attempts < maxAttempts) {
+        attempts++;
+        
+        // Read current position
+        const [positionSpeed, result, error] = await read4ByteTxRx(packetHandler, portHandler, servoId, ADDR_SCS_PRESENT_POSITION);
+        
+        if (result !== COMM_SUCCESS || error !== 0) {
+          log(`<span class="result-error">Error reading position while waiting</span>`);
+          return;
+        }
+        
+        const position = SCS_LOWORD(positionSpeed);
+        const speed = SCS_HIWORD(positionSpeed);
+        
+        // Update display
+        currentPosition = position;
+        currentPositionDisplay.textContent = `Position: ${position}`;
+        presentSpeedDisplay.textContent = SCS_TOHOST(speed, 15);
+        
+        // Check if position reached
+        if (Math.abs(goalPosition - position) <= SCS_MOVING_STATUS_THRESHOLD) {
+          reachedPosition = true;
+          log(`<span class="result-success">Position reached: ${position}</span>`);
+        } else {
+          // Wait before checking again
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+      
+      if (!reachedPosition) {
+        log(`<span class="result-error">Timed out waiting for position</span>`);
+      }
+    }
+    
+    // Torque off button click
+    torqueOffBtn.addEventListener('click', async () => {
+      const servoId = parseInt(servoIdInput.value);
+      
+      if (isNaN(servoId)) {
+        log('Invalid servo ID');
+        return;
+      }
+      
+      try {
+        log(`Turning torque OFF for servo ID: ${servoId}...`);
+        
+        // Write 1 byte to disable torque
+        const [result, error] = await write1ByteTxRx(packetHandler, portHandler, servoId, ADDR_SCS_TORQUE_ENABLE, 0);
+        
+        if (result !== COMM_SUCCESS) {
+          log(`<span class="result-error">Failed to turn torque OFF: ${packetHandler.getTxRxResult(result)}</span>`);
+        } else if (error !== 0) {
+          log(`<span class="result-error">Servo error: ${packetHandler.getRxPacketError(error)}</span>`);
+        } else {
+          log(`<span class="result-success">Torque OFF command successful</span>`);
+        }
+      } catch (error) {
+        log(`Error turning torque OFF: ${error.message}`);
+      }
+    });
+    
+    // Helper functions to mimic the Python functions
+    async function read4ByteTxRx(packetHandler, portHandler, scsId, address) {
+      try {
+        // Create read packet
+        const txpacket = [0, 0, 0, 0, 0, 0, 0, 0];
+        txpacket[2] = scsId;
+        txpacket[3] = 4;
+        txpacket[4] = 2; // INST_READ
+        txpacket[5] = address;
+        txpacket[6] = 4; // Length to read
+        
+        console.log(`Reading 4 bytes from address ${address} for servo ID ${scsId}`);
+        console.log(`TX packet: ${txpacket.map(b => '0x' + b.toString(16).padStart(2, '0')).join(' ')}`);
+        
+        // Send packet and get response
+        const [rxpacket, result, error] = await packetHandler.txRxPacket(portHandler, txpacket);
+        
+        if (result !== COMM_SUCCESS) {
+          console.log(`Read failed with result: ${result}`);
+          return [0, result, error];
+        }
+        
+        if (error !== 0) {
+          console.log(`Read failed with error: ${error}`);
+          return [0, result, error];
+        }
+        
+        if (!rxpacket || rxpacket.length < 9) {
+          console.log(`Invalid response packet length: ${rxpacket ? rxpacket.length : 'null'}`);
+          return [0, COMM_RX_CORRUPT, error];
+        }
+        
+        // Extract the 4 bytes from the response packet
+        const data = [
+          rxpacket[PKT_PARAMETER0],     // Byte 0
+          rxpacket[PKT_PARAMETER0 + 1], // Byte 1
+          rxpacket[PKT_PARAMETER0 + 2], // Byte 2
+          rxpacket[PKT_PARAMETER0 + 3]  // Byte 3
+        ];
+        
+        console.log(`Received data bytes: ${data.map(b => '0x' + b.toString(16).padStart(2, '0')).join(' ')}`);
+        
+        // Combine bytes according to protocol_end setting
+        const protocolEnd = packetHandler.getProtocolEnd();
+        let loword, hiword;
+        
+        // Create words according to protocol end setting
+        if (protocolEnd === 0) {
+          // STS/SMS (Low byte first)
+          loword = SCS_MAKEWORD(data[0], data[1]);
+          hiword = SCS_MAKEWORD(data[2], data[3]);
+        } else {
+          // SCS (High byte first)
+          loword = SCS_MAKEWORD(data[1], data[0]);
+          hiword = SCS_MAKEWORD(data[3], data[2]);
+        }
+        
+        // Combine to 32-bit value
+        const value = SCS_MAKEDWORD(loword, hiword);
+        
+        console.log(`Processed value: ${value} (0x${value.toString(16)})`);
+        console.log(`  - Low word: ${loword} (0x${loword.toString(16)})`);
+        console.log(`  - High word: ${hiword} (0x${hiword.toString(16)})`);
+        
+        return [value, result, error];
+      } catch (error) {
+        console.error("Error in read4ByteTxRx:", error);
+        return [0, COMM_RX_FAIL, 0];
+      }
+    }
+    
+    async function write1ByteTxRx(packetHandler, portHandler, scsId, address, data) {
+      // Create write packet for 1 byte
+      const txpacket = [0, 0, 0, 0, 0, 0, 0, 0];
+      txpacket[2] = scsId;
+      txpacket[3] = 4; // Length
+      txpacket[4] = 3; // INST_WRITE
+      txpacket[5] = address;
+      txpacket[6] = data & 0xFF;
+      
+      // Send packet and get response
+      const [rxpacket, result, error] = await packetHandler.txRxPacket(portHandler, txpacket);
+      
+      return [result, error];
+    }
+    
+    async function write2ByteTxRx(packetHandler, portHandler, scsId, address, data) {
+      // Break down the 2-byte value according to protocol end setting
+      let dataByte1, dataByte2;
+      if (packetHandler.getProtocolEnd() === 0) {
+        // STS/SMS (Low byte first)
+        dataByte1 = data & 0xFF;
+        dataByte2 = (data >> 8) & 0xFF;
+      } else {
+        // SCS (High byte first)
+        dataByte1 = (data >> 8) & 0xFF;
+        dataByte2 = data & 0xFF;
+      }
+      
+      // Create write packet for 2 bytes
+      const txpacket = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+      txpacket[2] = scsId;
+      txpacket[3] = 5; // Length (including parameters)
+      txpacket[4] = 3; // INST_WRITE
+      txpacket[5] = address;
+      txpacket[6] = dataByte1;
+      txpacket[7] = dataByte2;
+      
+      // Send packet and get response
+      const [rxpacket, result, error] = await packetHandler.txRxPacket(portHandler, txpacket);
+      
+      return [result, error];
+    }
+    
+    // Helper function to log messages
+    function log(message) {
+      const timestamp = new Date().toLocaleTimeString();
+      const logItem = document.createElement('div');
+      logItem.innerHTML = `[${timestamp}] ${message}`;
+      logElement.appendChild(logItem);
+      logElement.scrollTop = logElement.scrollHeight;
+      console.log(`[${timestamp}] ${message}`);
+    }
+  </script>
+</body>
+</html> 

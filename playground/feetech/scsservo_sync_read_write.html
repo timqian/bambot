@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SCServo Sync Read Write Example</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .section {
+      border: 1px solid #ccc;
+      padding: 15px;
+      border-radius: 5px;
+    }
+    .row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      align-items: center;
+    }
+    button {
+      padding: 8px 12px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    input, select {
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    .status {
+      margin-top: 10px;
+      padding: 10px;
+      background-color: #f5f5f5;
+      border-radius: 4px;
+      height: 200px;
+      overflow-y: auto;
+      font-family: monospace;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>SCServo Sync Read/Write Example</h1>
+    
+    <div class="section">
+      <h2>Connection</h2>
+      <div class="row">
+        <button id="btnConnect">Connect</button>
+        <button id="btnDisconnect" disabled>Disconnect</button>
+        <select id="baudRate">
+          <option value="1000000">1000000</option>
+          <option value="500000">500000</option>
+          <option value="115200">115200</option>
+          <option value="57600">57600</option>
+        </select>
+        <span>Baud Rate</span>
+      </div>
+    </div>
+    
+    <div class="section">
+      <h2>Servo Configuration</h2>
+      <div class="row">
+        <input type="number" id="idStart" min="1" max="253" value="1">
+        <span>Start ID</span>
+        <input type="number" id="idCount" min="1" max="10" value="3">
+        <span>Servo Count</span>
+        <select id="protocolEnd">
+          <option value="0">SCS_END</option>
+          <option value="1">SCS_END_PROTOCOL_V2</option>
+        </select>
+        <span>Protocol End</span>
+        <button id="btnTestPing">Test Ping</button>
+      </div>
+    </div>
+    
+    <div class="section">
+      <h2>Sync Read</h2>
+      <button id="btnSyncReadPosition">Sync Read Position</button>
+      <table id="positionTable">
+        <thead>
+          <tr>
+            <th>Servo ID</th>
+            <th>Position</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Populated dynamically -->
+        </tbody>
+      </table>
+    </div>
+    
+    <div class="section">
+      <h2>Sync Write</h2>
+      <div class="row">
+        <button id="btnSyncWritePosition">Sync Write Position</button>
+        <input type="number" id="targetPosition" min="0" max="4095" value="2048">
+        <span>Target Position</span>
+        <input type="number" id="movingSpeed" min="0" max="1023" value="100">
+        <span>Moving Speed</span>
+      </div>
+    </div>
+    
+    <div class="section">
+      <h2>Status Log</h2>
+      <div id="statusLog" class="status"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { 
+      PortHandler, 
+      PacketHandler, 
+      SCS_LOBYTE, 
+      SCS_HIBYTE, 
+      SCS_LOWORD, 
+      SCS_HIWORD, 
+      SCS_MAKEWORD, 
+      SCS_MAKEDWORD,
+      COMM_SUCCESS, 
+      COMM_RX_FAIL,
+      COMM_TX_FAIL,
+      COMM_NOT_AVAILABLE,
+      COMM_RX_CORRUPT,
+      COMM_RX_TIMEOUT,
+      COMM_RX_WAITING,
+      COMM_TX_ERROR,
+      INST_PING,
+      INST_STATUS,
+      PKT_ID,
+      PKT_LENGTH,
+      PKT_INSTRUCTION,
+      PKT_PARAMETER0,
+      GroupSyncRead,
+      GroupSyncWrite
+    } from './scsservo_sdk.mjs';
+
+    // Constants for SCServo
+    const SCS_ADDR_SCS_TORQUE_ENABLE         = 40;
+    const SCS_ADDR_SCS_GOAL_POSITION         = 42;
+    const SCS_ADDR_SCS_GOAL_SPEED            = 46;
+    const SCS_ADDR_SCS_PRESENT_POSITION      = 56;
+    
+    // Global variables
+    let port = null;
+    let packetHandler = null;
+    let syncRead = null;
+    let syncWrite = null;
+    let servos = [];
+    
+    // Log status message
+    function logStatus(message) {
+      const statusLog = document.getElementById('statusLog');
+      const timestamp = new Date().toLocaleTimeString();
+      statusLog.innerHTML += `[${timestamp}] ${message}<br>`;
+      statusLog.scrollTop = statusLog.scrollHeight;
+    }
+    
+    // Connect button event handler
+    document.getElementById('btnConnect').addEventListener('click', async () => {
+      try {
+        const baudRate = parseInt(document.getElementById('baudRate').value);
+        
+        // Create port handler first
+        port = new PortHandler();
+        const success = await port.requestPort();
+        if (!success) {
+          logStatus('Failed to select a serial port');
+          port = null;
+          return;
+        }
+        
+        // Set baudrate and open port
+        port.setBaudRate(baudRate);
+        const opened = await port.openPort();
+        if (!opened) {
+          logStatus(`Failed to open port at baudrate ${baudRate}`);
+          port = null;
+          return;
+        }
+        
+        // Create packet handler
+        const protocolEnd = parseInt(document.getElementById('protocolEnd').value);
+        packetHandler = new PacketHandler(protocolEnd);
+        
+        // Update UI
+        document.getElementById('btnConnect').disabled = true;
+        document.getElementById('btnDisconnect').disabled = false;
+        
+        logStatus('Connected to SCServo');
+        
+        // Initialize servo list (now await it since it's async)
+        await initializeServos();
+        
+        logStatus("Ready to communicate with servos");
+      } catch (error) {
+        logStatus(`Error connecting: ${error.message}`);
+        console.error(error);
+      }
+    });
+    
+    // Disconnect button event handler
+    document.getElementById('btnDisconnect').addEventListener('click', async () => {
+      try {
+        if (port) {
+          await port.closePort();
+          port = null;
+          packetHandler = null;
+          syncRead = null;
+          syncWrite = null;
+        }
+        
+        // Update UI
+        document.getElementById('btnConnect').disabled = false;
+        document.getElementById('btnDisconnect').disabled = true;
+        
+        // Reset status for all servos
+        servos.forEach(id => {
+          updateServoStatus(id, 'Disconnected');
+        });
+        
+        logStatus('Disconnected from SCServo');
+      } catch (error) {
+        logStatus(`Error disconnecting: ${error.message}`);
+        console.error(error);
+      }
+    });
+    
+    // Ping all servos to detect connectivity
+    async function pingAllServos() {
+      if (!port || !packetHandler) {
+        logStatus('Cannot ping servos - not connected');
+        return false;
+      }
+      
+      logStatus("Pinging all servos to check connectivity...");
+      
+      // First get the ID range
+      const startId = parseInt(document.getElementById('idStart').value);
+      const count = parseInt(document.getElementById('idCount').value);
+      
+      let detectedServoCount = 0;
+      
+      // Try to ping each servo ID
+      for (let i = 0; i < count; i++) {
+        const id = startId + i;
+        logStatus(`Pinging servo ID ${id}...`);
+        
+        try {
+          // Make sure port is not busy
+          if (port.isUsing) {
+            logStatus(`Port is busy, waiting before pinging servo ID ${id}...`);
+            port.isUsing = false;
+            await new Promise(resolve => setTimeout(resolve, 300));
+          }
+          
+          // Ping with short timeout
+          const [modelNumber, result, error] = await packetHandler.ping(port, id);
+          
+          if (result === COMM_SUCCESS) {
+            logStatus(`Servo ID ${id} detected, model number: ${modelNumber}`);
+            updateServoStatus(id, 'Connected');
+            detectedServoCount++;
+          } else {
+            logStatus(`No response from servo ID ${id}: ${getErrorMessage(result)}`);
+            updateServoStatus(id, 'Disconnected');
+          }
+        } catch (error) {
+          logStatus(`Error pinging servo ID ${id}: ${error.message}`);
+          updateServoStatus(id, 'Error');
+        }
+        
+        // Add a delay between pings
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+      
+      logStatus(`Ping scan complete. Detected ${detectedServoCount} out of ${count} servos.`);
+      return (detectedServoCount > 0);
+    }
+    
+    // Initialize servos based on user input
+    async function initializeServos() {
+      const startId = parseInt(document.getElementById('idStart').value);
+      const count = parseInt(document.getElementById('idCount').value);
+      
+      servos = [];
+      for (let i = 0; i < count; i++) {
+        servos.push(startId + i);
+      }
+      
+      // Update position table
+      updatePositionTable();
+      
+      logStatus(`Initialized ${count} servos starting from ID ${startId}`);
+      
+      // Check for connected servos
+      if (port && packetHandler) {
+        await pingAllServos();
+      }
+    }
+    
+    // Update position table
+    function updatePositionTable() {
+      const tbody = document.querySelector('#positionTable tbody');
+      tbody.innerHTML = '';
+      
+      // Update headers
+      const headerRow = document.querySelector('#positionTable thead tr');
+      headerRow.innerHTML = `
+        <th>Servo ID</th>
+        <th>Position</th>
+        <th>Status</th>
+      `;
+      
+      servos.forEach(id => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${id}</td>
+          <td id="position-${id}">-</td>
+          <td id="status-${id}">Unknown</td>
+        `;
+        tbody.appendChild(row);
+      });
+      
+      logStatus(`Updated position table for ${servos.length} servos`);
+    }
+    
+    // Update servo status in table
+    function updateServoStatus(id, status) {
+      const statusCell = document.getElementById(`status-${id}`);
+      if (statusCell) {
+        statusCell.textContent = status;
+        
+        // Also update cell color based on status
+        if (status === 'Connected') {
+          statusCell.style.color = 'green';
+        } else if (status === 'Disconnected') {
+          statusCell.style.color = 'red';
+        } else {
+          statusCell.style.color = 'black';
+        }
+      }
+    }
+    
+    // Helper function to format byte arrays as hex
+    function formatHexBytes(bytes) {
+      return bytes.map(b => '0x' + b.toString(16).padStart(2, '0')).join(' ');
+    }
+    
+    // Get error message for result code
+    function getErrorMessage(result) {
+      switch(result) {
+        case COMM_SUCCESS: return "Success";
+        case COMM_PORT_BUSY: return "Port Busy - Port is currently in use";
+        case COMM_TX_FAIL: return "TX Failed - Failed to transmit packet";
+        case COMM_RX_FAIL: return "RX Failed - Failed to receive packet";
+        case COMM_TX_ERROR: return "TX Error - Incorrect instruction packet";
+        case COMM_RX_WAITING: return "RX Waiting - Receiving status packet";
+        case COMM_RX_TIMEOUT: return "RX Timeout - No status packet received";
+        case COMM_RX_CORRUPT: return "RX Corrupt - Incorrect status packet";
+        case COMM_NOT_AVAILABLE: return "Not Available - Operation not supported";
+        default: return `Unknown error code: ${result}`;
+      }
+    }
+    
+    // Helper function to format position data
+    function formatPositionData(position) {
+      // Raw value
+      let formatted = `${position} `;
+      
+      // Add hex format
+      formatted += `(0x${position.toString(16)})`;
+      
+      return formatted;
+    }
+    
+    // Sync Read Position button event handler
+    document.getElementById('btnSyncReadPosition').addEventListener('click', async () => {
+      if (!port || !packetHandler) {
+        logStatus('Please connect to SCServo first');
+        return;
+      }
+      
+      try {
+        logStatus("Starting sync read operation...");
+        
+        // Create sync read instance for position
+        syncRead = new GroupSyncRead(
+          port, 
+          packetHandler, 
+          SCS_ADDR_SCS_PRESENT_POSITION,
+          4  // 4 bytes for position
+        );
+        
+        // Add parameters for each servo
+        let atLeastOneAdded = false;
+        servos.forEach(id => {
+          const added = syncRead.addParam(id);
+          if (added) {
+            atLeastOneAdded = true;
+            logStatus(`Added servo ID ${id} to sync read operation`);
+          } else {
+            logStatus(`Failed to add servo ID ${id} to sync read`);
+          }
+        });
+        
+        if (!atLeastOneAdded) {
+          logStatus("No servos were added to the sync read operation");
+          return;
+        }
+        
+        // Transmit and receive packet
+        logStatus("Sending sync read packet...");
+        const result = await syncRead.txRxPacket();
+        if (result !== COMM_SUCCESS) {
+          logStatus(`Sync read failed: ${getErrorMessage(result)}`);
+          
+          // Try individual reads as fallback
+          logStatus("Falling back to individual servo reads...");
+          await readPositionsIndividually();
+          return;
+        }
+        
+        logStatus("Sync read packet was successfully transmitted and received");
+        
+        // Get position for each servo
+        let atLeastOneSuccess = false;
+        servos.forEach(id => {
+          if (syncRead.isAvailable(id, SCS_ADDR_SCS_PRESENT_POSITION, 4)) {
+            const position = syncRead.getData(id, SCS_ADDR_SCS_PRESENT_POSITION, 4);
+            
+            // Format position and update UI
+            const formattedPosition = formatPositionData(position);
+            document.getElementById(`position-${id}`).textContent = formattedPosition;
+            logStatus(`Servo ID ${id} position: ${formattedPosition}`);
+            updateServoStatus(id, 'Connected');
+            atLeastOneSuccess = true;
+          } else {
+            logStatus(`Servo ID ${id} position data unavailable`);
+            updateServoStatus(id, 'No Data');
+          }
+        });
+        
+        if (!atLeastOneSuccess) {
+          logStatus("No valid position data was received from any servo");
+        }
+        
+        // Clear parameters
+        syncRead.clearParam();
+      } catch (error) {
+        logStatus(`Error reading positions: ${error.message}`);
+        console.error(error);
+        
+        // Try individual reads as fallback on exception
+        logStatus("Exception occurred, falling back to individual servo reads...");
+        await readPositionsIndividually();
+      }
+    });
+    
+    // Read positions individually (fallback method)
+    async function readPositionsIndividually() {
+      try {
+        let atLeastOneSuccess = false;
+        logStatus("Beginning individual servo reads for all servos...");
+        
+        // Force a port reset before starting individual reads
+        if (port.isUsing) {
+          logStatus("Resetting port state before individual reads");
+          port.isUsing = false;
+          await new Promise(resolve => setTimeout(resolve, 500)); // Longer delay
+        }
+        
+        // Read each servo one by one
+        for (const id of servos) {
+          logStatus(`Reading position for servo ID ${id} individually...`);
+          
+          // Try up to 3 times
+          let attempts = 0;
+          let success = false;
+          
+          while (!success && attempts < 3) {
+            attempts++;
+            
+            if (attempts > 1) {
+              logStatus(`Retry attempt ${attempts}/3 for servo ID ${id}`);
+              // Add a delay between attempts
+              await new Promise(resolve => setTimeout(resolve, 200 * attempts)); // Increasing delay
+            }
+            
+            // Make sure port is not busy
+            if (port.isUsing) {
+              logStatus(`Port is busy before attempt ${attempts}, resetting...`);
+              port.isUsing = false;
+              await new Promise(resolve => setTimeout(resolve, 300)); // Wait for port reset
+            }
+            
+            try {
+              // Read position
+              const [position, result, error] = await packetHandler.read4ByteTxRx(
+                port, 
+                id, 
+                SCS_ADDR_SCS_PRESENT_POSITION
+              );
+              
+              if (result !== COMM_SUCCESS) {
+                logStatus(`Attempt ${attempts}/3: Failed to read servo ID ${id}: ${getErrorMessage(result)}`);
+                continue;
+              }
+              
+              if (error !== 0) {
+                logStatus(`Attempt ${attempts}/3: Servo ID ${id} returned error: ${error}`);
+                continue;
+              }
+              
+              // Success - update UI and set success flags
+              const formattedPosition = formatPositionData(position);
+              document.getElementById(`position-${id}`).textContent = formattedPosition;
+              logStatus(`Servo ID ${id} position: ${formattedPosition}`);
+              updateServoStatus(id, 'Connected');
+              atLeastOneSuccess = true;
+              success = true;
+            } catch (err) {
+              logStatus(`Attempt ${attempts}/3: Exception during read of servo ID ${id}: ${err.message}`);
+              // Force port release on exception
+              port.isUsing = false;
+            }
+          }
+          
+          if (!success) {
+            logStatus(`Failed to read servo ID ${id} after 3 attempts`);
+            updateServoStatus(id, 'Disconnected');
+          }
+          
+          // Always add a delay between servos
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+        
+        if (!atLeastOneSuccess) {
+          logStatus("Failed to read position from any servo, even individually");
+        } else {
+          logStatus("Individual read operation completed");
+        }
+        
+        return atLeastOneSuccess;
+      } catch (error) {
+        logStatus(`Error in individual reads: ${error.message}`);
+        console.error(error);
+        port.isUsing = false; // Always reset port on exception
+        return false;
+      }
+    }
+    
+    // Sync Write Position button event handler
+    document.getElementById('btnSyncWritePosition').addEventListener('click', async () => {
+      if (!port || !packetHandler) {
+        logStatus('Please connect to SCServo first');
+        return;
+      }
+      
+      try {
+        const targetPosition = parseInt(document.getElementById('targetPosition').value);
+        const movingSpeed = parseInt(document.getElementById('movingSpeed').value);
+        
+        logStatus(`Preparing to send position ${targetPosition} with speed ${movingSpeed} to servos...`);
+        
+        // Create sync write instance for position and speed (6 bytes total)
+        syncWrite = new GroupSyncWrite(
+          port, 
+          packetHandler, 
+          SCS_ADDR_SCS_GOAL_POSITION,
+          6  // 4 bytes for position + 2 bytes for speed
+        );
+        
+        // Add parameters for each servo
+        let atLeastOneAdded = false;
+        servos.forEach(id => {
+          // Prepare data: [position (4 bytes) + speed (2 bytes)]
+          const data = [
+            SCS_LOBYTE(SCS_LOWORD(targetPosition)),
+            SCS_HIBYTE(SCS_LOWORD(targetPosition)),
+            SCS_LOBYTE(SCS_HIWORD(targetPosition)),
+            SCS_HIBYTE(SCS_HIWORD(targetPosition)),
+            SCS_LOBYTE(movingSpeed),
+            SCS_HIBYTE(movingSpeed)
+          ];
+          
+          logStatus(`Adding servo ID ${id} with position data: ${formatHexBytes(data)}`);
+          
+          const added = syncWrite.addParam(id, data);
+          if (added) {
+            atLeastOneAdded = true;
+          } else {
+            logStatus(`Failed to add servo ID ${id} to sync write`);
+          }
+        });
+        
+        if (!atLeastOneAdded) {
+          logStatus("No servos were added to the sync write operation");
+          return;
+        }
+        
+        // Transmit packet
+        logStatus("Sending sync write packet...");
+        const result = await syncWrite.txPacket();
+        if (result !== COMM_SUCCESS) {
+          logStatus(`Sync write failed: ${result} (${getErrorMessage(result)})`);
+          return;
+        }
+        
+        logStatus(`Successfully sent position ${targetPosition} to all servos`);
+        
+        // Clear parameters
+        syncWrite.clearParam();
+      } catch (error) {
+        logStatus(`Error writing positions: ${error.message}`);
+        console.error(error);
+      }
+    });
+    
+    // Test Ping button event handler
+    document.getElementById('btnTestPing').addEventListener('click', async () => {
+      if (!port || !packetHandler) {
+        logStatus('Please connect to SCServo first');
+        return;
+      }
+      
+      try {
+        const startId = parseInt(document.getElementById('idStart').value);
+        logStatus(`Testing ping to servo ID ${startId}...`);
+        
+        const [modelNumber, result, error, rxpacket] = await packetHandler.ping(port, startId);
+        
+        if (result !== COMM_SUCCESS) {
+          logStatus(`Ping failed: ${getErrorMessage(result)}`);
+          updateServoStatus(startId, 'Disconnected');
+          return;
+        }
+        
+        if (error !== 0) {
+          logStatus(`Servo error: ${error}`);
+          updateServoStatus(startId, 'Error');
+          return;
+        }
+        
+        logStatus(`Ping successful! Model number: ${modelNumber}`);
+        updateServoStatus(startId, 'Connected');
+        
+        // Detailed packet diagnostics
+        if (rxpacket) {
+          logStatus(`Response packet: ${formatHexBytes(rxpacket)}`);
+          
+          // Display detailed packet structure
+          let packetInfo = "";
+          packetInfo += `Header: ${formatHexBytes([rxpacket[0], rxpacket[1]])} | `;
+          packetInfo += `ID: ${rxpacket[2]} | `;
+          packetInfo += `Length: ${rxpacket[3]} | `;
+          packetInfo += `Error/Inst: 0x${rxpacket[4].toString(16).padStart(2,'0')}`;
+          
+          if (rxpacket.length > 5) {
+            packetInfo += ` | Parameters: `;
+            for (let i = 5; i < rxpacket.length - 1; i++) {
+              packetInfo += formatHexBytes([rxpacket[i]]) + ' ';
+            }
+            packetInfo += `| Checksum: 0x${rxpacket[rxpacket.length-1].toString(16).padStart(2,'0')}`;
+          }
+          
+          logStatus(packetInfo);
+          
+          // Check if INST_STATUS is valid
+          if (rxpacket[4] === INST_STATUS) {
+            logStatus("Response has correct INST_STATUS value (0x55)");
+          } else {
+            logStatus(`Warning: Response has unexpected INST_STATUS value: 0x${rxpacket[4].toString(16).padStart(2,'0')} instead of 0x55`);
+          }
+        }
+      } catch (error) {
+        logStatus(`Error pinging servo: ${error.message}`);
+        console.error(error);
+      }
+    });
+  </script>
+</body>
+</html> 
