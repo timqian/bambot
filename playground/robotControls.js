@@ -7,7 +7,10 @@ import { MathUtils } from 'three';
  */
 export function setupKeyboardControls(robot) {
   const keyState = {};
-  const stepSize = MathUtils.degToRad(5); // 每次按键旋转5度
+
+  // Get initial stepSize from the HTML slider
+  const speedControl = document.getElementById('speedControl');
+  let stepSize = speedControl ? MathUtils.degToRad(parseFloat(speedControl.value)) : MathUtils.degToRad(0.2);
   
   // 默认的按键-关节映射
   const keyMappings = {
@@ -36,6 +39,21 @@ export function setupKeyboardControls(robot) {
   window.addEventListener('keyup', (e) => {
     keyState[e.key.toLowerCase()] = false;
   });
+
+  // 添加速度控制功能
+  if (speedControl) {
+    speedControl.addEventListener('input', (e) => {
+      // 从滑块获取值 (0.5 到 10)，然后转换为弧度
+      const speedFactor = parseFloat(e.target.value);
+      stepSize = MathUtils.degToRad(speedFactor);
+      
+      // 更新速度显示
+      const speedDisplay = document.getElementById('speedValue');
+      if (speedDisplay) {
+        speedDisplay.textContent = speedFactor.toFixed(1);
+      }
+    });
+  }
 
   function updateJoints() {
     if (!robot || !robot.joints) return;
@@ -90,6 +108,13 @@ export function setupControlPanel() {
       controlPanel.style.display = 'block';
       togglePanel.style.display = 'none';
     });
+  }
+
+  // 初始化速度显示
+  const speedDisplay = document.getElementById('speedValue');
+  const speedControl = document.getElementById('speedControl');
+  if (speedDisplay && speedControl) {
+    speedDisplay.textContent = speedControl.value;
   }
 
   // 检查键盘是否正在使用

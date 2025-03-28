@@ -66,11 +66,13 @@ function init() {
   // Create reflective floor (MuJoCo style)
   const groundMaterial = new MeshPhysicalMaterial({
     color: 0x808080,
-    metalness: 0.5,
-    roughness: 0.2,
-    reflectivity: 0.5,
+    metalness: 0.7,
+    roughness: 0.3,
+    reflectivity: 0.1,
     clearcoat: 0.3,
     side: DoubleSide,
+    transparent: true,     // 启用透明度
+    opacity: 0.7,          // 设置透明度为0.7（可以根据需要调整，1.0为完全不透明）
   });
   
   // 创建格子纹理的地面
