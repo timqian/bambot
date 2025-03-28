@@ -119,7 +119,7 @@ function init() {
     // 加载选中的模型
     const manager = new LoadingManager();
     const loader = new URDFLoader(manager);
-    loader.load(`./URDF/${selectedModel}.urdf`, result => {
+    loader.load(`/URDF/${selectedModel}.urdf`, result => {
       robot = result;
     });
 
@@ -146,7 +146,7 @@ function init() {
   // 初始加载默认模型
   const manager = new LoadingManager();
   const loader = new URDFLoader(manager);
-  loader.load('./URDF/so_arm100.urdf', result => {
+  loader.load('/URDF/so_arm100.urdf', result => {
     robot = result;
   });
 
