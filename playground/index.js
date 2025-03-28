@@ -171,7 +171,7 @@ function init() {
       // }
 
       console.log(robot.joints);
-      // robot.joints["Elbow"].setJointValue(3);
+      // robot.joints["Joint #3"].setJointValue(3);
       robot.updateMatrixWorld(true);
 
       const bb = new Box3();
