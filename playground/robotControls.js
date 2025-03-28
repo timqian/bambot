@@ -87,6 +87,9 @@ async function processCommandQueue() {
  */
 export function setupKeyboardControls(robot) {
   const keyState = {};
+  // Get the keyboard control section element
+  const keyboardControlSection = document.getElementById('keyboardControlSection');
+  let keyboardActiveTimeout;
 
   // Get initial stepSize from the HTML slider
   const speedControl = document.getElementById('speedControl');
@@ -94,30 +97,64 @@ export function setupKeyboardControls(robot) {
   
   // 默认的按键-关节映射
   const keyMappings = {
-    'q': { jointIndex: 0, direction: 1 },
-    'a': { jointIndex: 0, direction: -1 },
-    'w': { jointIndex: 1, direction: 1 },
-    's': { jointIndex: 1, direction: -1 },
-    'e': { jointIndex: 2, direction: 1 },
-    'd': { jointIndex: 2, direction: -1 },
-    'r': { jointIndex: 3, direction: 1 },
-    'f': { jointIndex: 3, direction: -1 },
-    't': { jointIndex: 4, direction: 1 },
-    'g': { jointIndex: 4, direction: -1 },
-    'y': { jointIndex: 5, direction: 1 },
-    'h': { jointIndex: 5, direction: -1 },
+    '1': { jointIndex: 0, direction: 1 },
+    'q': { jointIndex: 0, direction: -1 },
+    '2': { jointIndex: 1, direction: 1 },
+    'w': { jointIndex: 1, direction: -1 },
+    '3': { jointIndex: 2, direction: 1 },
+    'e': { jointIndex: 2, direction: -1 },
+    '4': { jointIndex: 3, direction: 1 },
+    'r': { jointIndex: 3, direction: -1 },
+    '5': { jointIndex: 4, direction: 1 },
+    't': { jointIndex: 4, direction: -1 },
+    '6': { jointIndex: 5, direction: 1 },
+    'y': { jointIndex: 5, direction: -1 },
   };
   
   // 获取机器人实际的关节名称
   const jointNames = robot && robot.joints ? Object.keys(robot.joints) : [];
   console.log('Available joints:', jointNames);
   
+  // Function to set the div as active
+  const setKeyboardSectionActive = () => {
+    if (keyboardControlSection) {
+      keyboardControlSection.classList.add('control-active');
+      
+      // Clear existing timeout if any
+      if (keyboardActiveTimeout) {
+        clearTimeout(keyboardActiveTimeout);
+      }
+      
+      // Set timeout to remove the active class after 2 seconds of inactivity
+      keyboardActiveTimeout = setTimeout(() => {
+        keyboardControlSection.classList.remove('control-active');
+      }, 2000);
+    }
+  };
+  
   window.addEventListener('keydown', (e) => {
-    keyState[e.key.toLowerCase()] = true;
+    const key = e.key.toLowerCase();
+    keyState[key] = true;
+    
+    // Add visual styling to show pressed key
+    const keyElement = document.querySelector(`.key[data-key="${key}"]`);
+    if (keyElement) {
+      keyElement.classList.add('key-pressed');
+      
+      // Highlight the keyboard control section
+      setKeyboardSectionActive();
+    }
   });
 
   window.addEventListener('keyup', (e) => {
-    keyState[e.key.toLowerCase()] = false;
+    const key = e.key.toLowerCase();
+    keyState[key] = false;
+    
+    // Remove visual styling when key is released
+    const keyElement = document.querySelector(`.key[data-key="${key}"]`);
+    if (keyElement) {
+      keyElement.classList.remove('key-pressed');
+    }
   });
 
   // 添加速度控制功能
@@ -138,9 +175,12 @@ export function setupKeyboardControls(robot) {
   function updateJoints() {
     if (!robot || !robot.joints) return;
 
+    let keyPressed = false;
+
     // 处理每个按键映射
     Object.keys(keyState).forEach(key => {
       if (keyState[key] && keyMappings[key]) {
+        keyPressed = true;
         const { jointIndex, direction } = keyMappings[key];
         
         // 根据索引获取关节名称（如果可用）
@@ -181,6 +221,11 @@ export function setupKeyboardControls(robot) {
       }
     });
 
+    // If any key is pressed, set the keyboard section as active
+    if (keyPressed) {
+      setKeyboardSectionActive();
+    }
+
     // 更新机器人
     if (robot.updateMatrixWorld) {
       robot.updateMatrixWorld(true);
@@ -199,6 +244,7 @@ export function setupControlPanel() {
   const togglePanel = document.getElementById('togglePanel');
   const hideControls = document.getElementById('hideControls');
 
+  // 处理折叠/展开控制面板
   if (hideControls) {
     hideControls.addEventListener('click', () => {
       controlPanel.style.display = 'none';
@@ -219,33 +265,48 @@ export function setupControlPanel() {
   if (speedDisplay && speedControl) {
     speedDisplay.textContent = speedControl.value;
   }
-
-  // 检查键盘是否正在使用
-  let keyboardActive = false;
-  const keyboardStatus = document.getElementById('keyboardStatus');
-
-  window.addEventListener('keydown', () => {
-    keyboardActive = true;
-    if (keyboardStatus) {
-      keyboardStatus.classList.remove('inactive');
-      keyboardStatus.classList.add('active');
-    }
-    
-    // 如果2秒内没有键盘输入，则重置非活动状态
-    setTimeout(() => {
-      keyboardActive = false;
-      if (keyboardStatus && !keyboardActive) {
-        keyboardStatus.classList.remove('active');
-        keyboardStatus.classList.add('inactive');
-      }
-    }, 2000);
-  });
   
+  // 设置可折叠部分的逻辑
+  setupCollapsibleSections();
+
   // 添加真实机器人连接事件处理
   const connectButton = document.getElementById('connectRealRobot');
   if (connectButton) {
     connectButton.addEventListener('click', toggleRealRobotConnection);
   }
+  
+  // Joycon和VR连接按钮的占位处理（未来实现）
+  const connectJoyconButton = document.getElementById('connectJoycon');
+  if (connectJoyconButton) {
+    connectJoyconButton.addEventListener('click', () => {
+      console.log('Joycon connection not yet implemented');
+      alert('Joycon connection will be implemented in the future.');
+    });
+  }
+  
+  const connectVRButton = document.getElementById('connectVR');
+  if (connectVRButton) {
+    connectVRButton.addEventListener('click', () => {
+      console.log('VR connection not yet implemented');
+      alert('VR connection will be implemented in the future.');
+    });
+  }
+}
+
+/**
+ * 设置可折叠部分的功能
+ */
+function setupCollapsibleSections() {
+  // 获取所有可折叠部分的标头
+  const collapsibleHeaders = document.querySelectorAll('.collapsible-header');
+  
+  collapsibleHeaders.forEach(header => {
+    header.addEventListener('click', () => {
+      // 切换当前可折叠部分的打开/关闭状态
+      const section = header.parentElement;
+      section.classList.toggle('open');
+    });
+  });
 }
 
 // 添加真实机器人操作相关的函数
@@ -254,9 +315,8 @@ export function setupControlPanel() {
  */
 async function toggleRealRobotConnection() {
   const connectButton = document.getElementById('connectRealRobot');
-  const statusIndicator = document.getElementById('realRobotStatus');
   
-  if (!connectButton || !statusIndicator) return;
+  if (!connectButton) return;
   
   if (!isConnectedToRealRobot) {
     try {
@@ -313,15 +373,15 @@ async function toggleRealRobotConnection() {
       }
       
       // Update UI
-      statusIndicator.classList.remove('inactive');
-      statusIndicator.classList.add('active');
-      connectButton.textContent = 'Disconnect Real Robot';
+      connectButton.classList.add('connected');
+      connectButton.textContent = 'Disconnect Robot';
       isConnectedToRealRobot = true;
       
     } catch (error) {
       console.error('Connection error:', error);
       alert(`Failed to connect: ${error.message}`);
       connectButton.textContent = 'Connect Real Robot';
+      connectButton.classList.remove('connected');
     } finally {
       connectButton.disabled = false;
     }
@@ -346,8 +406,7 @@ async function toggleRealRobotConnection() {
       }
       
       // Update UI
-      statusIndicator.classList.remove('active');
-      statusIndicator.classList.add('inactive');
+      connectButton.classList.remove('connected');
       connectButton.textContent = 'Connect Real Robot';
       isConnectedToRealRobot = false;
     } catch (error) {

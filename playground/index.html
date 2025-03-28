@@ -3,7 +3,7 @@
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
         <meta charset="utf-8"/>
-
+        
         <title>Simple URDF Loading Example</title>
 
         <style>
@@ -12,6 +12,7 @@
                 margin: 0;
                 padding: 0;
                 overflow: hidden;
+                font-family: Arial, sans-serif;
             }
             
             .controls {
@@ -52,7 +53,6 @@
                 color: white;
                 padding: 15px;
                 border-radius: 8px;
-                font-family: Arial, sans-serif;
                 z-index: 1000;
                 max-width: 350px;
             }
@@ -69,7 +69,44 @@
             .control-pair {
                 display: flex;
                 justify-content: space-between;
-                margin-bottom: 4px;
+                margin-bottom: 8px;
+                align-items: center;
+            }
+            
+            .control-pair > div {
+                flex: 1;
+                text-align: center;
+            }
+            
+            .control-pair > div:first-child {
+                text-align: left;
+            }
+            
+            .control-pair > div:last-child {
+                text-align: right;
+            }
+            
+            .joint-control {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 8px;
+                align-items: center;
+            }
+            
+            .joint-name {
+                flex: 0 0 100px;
+                text-align: left;
+                padding-right: 15px;
+                font-weight: bold;
+            }
+            
+            .joint-keys {
+                flex: 1;
+                white-space: nowrap;
+            }
+            
+            .joint-keys .key:nth-child(3) {
+                margin-left: 10px;
             }
             
             .key {
@@ -77,6 +114,24 @@
                 padding: 2px 6px;
                 border-radius: 4px;
                 font-family: monospace;
+            }
+            
+            .key-pressed {
+                background: rgba(255, 255, 255, 0.6);
+                color: #000;
+                box-shadow: 0 0 8px rgba(76, 175, 80, 0.8);
+            }
+            
+            .direction-plus {
+                color: #4CAF50;
+                font-weight: bold;
+                margin-left: 4px;
+            }
+            
+            .direction-minus {
+                color: #F44336;
+                font-weight: bold;
+                margin-left: 4px;
             }
             
             .control-status {
@@ -104,13 +159,18 @@
                 position: fixed;
                 bottom: 20px;
                 left: 20px;
-                background: rgba(0, 0, 0, 0.7);
+                background: #333;
                 color: white;
                 padding: 8px 12px;
                 border-radius: 4px;
                 cursor: pointer;
                 z-index: 1001;
                 display: none;
+                font-weight: bold;
+            }
+
+            .toggle-panel:hover {
+                background: #444;
             }
             
             .speed-control {
@@ -179,6 +239,162 @@
                 background: #cccccc;
                 cursor: not-allowed;
             }
+            
+            /* Connect Button Style */
+            .connect-button {
+                display: block;
+                width: 100%;
+                padding: 8px;
+                margin: 10px 0 15px 0;
+                background: #2196F3;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                font-weight: bold;
+                transition: background-color 0.3s;
+            }
+            
+            .connect-button:hover {
+                background: #0b7dda;
+            }
+            
+            .connect-button:disabled {
+                background: #cccccc;
+                cursor: not-allowed;
+            }
+            
+            .connect-button.connected {
+                background: #4CAF50;
+            }
+            
+            .connect-button.connected:hover {
+                background: #3d8b40;
+            }
+            
+            /* Collapsible section styles */
+            .collapsible {
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 6px;
+                margin-bottom: 10px;
+                overflow: hidden;
+                width: 300px;
+            }
+            
+            .collapsible-header {
+                padding: 10px;
+                cursor: pointer;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-weight: bold;
+            }
+            
+            .collapsible-header:hover {
+                background: rgba(255, 255, 255, 0.15);
+            }
+            
+            .collapsible-content {
+                padding: 0 10px 10px 10px;
+                display: none;
+            }
+            
+            .collapsible.open .collapsible-content {
+                display: block;
+            }
+            
+            .collapsible-icon {
+                transition: transform 0.3s;
+            }
+            
+            .collapsible.open .collapsible-icon {
+                transform: rotate(180deg);
+            }
+            
+            /* Active control section */
+            .control-active {
+                box-shadow: 0 0 8px rgba(76, 175, 80, 0.8);
+                /* border: 1px solid rgba(76, 175, 80, 0.6); */
+                /* background: rgba(255, 255, 255, 0.1); */
+            }
+            
+            /* Global Controls Section */
+            .global-controls {
+                margin-bottom: 15px;
+            }
+            
+            /* Panel header with title and close button */
+            .panel-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 15px;
+            }
+            
+            .panel-header h3 {
+                margin: 0;
+            }
+            
+            .panel-header span {
+                font-size: 20px;
+                font-weight: bold;
+            }
+            
+            /* Help tooltip styles */
+            .help-wrapper {
+                position: relative;
+                display: inline-flex;
+                align-items: center;
+                width: 100%;
+            }
+            
+            .help-icon {
+                display: inline-flex;
+                justify-content: center;
+                align-items: center;
+                width: 18px;
+                height: 18px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.3);
+                color: #fff;
+                font-size: 12px;
+                font-weight: bold;
+                margin-left: 10px;
+                cursor: help;
+            }
+            
+            .tooltip {
+                visibility: hidden;
+                position: absolute;
+                top: -90px;
+                right: 0;
+                background: rgba(0, 0, 0, 0.9);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                color: white;
+                border-radius: 4px;
+                padding: 10px;
+                width: 250px;
+                font-size: 12px;
+                z-index: 1002;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+                opacity: 0;
+                transition: opacity 0.3s;
+            }
+            
+            .tooltip ul {
+                margin: 5px 0;
+                padding-left: 20px;
+            }
+            
+            .tooltip li {
+                margin-bottom: 5px;
+            }
+            
+            .help-icon:hover .tooltip,
+            .help-icon.active .tooltip {
+                visibility: visible;
+                opacity: 1;
+            }
         </style>
     </head>
     <body>
@@ -191,41 +407,105 @@
         </div>
         
         <div class="control-panel" id="controlPanel">
-            <h3>Robot Arm Controls</h3>
+            <div class="panel-header">
+                <h3>Play with the Robot!</h3>
+                <span id="hideControls" style="cursor: pointer; padding: 0 5px;">×</span>
+            </div>
             
-            <div class="control-info">
-                <h4>Keyboard Controls:</h4>
-                <div class="control-pair"><span class="key">Q/A</span>-<span>Joint 1 +/-</span></div>
-                <div class="control-pair"><span class="key">W/S</span>-<span>Joint 2 +/-</span></div>
-                <div class="control-pair"><span class="key">E/D</span>-<span>Joint 3 +/-</span></div>
-                <div class="control-pair"><span class="key">R/F</span>-<span>Joint 4 +/-</span></div>
-                <div class="control-pair"><span class="key">T/G</span>-<span>Joint 5 +/-</span></div>
-                <div class="control-pair"><span class="key">Y/H</span>-<span>Joint 6 +/-</span></div>
+            <div class="global-controls">
+                <!-- Speed control (global setting) -->
+                <div class="speed-control">
+                    <label for="speedControl">Control Speed:</label>
+                    <div class="speed-slider">
+                        <input type="range" id="speedControl" min="0.1" max="1" step="0.1" value="0.2">
+                        <span class="speed-value" id="speedValue">0.2</span>
+                    </div>
+                </div>
                 
-                <div class="control-status">
-                    <div class="status-indicator active" id="keyboardStatus"></div>
-                    <span>Keyboard Control</span>
-                </div>
+                <!-- Connect Real Robot button (global) -->
             </div>
             
-            <div class="speed-control">
-                <label for="speedControl">Speed:</label>
-                <div class="speed-slider">
-                    <input type="range" id="speedControl" min="0.1" max="1" step="0.1" value="0.2">
-                    <span class="speed-value" id="speedValue">0.2</span>
+            <!-- Control methods section with collapsible panels -->
+            <div class="control-methods">
+                <!-- Keyboard Controls -->
+                <div class="collapsible open" id="keyboardControlSection">
+                    <div class="collapsible-header">
+                        <span>Keyboard Controls</span>
+                        <span class="collapsible-icon">▼</span>
+                    </div>
+                    <div class="collapsible-content">
+                        <div class="joint-control">
+                            <div class="joint-name">Base:</div>
+                            <div class="joint-keys"><span class="key" data-key="1">1</span> <span class="direction-plus">+</span> <span class="key" data-key="q">Q</span> <span class="direction-minus">-</span></div>
+                        </div>
+                        <div class="joint-control">
+                            <div class="joint-name">Shoulder:</div>
+                            <div class="joint-keys"><span class="key" data-key="2">2</span> <span class="direction-plus">+</span> <span class="key" data-key="w">W</span> <span class="direction-minus">-</span></div>
+                        </div>
+                        <div class="joint-control">
+                            <div class="joint-name">Elbow:</div>
+                            <div class="joint-keys"><span class="key" data-key="3">3</span> <span class="direction-plus">+</span> <span class="key" data-key="e">E</span> <span class="direction-minus">-</span></div>
+                        </div>
+                        <div class="joint-control">
+                            <div class="joint-name">Wrist:</div>
+                            <div class="joint-keys"><span class="key" data-key="4">4</span> <span class="direction-plus">+</span> <span class="key" data-key="r">R</span> <span class="direction-minus">-</span></div>
+                        </div>
+                        <div class="joint-control">
+                            <div class="joint-name">Hand:</div>
+                            <div class="joint-keys"><span class="key" data-key="5">5</span> <span class="direction-plus">+</span> <span class="key" data-key="t">T</span> <span class="direction-minus">-</span></div>
+                        </div>
+                        <div class="joint-control">
+                            <div class="joint-name">Thumb:</div>
+                            <div class="joint-keys"><span class="key" data-key="6">6</span> <span class="direction-plus">+</span> <span class="key" data-key="y">Y</span> <span class="direction-minus">-</span></div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            
-            <div class="real-robot-control">
-                <h4>Real Robot Control</h4>
-                <div class="control-status">
-                    <div class="status-indicator inactive" id="realRobotStatus"></div>
-                    <span>Robot Connection</span>
+                
+                <!-- Placeholder for Joycon Controls (future) -->
+                <div class="collapsible" id="joyconControlSection">
+                    <div class="collapsible-header">
+                        <span>Joycon Controls</span>
+                        <span class="collapsible-icon">▼</span>
+                    </div>
+                    <div class="collapsible-content">
+                        <button id="connectJoycon" class="connect-button">Connect Joycon</button>
+                        <div class="control-info">
+                            <p>Joycon controls will be available after connecting.</p>
+                            <!-- Joycon control details will be added here -->
+                        </div>
+                    </div>
                 </div>
-                <button id="connectRealRobot">Connect Real Robot</button>
+                
+                <!-- Placeholder for VR Controls (future) -->
+                <div class="collapsible" id="vrControlSection">
+                    <div class="collapsible-header">
+                        <span>VR Controls</span>
+                        <span class="collapsible-icon">▼</span>
+                    </div>
+                    <div class="collapsible-content">
+                        <button id="connectVR" class="connect-button">Connect VR</button>
+                        <div class="control-info">
+                            <p>VR controls will be available after connecting.</p>
+                            <!-- VR control details will be added here -->
+                        </div>
+                    </div>
+                </div>
+
+                <br>
+                <div class="help-wrapper">
+                    <button id="connectRealRobot" class="connect-button">Connect Real Robot</button>
+                    <div class="help-icon" id="connectHelpIcon">?
+                        <div class="tooltip">
+                            <strong>Before connecting:</strong>
+                            <ul>
+                                <li>Select the correct device when prompted</li>
+                                <li>Ensure your physical robot's position matches the virtual robot's position</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
             </div>
-            
-            <button id="hideControls">Hide Controls</button>
         </div>
         
         <div class="toggle-panel" id="togglePanel">Show Controls</div>
