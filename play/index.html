@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+        <meta charset="utf-8"/>
+
+        <title>Simple URDF Loading Example</title>
+
+        <style>
+            html, body {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+                overflow: hidden;
+            }
+            
+            .controls {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 1000;
+                display: flex;
+                gap: 10px;
+                align-items: center;
+            }
+
+            #modelSelect {
+                padding: 8px;
+                border-radius: 4px;
+                border: 1px solid #ccc;
+                background: white;
+            }
+
+            .github-link {
+                color: white;
+                text-decoration: none;
+                padding: 8px;
+                background: #333;
+                border-radius: 4px;
+                display: inline-block;
+            }
+
+            .github-link:hover {
+                background: #444;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="controls">
+            <select id="modelSelect">
+                <option value="so_arm100">SO Arm 100</option>
+                <option value="bambot">Bambot</option>
+            </select>
+            <a href="https://github.com/timqian/bambot" target="_blank" class="github-link">GitHub</a>
+        </div>
+        <script type="module" src="./index.js"></script>
+    </body>
+</html>

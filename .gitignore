@@ -1,1 +1,5 @@
-bambotapp/
+nativeAPP/
+# mujoco_wasm/
+software
+
+.DS_Store
