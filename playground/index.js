@@ -22,9 +22,11 @@ import {
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import URDFLoader from 'urdf-loader';
-
+// 导入控制工具函数
+import { setupKeyboardControls, setupControlPanel } from './robotControls.js';
 
 let scene, camera, renderer, robot, controls;
+let keyboardUpdate;
 
 init();
 render();
@@ -140,6 +142,9 @@ function init() {
       robot.scale.set(15, 15, 15);
       robot.position.y -= bb.min.y;
       scene.add(robot);
+
+      // Initialize keyboard controls for the new model
+      keyboardUpdate = setupKeyboardControls(robot);
     };
   });
 
@@ -152,18 +157,15 @@ function init() {
 
   // wait until all the geometry has loaded to add the model to the scene
   manager.onLoad = () => {
-
       robot.rotation.x = - Math.PI / 2;
       robot.rotation.z = - Math.PI;
       robot.traverse(c => {
           c.castShadow = true;
       });
       // for (let i = 1; i <= 6; i++) {
-
       //     robot.joints[`HP${ i }`].setJointValue(MathUtils.degToRad(30));
       //     robot.joints[`KP${ i }`].setJointValue(MathUtils.degToRad(120));
       //     robot.joints[`AP${ i }`].setJointValue(MathUtils.degToRad(-60));
-
       // }
 
       console.log(robot.joints);
@@ -177,28 +179,32 @@ function init() {
       robot.position.y -= bb.min.y;
       scene.add(robot);
 
+      // Initialize keyboard controls
+      keyboardUpdate = setupKeyboardControls(robot);
   };
 
   onResize();
   window.addEventListener('resize', onResize);
 
+  // Setup UI for control panel
+  setupControlPanel();
 }
 
 function onResize() {
-
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(window.devicePixelRatio);
 
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
-
 }
 
 function render() {
-
   requestAnimationFrame(render);
+  
+  // Update joint positions based on keyboard input
+  if (keyboardUpdate) keyboardUpdate();
+  
   renderer.render(scene, camera);
-
 }
 
 // 添加创建格子纹理的函数

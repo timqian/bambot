@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <robot name="so_arm100">
   <!-- Materials -->
-  <material name="orange">
+  <material name="green">
     <color rgba="0.2 0.4 0.1 1.0"/>
   </material>
   <material name="black">
@@ -20,7 +20,7 @@
       <geometry>
         <mesh filename="meshes/Base.stl"/>
       </geometry>
-      <material name="orange"/>
+      <material name="green"/>
     </visual>
     <visual>
       <geometry>
@@ -46,7 +46,7 @@
       <geometry>
         <mesh filename="meshes/Rotation_Pitch.stl"/>
       </geometry>
-      <material name="orange"/>
+      <material name="green"/>
     </visual>
     <visual>
       <geometry>
@@ -72,7 +72,7 @@
       <geometry>
         <mesh filename="meshes/Upper_Arm.stl"/>
       </geometry>
-      <material name="orange"/>
+      <material name="green"/>
     </visual>
     <visual>
       <geometry>
@@ -98,7 +98,7 @@
       <geometry>
         <mesh filename="meshes/Lower_Arm.stl"/>
       </geometry>
-      <material name="orange"/>
+      <material name="green"/>
     </visual>
     <visual>
       <geometry>
@@ -124,7 +124,7 @@
       <geometry>
         <mesh filename="meshes/Wrist_Pitch_Roll.stl"/>
       </geometry>
-      <material name="orange"/>
+      <material name="green"/>
     </visual>
     <visual>
       <geometry>
@@ -150,7 +150,7 @@
       <geometry>
         <mesh filename="meshes/Fixed_Jaw.stl"/>
       </geometry>
-      <material name="orange"/>
+      <material name="green"/>
     </visual>
     <visual>
       <geometry>
@@ -171,7 +171,7 @@
       <geometry>
         <mesh filename="meshes/Moving_Jaw.stl"/>
       </geometry>
-      <material name="orange"/>
+      <material name="green"/>
     </visual>
   </link>
 

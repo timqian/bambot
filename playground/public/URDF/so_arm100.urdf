@@ -1,8 +1,8 @@
 <?xml version='1.0' encoding='utf-8'?>
 <robot name="so_arm100">
   <!-- Materials -->
-  <material name="orange">
-    <color rgba="0 0.4 0.1 1.0"/>
+  <material name="green">
+    <color rgba="0.06 0.4 0.1 1.0"/>
   </material>
   <material name="black">
     <color rgba="0.1 0.1 0.1 1.0"/>
@@ -20,7 +20,7 @@
       <geometry>
         <mesh filename="meshes/Base.stl"/>
       </geometry>
-      <material name="orange"/>
+      <material name="green"/>
     </visual>
     <visual>
       <geometry>
@@ -46,7 +46,7 @@
       <geometry>
         <mesh filename="meshes/Rotation_Pitch.stl"/>
       </geometry>
-      <material name="orange"/>
+      <material name="green"/>
     </visual>
     <visual>
       <geometry>
@@ -72,7 +72,7 @@
       <geometry>
         <mesh filename="meshes/Upper_Arm.stl"/>
       </geometry>
-      <material name="orange"/>
+      <material name="green"/>
     </visual>
     <visual>
       <geometry>
@@ -98,7 +98,7 @@
       <geometry>
         <mesh filename="meshes/Lower_Arm.stl"/>
       </geometry>
-      <material name="orange"/>
+      <material name="green"/>
     </visual>
     <visual>
       <geometry>
@@ -124,7 +124,7 @@
       <geometry>
         <mesh filename="meshes/Wrist_Pitch_Roll.stl"/>
       </geometry>
-      <material name="orange"/>
+      <material name="green"/>
     </visual>
     <visual>
       <geometry>
@@ -150,7 +150,7 @@
       <geometry>
         <mesh filename="meshes/Fixed_Jaw.stl"/>
       </geometry>
-      <material name="orange"/>
+      <material name="green"/>
     </visual>
     <visual>
       <geometry>
@@ -171,7 +171,7 @@
       <geometry>
         <mesh filename="meshes/Moving_Jaw.stl"/>
       </geometry>
-      <material name="orange"/>
+      <material name="green"/>
     </visual>
   </link>
 
@@ -182,7 +182,7 @@
     <child link="Rotation_Pitch"/>
     <origin xyz="0 -0.0452 0.0165" rpy="1.57079 0 0"/>
     <axis xyz="0 1 0"/>
-    <limit lower="-2.2" upper="2.2" effort="35" velocity="1"/>
+    <limit lower="-2" upper="2" effort="35" velocity="1"/>
   </joint>
 
   <joint name="Pitch" type="revolute">
@@ -190,7 +190,7 @@
     <child link="Upper_Arm"/>
     <origin xyz="0 0.1025 0.0306" rpy="-1.8 0 0"/>
     <axis xyz="1 0 0"/>
-    <limit lower="-3.14158" upper="0.2" effort="35" velocity="1"/>
+    <limit lower="0" upper="3.5" effort="35" velocity="1"/>
   </joint>
 
   <joint name="Elbow" type="revolute">
@@ -198,7 +198,7 @@
     <child link="Lower_Arm"/>
     <origin xyz="0 0.11257 0.028" rpy="1.57079 0 0"/>
     <axis xyz="1 0 0"/>
-    <limit lower="0" upper="3.14158" effort="35" velocity="1"/>
+    <limit lower="-3.14158" upper="0" effort="35" velocity="1"/>
   </joint>
 
   <joint name="Wrist_Pitch" type="revolute">
@@ -206,7 +206,7 @@
     <child link="Wrist_Pitch_Roll"/>
     <origin xyz="0 0.0052 0.1349" rpy="-1 0 0"/>
     <axis xyz="1 0 0"/>
-    <limit lower="-2.0" upper="1.8" effort="35" velocity="1"/>
+    <limit lower="-2.5" upper="1.2" effort="35" velocity="1"/>
   </joint>
 
   <joint name="Wrist_Roll" type="revolute">

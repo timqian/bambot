@@ -43,6 +43,75 @@
             .github-link:hover {
                 background: #444;
             }
+            
+            .control-panel {
+                position: fixed;
+                bottom: 20px;
+                left: 20px;
+                background: rgba(0, 0, 0, 0.7);
+                color: white;
+                padding: 15px;
+                border-radius: 8px;
+                font-family: Arial, sans-serif;
+                z-index: 1000;
+                max-width: 350px;
+            }
+            
+            .control-panel h3 {
+                margin-top: 0;
+                margin-bottom: 10px;
+            }
+            
+            .control-info {
+                margin-bottom: 15px;
+            }
+            
+            .control-pair {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 4px;
+            }
+            
+            .key {
+                background: rgba(255, 255, 255, 0.2);
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-family: monospace;
+            }
+            
+            .control-status {
+                display: flex;
+                align-items: center;
+                margin-top: 10px;
+            }
+            
+            .status-indicator {
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                margin-right: 8px;
+            }
+            
+            .active {
+                background: #4CAF50;
+            }
+            
+            .inactive {
+                background: #F44336;
+            }
+            
+            .toggle-panel {
+                position: fixed;
+                bottom: 20px;
+                left: 20px;
+                background: rgba(0, 0, 0, 0.7);
+                color: white;
+                padding: 8px 12px;
+                border-radius: 4px;
+                cursor: pointer;
+                z-index: 1001;
+                display: none;
+            }
         </style>
     </head>
     <body>
@@ -53,6 +122,30 @@
             </select>
             <a href="https://github.com/timqian/bambot" target="_blank" class="github-link">GitHub</a>
         </div>
+        
+        <div class="control-panel" id="controlPanel">
+            <h3>Robot Arm Controls</h3>
+            
+            <div class="control-info">
+                <h4>Keyboard Controls:</h4>
+                <div class="control-pair"><span class="key">Q</span><span>/ <span class="key">A</span> - Joint 1 +/-</span></div>
+                <div class="control-pair"><span class="key">W</span><span>/ <span class="key">S</span> - Joint 2 +/-</span></div>
+                <div class="control-pair"><span class="key">E</span><span>/ <span class="key">D</span> - Joint 3 +/-</span></div>
+                <div class="control-pair"><span class="key">R</span><span>/ <span class="key">F</span> - Joint 4 +/-</span></div>
+                <div class="control-pair"><span class="key">T</span><span>/ <span class="key">G</span> - Joint 5 +/-</span></div>
+                <div class="control-pair"><span class="key">Y</span><span>/ <span class="key">H</span> - Joint 6 +/-</span></div>
+                
+                <div class="control-status">
+                    <div class="status-indicator active" id="keyboardStatus"></div>
+                    <span>Keyboard Control</span>
+                </div>
+            </div>
+            
+            <button id="hideControls">Hide Controls</button>
+        </div>
+        
+        <div class="toggle-panel" id="togglePanel">Show Controls</div>
+        
         <script type="module" src="./index.js"></script>
     </body>
 </html>
