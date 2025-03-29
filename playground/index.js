@@ -119,14 +119,29 @@ function init() {
   const modelSelect = document.getElementById('modelSelect');
   modelSelect.addEventListener('change', (e) => {
     const selectedModel = e.target.value;
-    if (window.robot) {
-      scene.remove(window.robot);
+    window.location.hash = selectedModel;
+    window.location.reload();
+
+  });
+
+  // 根据URL hash或默认加载模型
+  function loadModelFromHash() {
+    // 获取URL hash（去掉#号）
+    let modelToLoad = window.location.hash.substring(1);
+    
+    // 如果hash为空或无效，使用默认模型
+    if (!modelToLoad || (modelToLoad !== 'bambot' && modelToLoad !== 'so_arm100' && modelToLoad !== 'lekiwi')) {
+      modelToLoad = 'bambot'; // 默认为bambot
     }
     
-    // 加载选中的模型
+    // 设置下拉框的值为当前模型
+    modelSelect.value = modelToLoad;
+    
+    // 加载模型
     const manager = new LoadingManager();
     const loader = new URDFLoader(manager);
-    loader.load(`/URDF/${selectedModel}.urdf`, result => {
+
+    loader.load(`/URDF/${modelToLoad}.urdf`, result => {
       window.robot = result;
     });
 
@@ -136,39 +151,6 @@ function init() {
       window.robot.rotation.z = - Math.PI;
       window.robot.traverse(c => {
         c.castShadow = true;
-      });
-
-      console.log(window.robot.joints);
-      // 记录关节限制信息到控制台，便于调试
-      logJointLimits(window.robot);
-      
-      window.robot.updateMatrixWorld(true);
-
-      const bb = new Box3();
-      bb.setFromObject(window.robot);
-
-      window.robot.scale.set(15, 15, 15);
-      window.robot.position.y -= bb.min.y;
-      scene.add(window.robot);
-
-      // Initialize keyboard controls for the new model
-      keyboardUpdate = setupKeyboardControls(window.robot);
-    };
-  });
-
-  // 初始加载默认模型
-  const manager = new LoadingManager();
-  const loader = new URDFLoader(manager);
-  loader.load('/URDF/so_arm100.urdf', result => {
-    window.robot = result;
-  });
-
-  // wait until all the geometry has loaded to add the model to the scene
-  manager.onLoad = () => {
-      window.robot.rotation.x = - Math.PI / 2;
-      window.robot.rotation.z = - Math.PI;
-      window.robot.traverse(c => {
-          c.castShadow = true;
       });
       console.log(window.robot.joints);
       // 记录关节限制信息到控制台，便于调试
@@ -185,7 +167,11 @@ function init() {
 
       // Initialize keyboard controls
       keyboardUpdate = setupKeyboardControls(window.robot);
-  };
+    };
+  }
+
+  // 初始加载模型
+  loadModelFromHash();
 
   onResize();
   window.addEventListener('resize', onResize);
