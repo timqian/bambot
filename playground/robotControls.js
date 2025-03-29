@@ -319,6 +319,10 @@ export function setupKeyboardControls(robot) {
                     robot.joints[jointName].setJointValue(newValue);
                     // 更新最后安全位置
                     servoLastSafePositions[servoId] = newPosition;
+
+                    // 更新舵机状态为成功
+                    servoCommStatus[servoId].status = 'success';
+                    updateServoStatusUI();
                   } else {
                     // 如果舵机移动失败，恢复当前位置记录
                     servoCurrentPositions[servoId] = prevPosition;
