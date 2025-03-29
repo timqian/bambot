@@ -413,6 +413,50 @@
                 max-width: 200px;
                 word-wrap: break-word;
             }
+            
+            /* 舵机和关节限位提醒 */
+            #servoLimitAlert {
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(244, 67, 54, 0.9);
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                z-index: 2000;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+                display: none;
+                text-align: center;
+                max-width: 400px;
+                font-weight: bold;
+                animation: fadeInOut 0.3s ease;
+                pointer-events: none; /* 确保不阻碍用户点击 */
+            }
+            
+            #jointLimitAlert {
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(255, 152, 0, 0.9);
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                z-index: 2000;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+                display: none;
+                text-align: center;
+                max-width: 400px;
+                font-weight: bold;
+                animation: fadeInOut 0.3s ease;
+                pointer-events: none; /* 确保不阻碍用户点击 */
+            }
+            
+            @keyframes fadeInOut {
+                0% { opacity: 0; transform: translate(-50%, -20px); }
+                100% { opacity: 1; transform: translate(-50%, 0); }
+            }
         </style>
     </head>
     <body>
@@ -423,6 +467,10 @@
             </select>
             <a href="https://github.com/timqian/bambot" target="_blank" class="github-link">GitHub</a>
         </div>
+        
+        <!-- 添加舵机限位和错误提醒框 -->
+        <div id="servoLimitAlert"></div>
+        <div id="jointLimitAlert"></div>
         
         <div class="control-panel" id="controlPanel">
             <div class="panel-header">

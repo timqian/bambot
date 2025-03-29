@@ -25,7 +25,10 @@ import URDFLoader from 'urdf-loader';
 // 导入控制工具函数
 import { setupKeyboardControls, setupControlPanel } from './robotControls.js';
 
-let scene, camera, renderer, robot, controls;
+// 声明为全局变量
+let scene, camera, renderer, controls;
+// 将robot设为全局变量，便于其他模块访问
+window.robot = null;
 let keyboardUpdate;
 
 init();
@@ -116,37 +119,40 @@ function init() {
   const modelSelect = document.getElementById('modelSelect');
   modelSelect.addEventListener('change', (e) => {
     const selectedModel = e.target.value;
-    if (robot) {
-      scene.remove(robot);
+    if (window.robot) {
+      scene.remove(window.robot);
     }
     
     // 加载选中的模型
     const manager = new LoadingManager();
     const loader = new URDFLoader(manager);
     loader.load(`/URDF/${selectedModel}.urdf`, result => {
-      robot = result;
+      window.robot = result;
     });
 
     // 等待模型加载完成
     manager.onLoad = () => {
-      robot.rotation.x = - Math.PI / 2;
-      robot.rotation.z = - Math.PI;
-      robot.traverse(c => {
+      window.robot.rotation.x = - Math.PI / 2;
+      window.robot.rotation.z = - Math.PI;
+      window.robot.traverse(c => {
         c.castShadow = true;
       });
 
-      console.log(robot.joints);
-      robot.updateMatrixWorld(true);
+      console.log(window.robot.joints);
+      // 记录关节限制信息到控制台，便于调试
+      logJointLimits(window.robot);
+      
+      window.robot.updateMatrixWorld(true);
 
       const bb = new Box3();
-      bb.setFromObject(robot);
+      bb.setFromObject(window.robot);
 
-      robot.scale.set(15, 15, 15);
-      robot.position.y -= bb.min.y;
-      scene.add(robot);
+      window.robot.scale.set(15, 15, 15);
+      window.robot.position.y -= bb.min.y;
+      scene.add(window.robot);
 
       // Initialize keyboard controls for the new model
-      keyboardUpdate = setupKeyboardControls(robot);
+      keyboardUpdate = setupKeyboardControls(window.robot);
     };
   });
 
@@ -154,35 +160,31 @@ function init() {
   const manager = new LoadingManager();
   const loader = new URDFLoader(manager);
   loader.load('/URDF/so_arm100.urdf', result => {
-    robot = result;
+    window.robot = result;
   });
 
   // wait until all the geometry has loaded to add the model to the scene
   manager.onLoad = () => {
-      robot.rotation.x = - Math.PI / 2;
-      robot.rotation.z = - Math.PI;
-      robot.traverse(c => {
+      window.robot.rotation.x = - Math.PI / 2;
+      window.robot.rotation.z = - Math.PI;
+      window.robot.traverse(c => {
           c.castShadow = true;
       });
-      // for (let i = 1; i <= 6; i++) {
-      //     robot.joints[`HP${ i }`].setJointValue(MathUtils.degToRad(30));
-      //     robot.joints[`KP${ i }`].setJointValue(MathUtils.degToRad(120));
-      //     robot.joints[`AP${ i }`].setJointValue(MathUtils.degToRad(-60));
-      // }
-
-      console.log(robot.joints);
-      // robot.joints["Joint #3"].setJointValue(3);
-      robot.updateMatrixWorld(true);
+      console.log(window.robot.joints);
+      // 记录关节限制信息到控制台，便于调试
+      logJointLimits(window.robot);
+      
+      window.robot.updateMatrixWorld(true);
 
       const bb = new Box3();
-      bb.setFromObject(robot);
+      bb.setFromObject(window.robot);
 
-      robot.scale.set(15, 15, 15);
-      robot.position.y -= bb.min.y;
-      scene.add(robot);
+      window.robot.scale.set(15, 15, 15);
+      window.robot.position.y -= bb.min.y;
+      scene.add(window.robot);
 
       // Initialize keyboard controls
-      keyboardUpdate = setupKeyboardControls(robot);
+      keyboardUpdate = setupKeyboardControls(window.robot);
   };
 
   onResize();
@@ -190,6 +192,29 @@ function init() {
 
   // Setup UI for control panel
   setupControlPanel();
+}
+
+/**
+ * 输出关节限制信息到控制台
+ * @param {Object} robot - 机器人对象
+ */
+function logJointLimits(robot) {
+  if (!robot || !robot.joints) return;
+  
+  console.log("Robot joint limits:");
+  Object.entries(robot.joints).forEach(([name, joint]) => {
+    console.log(`Joint: ${name}`);
+    console.log(`  Type: ${joint.jointType}`);
+    
+    if (joint.jointType !== 'fixed' && joint.jointType !== 'continuous') {
+      console.log(`  Limits: ${joint.limit.lower.toFixed(4)} to ${joint.limit.upper.toFixed(4)} rad`);
+      console.log(`  Current value: ${Array.isArray(joint.jointValue) ? joint.jointValue.join(', ') : joint.jointValue}`);
+    } else if (joint.jointType === 'continuous') {
+      console.log(`  No limits (continuous joint)`);
+    } else {
+      console.log(`  No limits (fixed joint)`);
+    }
+  });
 }
 
 function onResize() {
@@ -204,7 +229,9 @@ function render() {
   requestAnimationFrame(render);
   
   // Update joint positions based on keyboard input
-  if (keyboardUpdate) keyboardUpdate();
+  if (keyboardUpdate) {
+    keyboardUpdate();
+  }
   
   renderer.render(scene, camera);
 }

@@ -34,6 +34,16 @@ let servoCurrentPositions = {
   6: 0
 };
 
+// 存储真实舵机的最后一个安全位置
+let servoLastSafePositions = {
+  1: 0,
+  2: 0,
+  3: 0,
+  4: 0,
+  5: 0,
+  6: 0
+};
+
 // 舵机通信状态
 let servoCommStatus = {
   1: { status: 'idle', lastError: null },
@@ -47,6 +57,28 @@ let servoCommStatus = {
 // 命令队列系统，确保串口操作顺序执行
 let commandQueue = [];
 let isProcessingQueue = false;
+
+/**
+ * 显示警告提醒
+ * @param {string} type - 提醒类型 ('joint' 虚拟关节限位, 'servo' 真实舵机错误)
+ * @param {string} message - 显示的消息
+ * @param {number} duration - 显示持续时间(毫秒)，默认3秒
+ */
+function showAlert(type, message, duration = 3000) {
+  const alertId = type === 'joint' ? 'jointLimitAlert' : 'servoLimitAlert';
+  const alertElement = document.getElementById(alertId);
+  
+  if (alertElement) {
+    // 设置消息并显示
+    alertElement.textContent = message;
+    alertElement.style.display = 'block';
+    
+    // 设置定时器，自动隐藏
+    setTimeout(() => {
+      alertElement.style.display = 'none';
+    }, duration);
+  }
+}
 
 /**
  * 添加命令到队列并执行
@@ -93,6 +125,34 @@ async function processCommandQueue() {
   
   // 继续处理队列中的下一个命令
   await processCommandQueue();
+}
+
+/**
+ * 检查关节值是否在URDF定义的限制范围内
+ * @param {Object} joint - 关节对象
+ * @param {number} newValue - 新的关节值
+ * @returns {boolean} 如果在限制范围内则返回true
+ */
+function isJointWithinLimits(joint, newValue) {
+  // 如果关节类型是continuous或类型是fixed，则没有限制
+  if (joint.jointType === 'continuous' || joint.jointType === 'fixed') {
+    return true;
+  }
+  
+  // 如果关节设置了ignoreLimits标志，也返回true
+  if (joint.ignoreLimits) {
+    return true;
+  }
+  
+  // 检查关节值是否在上下限范围内
+  // 注意：对于多自由度关节，需要检查每个值
+  if (Array.isArray(newValue)) {
+    // 对于多自由度关节如planar、floating等
+    return true; // 这种情况较为复杂，需要根据实际情况处理
+  } else {
+    // 对于单自由度关节，如revolute或prismatic
+    return newValue >= joint.limit.lower && newValue <= joint.limit.upper;
+  }
 }
 
 /**
@@ -213,8 +273,16 @@ export function setupKeyboardControls(robot) {
             
             // 获取当前关节值
             const currentValue = robot.joints[jointName].angle;
-            // 设置新的关节值
-            robot.joints[jointName].setJointValue(currentValue + direction * stepSize);
+            // 计算新的关节值
+            const newValue = currentValue + direction * stepSize;
+            
+            // 检查是否超出关节限制
+            if (!isJointWithinLimits(robot.joints[jointName], newValue)) {
+              console.warn(`Joint ${jointName} would exceed its limits. Movement prevented.`);
+              // 显示虚拟关节限位提醒
+              showAlert('joint', `Joint ${jointName} has reached its limit!`);
+              return; // 跳过这个关节的更新
+            }
             
             // 如果连接到真实机器人，同时控制真实舵机
             if (isConnectedToRealRobot) {
@@ -224,11 +292,16 @@ export function setupKeyboardControls(robot) {
               // 大约4096步对应一圈(2π)
               const stepChange = Math.round((direction * stepSize) * (4096 / (2 * Math.PI)));
               
-              // 更新舵机位置（相对当前位置）
-              // 注意: 舵机位置是0-4095范围内的值
+              // 计算新的位置值
               let newPosition = (servoCurrentPositions[servoId] + stepChange) % 4096;
-              if (newPosition < 0) newPosition += 4096; // 处理负数情况
+              // if (newPosition < 0) newPosition += 4096; // 处理负数情况
               
+              // 重要说明：虚拟关节与真实舵机使用不同的位置和限制系统
+              // 虚拟关节使用弧度制，受URDF中定义的限制约束
+              // 真实舵机使用0-4095的步数范围，没有应用虚拟关节的限制
+              
+              // 暂存舵机位置（虚拟舵机还没更新）
+              const prevPosition = servoCurrentPositions[servoId];
               // 更新当前位置记录
               servoCurrentPositions[servoId] = newPosition;
               
@@ -237,12 +310,80 @@ export function setupKeyboardControls(robot) {
               updateServoStatusUI();
               
               // 使用队列系统控制舵机，防止并发访问
-              writeServoPosition(servoId, newPosition).catch(error => {
-                console.error(`Error controlling servo ${servoId}:`, error);
-                servoCommStatus[servoId].status = 'error';
-                servoCommStatus[servoId].lastError = error.message || 'Communication error';
-                updateServoStatusUI();
-              });
+              // 等待舵机移动结果，决定是否更新虚拟关节
+              writeServoPosition(servoId, newPosition)
+                .then(success => {
+                  // 如果舵机移动成功，更新最后成功位置并设置虚拟关节位置
+                  if (success) {
+                    // 更新虚拟关节
+                    robot.joints[jointName].setJointValue(newValue);
+                    // 更新最后安全位置
+                    servoLastSafePositions[servoId] = newPosition;
+                  } else {
+                    // 如果舵机移动失败，恢复当前位置记录
+                    servoCurrentPositions[servoId] = prevPosition;
+                    console.warn(`Failed to move servo ${servoId}. Virtual joint not updated.`);
+                    
+                    // 显示舵机错误提醒
+                    showAlert('servo', `Servo ${servoId} movement failed!`);
+                    
+                    // 尝试将舵机恢复到最后一个安全位置
+                    if (servoLastSafePositions[servoId] !== prevPosition) {
+                      console.log(`Attempting to move servo ${servoId} back to last safe position...`);
+                      writeServoPosition(servoId, servoLastSafePositions[servoId], true)
+                        .then(recoverySuccess => {
+                          if (recoverySuccess) {
+                            console.log(`Successfully moved servo ${servoId} back to safe position.`);
+                            servoCurrentPositions[servoId] = servoLastSafePositions[servoId];
+                          } else {
+                            console.error(`Failed to move servo ${servoId} back to safe position.`);
+                            // 显示舵机恢复错误提醒
+                            showAlert('servo', `Servo ${servoId} could not recover to safe position!`, 4000);
+                          }
+                        })
+                        .catch(error => {
+                          console.error(`Error moving servo ${servoId} back to safe position:`, error);
+                          // 显示舵机恢复错误提醒
+                          showAlert('servo', `Error recovering servo ${servoId}: ${error.message || 'Unknown error'}`, 4000);
+                        });
+                    }
+                  }
+                })
+                .catch(error => {
+                  // 舵机控制失败，不更新虚拟关节，恢复当前位置记录
+                  servoCurrentPositions[servoId] = prevPosition;
+                  console.error(`Error controlling servo ${servoId}:`, error);
+                  servoCommStatus[servoId].status = 'error';
+                  servoCommStatus[servoId].lastError = error.message || 'Communication error';
+                  updateServoStatusUI();
+                  
+                  // 显示舵机错误提醒
+                  showAlert('servo', `Servo ${servoId} error: ${error.message || 'Communication failed'}`);
+                  
+                  // 尝试将舵机恢复到最后一个安全位置
+                  if (servoLastSafePositions[servoId] !== prevPosition) {
+                    console.log(`Attempting to move servo ${servoId} back to last safe position...`);
+                    writeServoPosition(servoId, servoLastSafePositions[servoId], true)
+                      .then(recoverySuccess => {
+                        if (recoverySuccess) {
+                          console.log(`Successfully moved servo ${servoId} back to safe position.`);
+                          servoCurrentPositions[servoId] = servoLastSafePositions[servoId];
+                        } else {
+                          console.error(`Failed to move servo ${servoId} back to safe position.`);
+                          // 显示舵机恢复错误提醒
+                          showAlert('servo', `Servo ${servoId} could not recover to safe position!`, 4000);
+                        }
+                      })
+                      .catch(error => {
+                        console.error(`Error moving servo ${servoId} back to safe position:`, error);
+                        // 显示舵机恢复错误提醒
+                        showAlert('servo', `Error recovering servo ${servoId}: ${error.message || 'Unknown error'}`, 4000);
+                      });
+                  }
+                });
+            } else {
+              // 如果没有连接真实机器人，直接更新虚拟关节
+              robot.joints[jointName].setJointValue(newValue);
             }
           }
         }
@@ -361,29 +502,37 @@ function handleServoError(servoId, result, error, operation, isWarning = false) 
   // 构造状态前缀
   const statusPrefix = isWarning ? '' : (result !== COMM_SUCCESS ? 'Communication failed: ' : '');
   
+  let errorMessage = '';
+  
   // 检查错误码
   if (error & ERRBIT_OVERLOAD) {
-    servoCommStatus[servoId].lastError = `${statusPrefix}Overload or stuck${!isWarning ? ` (code: ${result})` : ''}`;
+    errorMessage = `${statusPrefix}Overload or stuck${!isWarning ? ` (code: ${result})` : ''}`;
+    servoCommStatus[servoId].lastError = errorMessage;
     const logFn = isWarning ? console.warn : console.error;
     logFn(`Servo ${servoId} ${operation} ${isWarning ? 'warning' : 'failed'} with overload error (${error})`);
   } else if (error & ERRBIT_OVERHEAT) {
-    servoCommStatus[servoId].lastError = `${statusPrefix}Overheat${!isWarning ? ` (code: ${result})` : ''}`;
+    errorMessage = `${statusPrefix}Overheat${!isWarning ? ` (code: ${result})` : ''}`;
+    servoCommStatus[servoId].lastError = errorMessage;
     const logFn = isWarning ? console.warn : console.error;
     logFn(`Servo ${servoId} ${operation} ${isWarning ? 'warning' : 'failed'} with overheat error (${error})`);
   } else if (error & ERRBIT_VOLTAGE) {
-    servoCommStatus[servoId].lastError = `${statusPrefix}Voltage error${!isWarning ? ` (code: ${result})` : ''}`;
+    errorMessage = `${statusPrefix}Voltage error${!isWarning ? ` (code: ${result})` : ''}`;
+    servoCommStatus[servoId].lastError = errorMessage;
     const logFn = isWarning ? console.warn : console.error;
     logFn(`Servo ${servoId} ${operation} ${isWarning ? 'warning' : 'failed'} with voltage error (${error})`);
   } else if (error & ERRBIT_ANGLE) {
-    servoCommStatus[servoId].lastError = `${statusPrefix}Angle sensor error${!isWarning ? ` (code: ${result})` : ''}`;
+    errorMessage = `${statusPrefix}Angle sensor error${!isWarning ? ` (code: ${result})` : ''}`;
+    servoCommStatus[servoId].lastError = errorMessage;
     const logFn = isWarning ? console.warn : console.error;
     logFn(`Servo ${servoId} ${operation} ${isWarning ? 'warning' : 'failed'} with angle sensor error (${error})`);
   } else if (error & ERRBIT_OVERELE) {
-    servoCommStatus[servoId].lastError = `${statusPrefix}Overcurrent${!isWarning ? ` (code: ${result})` : ''}`;
+    errorMessage = `${statusPrefix}Overcurrent${!isWarning ? ` (code: ${result})` : ''}`;
+    servoCommStatus[servoId].lastError = errorMessage;
     const logFn = isWarning ? console.warn : console.error;
     logFn(`Servo ${servoId} ${operation} ${isWarning ? 'warning' : 'failed'} with overcurrent error (${error})`);
   } else if (error !== 0 || result !== COMM_SUCCESS) {
-    servoCommStatus[servoId].lastError = `${statusPrefix}${isWarning ? 'Unknown error code' : operation + ' failed'}: ${error}${!isWarning ? ` (code: ${result})` : ''}`;
+    errorMessage = `${statusPrefix}${isWarning ? 'Unknown error code' : operation + ' failed'}: ${error}${!isWarning ? ` (code: ${result})` : ''}`;
+    servoCommStatus[servoId].lastError = errorMessage;
     const logFn = isWarning ? console.warn : console.error;
     logFn(`Servo ${servoId} ${isWarning ? 'returned unknown error code' : operation + ' failed'}: ${error}`);
   } else {
@@ -391,6 +540,11 @@ function handleServoError(servoId, result, error, operation, isWarning = false) 
     servoCommStatus[servoId].status = 'success';
     servoCommStatus[servoId].lastError = null;
     return true;
+  }
+  
+  // 在UI上显示错误提醒，严重错误才弹出提醒
+  if (!isWarning || error & (ERRBIT_OVERLOAD | ERRBIT_OVERHEAT | ERRBIT_VOLTAGE)) {
+    showAlert('servo', `Servo ${servoId}: ${errorMessage}`);
   }
   
   updateServoStatusUI();
@@ -472,6 +626,8 @@ async function toggleRealRobotConnection() {
           const currentPosition = await readServoPosition(servoId);
           if (currentPosition !== null) {
             servoCurrentPositions[servoId] = currentPosition;
+            // 同时设置为最后安全位置
+            servoLastSafePositions[servoId] = currentPosition;
             console.log(`Servo ${servoId} current position: ${currentPosition}`);
             
             // 读取成功，更新状态为success
@@ -503,6 +659,9 @@ async function toggleRealRobotConnection() {
       connectButton.textContent = 'Connect Real Robot';
       connectButton.classList.remove('connected');
       
+      // 显示连接错误提醒
+      showAlert('servo', `Failed to connect to robot: ${error.message}`, 5000);
+      
       // 连接失败，更新所有舵机状态为error
       for (let servoId = 1; servoId <= 6; servoId++) {
         servoCommStatus[servoId].status = 'error';
@@ -532,9 +691,11 @@ async function toggleRealRobotConnection() {
         await portHandler.closePort();
       }
       
-      // 重置所有舵机状态为idle
+      // 重置所有舵机状态和位置信息
       for (let servoId = 1; servoId <= 6; servoId++) {
         servoCommStatus[servoId] = { status: 'idle', lastError: null };
+        servoCurrentPositions[servoId] = 0;
+        servoLastSafePositions[servoId] = 0;
       }
       
       // 隐藏舵机状态区域
@@ -635,8 +796,9 @@ async function writeTorqueEnableRaw(servoId, enable) {
  * 写入舵机位置
  * @param {number} servoId - 舵机ID (1-6)
  * @param {number} position - 位置值 (0-4095)
+ * @param {boolean} [skipLimitCheck=false] - 是否为恢复操作，已不再检查虚拟关节限制
  */
-async function writeServoPosition(servoId, position) {
+async function writeServoPosition(servoId, position, skipLimitCheck = false) {
   if (!isConnectedToRealRobot || !portHandler || !packetHandler) return;
   
   return queueCommand(async () => {
