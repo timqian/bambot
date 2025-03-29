@@ -492,6 +492,81 @@
                 </div>
 
                 <br>
+                <!-- Servo Status Section (initially hidden) -->
+                <div class="collapsible" id="servoStatusContainer" style="display: none;">
+                    <div class="collapsible-header">
+                        <span>Servo Status</span>
+                        <span class="collapsible-icon">▼</span>
+                    </div>
+                    <div class="collapsible-content">
+                        <style>
+                            .servo-status-grid {
+                                display: grid;
+                                grid-template-columns: auto 1fr auto;
+                                gap: 5px;
+                                margin-top: 10px;
+                            }
+                            .servo-status-row {
+                                display: contents;
+                            }
+                            .servo-name {
+                                font-weight: bold;
+                            }
+                            .servo-status {
+                                text-align: center;
+                            }
+                            .servo-error {
+                                grid-column: span 3;
+                                font-size: 12px;
+                                color: #F44336;
+                                display: none;
+                                margin-bottom: 5px;
+                                background: rgba(244, 67, 54, 0.1);
+                                padding: 3px;
+                                border-radius: 3px;
+                            }
+                        </style>
+                        <div class="servo-status-grid">
+                            <div class="servo-status-row">
+                                <div class="servo-name">Joint 1:</div>
+                                <div class="servo-status-spacer"></div>
+                                <div id="servo-1-status" class="servo-status">idle</div>
+                                <div id="servo-1-error" class="servo-error"></div>
+                            </div>
+                            <div class="servo-status-row">
+                                <div class="servo-name">Joint 2:</div>
+                                <div class="servo-status-spacer"></div>
+                                <div id="servo-2-status" class="servo-status">idle</div>
+                                <div id="servo-2-error" class="servo-error"></div>
+                            </div>
+                            <div class="servo-status-row">
+                                <div class="servo-name">Joint 3:</div>
+                                <div class="servo-status-spacer"></div>
+                                <div id="servo-3-status" class="servo-status">idle</div>
+                                <div id="servo-3-error" class="servo-error"></div>
+                            </div>
+                            <div class="servo-status-row">
+                                <div class="servo-name">Joint 4:</div>
+                                <div class="servo-status-spacer"></div>
+                                <div id="servo-4-status" class="servo-status">idle</div>
+                                <div id="servo-4-error" class="servo-error"></div>
+                            </div>
+                            <div class="servo-status-row">
+                                <div class="servo-name">Joint 5:</div>
+                                <div class="servo-status-spacer"></div>
+                                <div id="servo-5-status" class="servo-status">idle</div>
+                                <div id="servo-5-error" class="servo-error"></div>
+                            </div>
+                            <div class="servo-status-row">
+                                <div class="servo-name">Joint 6:</div>
+                                <div class="servo-status-spacer"></div>
+                                <div id="servo-6-status" class="servo-status">idle</div>
+                                <div id="servo-6-error" class="servo-error"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="help-wrapper">
                     <button id="connectRealRobot" class="connect-button">Connect Real Robot</button>
                     <div class="help-icon" id="connectHelpIcon">?

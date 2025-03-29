@@ -29,6 +29,16 @@ let servoCurrentPositions = {
   6: 0
 };
 
+// 舵机通信状态
+let servoCommStatus = {
+  1: { status: 'idle', lastError: null },
+  2: { status: 'idle', lastError: null },
+  3: { status: 'idle', lastError: null },
+  4: { status: 'idle', lastError: null },
+  5: { status: 'idle', lastError: null },
+  6: { status: 'idle', lastError: null },
+};
+
 // 命令队列系统，确保串口操作顺序执行
 let commandQueue = [];
 let isProcessingQueue = false;
@@ -189,6 +199,13 @@ export function setupKeyboardControls(robot) {
           
           // 检查关节是否存在于机器人中
           if (robot.joints[jointName]) {
+            // 如果连接到真实机器人，先检查该舵机是否有错误状态
+            const servoId = jointIndex + 1;
+            if (isConnectedToRealRobot && servoCommStatus[servoId].status === 'error') {
+              console.warn(`Servo ${servoId} is in error state. Virtual movement prevented.`);
+              return; // 跳过这个关节的更新
+            }
+            
             // 获取当前关节值
             const currentValue = robot.joints[jointName].angle;
             // 设置新的关节值
@@ -197,7 +214,6 @@ export function setupKeyboardControls(robot) {
             // 如果连接到真实机器人，同时控制真实舵机
             if (isConnectedToRealRobot) {
               // 注意: 真实舵机ID从1到6，而jointIndex从0到5
-              const servoId = jointIndex + 1;
               
               // 计算舵机相对位移量 (角度变化量转换为舵机步数)
               // 大约4096步对应一圈(2π)
@@ -211,9 +227,16 @@ export function setupKeyboardControls(robot) {
               // 更新当前位置记录
               servoCurrentPositions[servoId] = newPosition;
               
+              // 更新舵机状态为待处理
+              servoCommStatus[servoId].status = 'pending';
+              updateServoStatusUI();
+              
               // 使用队列系统控制舵机，防止并发访问
               writeServoPosition(servoId, newPosition).catch(error => {
                 console.error(`Error controlling servo ${servoId}:`, error);
+                servoCommStatus[servoId].status = 'error';
+                servoCommStatus[servoId].lastError = error.message || 'Communication error';
+                updateServoStatusUI();
               });
             }
           }
@@ -315,6 +338,7 @@ function setupCollapsibleSections() {
  */
 async function toggleRealRobotConnection() {
   const connectButton = document.getElementById('connectRealRobot');
+  const servoStatusContainer = document.getElementById('servoStatusContainer');
   
   if (!connectButton) return;
   
@@ -332,6 +356,19 @@ async function toggleRealRobotConnection() {
       // Request serial port
       connectButton.disabled = true;
       connectButton.textContent = 'Connecting...';
+      
+      // 重置所有舵机状态为idle
+      for (let servoId = 1; servoId <= 6; servoId++) {
+        servoCommStatus[servoId] = { status: 'idle', lastError: null };
+      }
+      updateServoStatusUI();
+      
+      // 显示舵机状态区域
+      if (servoStatusContainer) {
+        servoStatusContainer.style.display = 'block';
+        // 确保状态面板默认是打开的
+        servoStatusContainer.classList.add('open');
+      }
       
       const success = await portHandler.requestPort();
       if (!success) {
@@ -355,6 +392,10 @@ async function toggleRealRobotConnection() {
       // Set initial parameters for servos (e.g. acceleration)
       for (let servoId = 1; servoId <= 6; servoId++) {
         try {
+          // 更新舵机状态为处理中
+          servoCommStatus[servoId].status = 'pending';
+          updateServoStatusUI();
+          
           // 按顺序执行，等待每个操作完成
           await writeServoAcceleration(servoId, 10);
           await writeServoSpeed(servoId, 300);
@@ -364,11 +405,22 @@ async function toggleRealRobotConnection() {
           if (currentPosition !== null) {
             servoCurrentPositions[servoId] = currentPosition;
             console.log(`Servo ${servoId} current position: ${currentPosition}`);
+            
+            // 读取成功，更新状态为success
+            servoCommStatus[servoId].status = 'success';
           } else {
             console.warn(`Could not read current position for Servo ${servoId}, using default 0`);
+            
+            // 读取失败，更新状态为error
+            servoCommStatus[servoId].status = 'error';
+            servoCommStatus[servoId].lastError = 'Failed to read initial position';
           }
+          updateServoStatusUI();
         } catch (err) {
           console.warn(`Error initializing servo ${servoId}:`, err);
+          servoCommStatus[servoId].status = 'error';
+          servoCommStatus[servoId].lastError = err.message || 'Initialization error';
+          updateServoStatusUI();
         }
       }
       
@@ -382,6 +434,13 @@ async function toggleRealRobotConnection() {
       alert(`Failed to connect: ${error.message}`);
       connectButton.textContent = 'Connect Real Robot';
       connectButton.classList.remove('connected');
+      
+      // 连接失败，更新所有舵机状态为error
+      for (let servoId = 1; servoId <= 6; servoId++) {
+        servoCommStatus[servoId].status = 'error';
+        servoCommStatus[servoId].lastError = error.message || 'Connection failed';
+      }
+      updateServoStatusUI();
     } finally {
       connectButton.disabled = false;
     }
@@ -405,6 +464,16 @@ async function toggleRealRobotConnection() {
         await portHandler.closePort();
       }
       
+      // 重置所有舵机状态为idle
+      for (let servoId = 1; servoId <= 6; servoId++) {
+        servoCommStatus[servoId] = { status: 'idle', lastError: null };
+      }
+      
+      // 隐藏舵机状态区域
+      if (servoStatusContainer) {
+        servoStatusContainer.style.display = 'none';
+      }
+      
       // Update UI
       connectButton.classList.remove('connected');
       connectButton.textContent = 'Connect Real Robot';
@@ -425,6 +494,13 @@ async function readServoPosition(servoId) {
   
   return queueCommand(async () => {
     try {
+      // 更新舵机状态为处理中
+      if (servoCommStatus[servoId]) {
+        servoCommStatus[servoId].status = 'pending';
+        servoCommStatus[servoId].lastError = null;
+        updateServoStatusUI();
+      }
+      
       // 确保能够读取舵机位置
       await writeTorqueEnableRaw(servoId, 1);
       
@@ -434,6 +510,21 @@ async function readServoPosition(servoId) {
         servoId,
         ADDR_SCS_PRESENT_POSITION
       );
+      
+      // 更新舵机状态
+      if (servoCommStatus[servoId]) {
+        if (result === COMM_SUCCESS) {
+          servoCommStatus[servoId].status = 'success';
+          servoCommStatus[servoId].lastError = null;
+        } else {
+          servoCommStatus[servoId].status = 'error';
+          servoCommStatus[servoId].lastError = `Read error ${error} (code: ${result})`;
+          console.error(`Failed to read position from servo ${servoId}: ${error}`);
+          updateServoStatusUI();
+          return null;
+        }
+        updateServoStatusUI();
+      }
       
       if (result !== COMM_SUCCESS) {
         console.error(`Failed to read position from servo ${servoId}: ${error}`);
@@ -453,6 +544,14 @@ async function readServoPosition(servoId) {
       return position & 0xFFFF; // 只取低16位，这是舵机位置的有效范围
     } catch (error) {
       console.error(`Error reading position from servo ${servoId}:`, error);
+      
+      // 更新舵机状态为错误
+      if (servoCommStatus[servoId]) {
+        servoCommStatus[servoId].status = 'error';
+        servoCommStatus[servoId].lastError = error.message || 'Communication error';
+        updateServoStatusUI();
+      }
+      
       return null;
     }
   });
@@ -492,6 +591,11 @@ async function writeServoPosition(servoId, position) {
   
   return queueCommand(async () => {
     try {
+      // 更新舵机状态为处理中
+      servoCommStatus[servoId].status = 'pending';
+      servoCommStatus[servoId].lastError = null;
+      updateServoStatusUI();
+      
       // 如果有必要，先确保扭矩开启
       await writeTorqueEnableRaw(servoId, 1);
       
@@ -515,11 +619,24 @@ async function writeServoPosition(servoId, position) {
         adjustedPosition & 0xFFFF // 只使用低16位
       );
       
-      if (result !== COMM_SUCCESS) {
+      // 更新舵机状态
+      if (result === COMM_SUCCESS) {
+        servoCommStatus[servoId].status = 'success';
+        servoCommStatus[servoId].lastError = null;
+      } else {
+        servoCommStatus[servoId].status = 'error';
+        servoCommStatus[servoId].lastError = `Error ${error} (code: ${result})`;
         console.error(`Failed to write position to servo ${servoId}: ${error}`);
       }
+      updateServoStatusUI();
+      
+      return result === COMM_SUCCESS;
     } catch (error) {
       console.error(`Error writing position to servo ${servoId}:`, error);
+      servoCommStatus[servoId].status = 'error';
+      servoCommStatus[servoId].lastError = error.message || 'Communication error';
+      updateServoStatusUI();
+      throw error;
     }
   });
 }
@@ -534,6 +651,11 @@ async function writeServoAcceleration(servoId, acceleration) {
   
   return queueCommand(async () => {
     try {
+      // 更新舵机状态为处理中
+      servoCommStatus[servoId].status = 'pending';
+      servoCommStatus[servoId].lastError = null;
+      updateServoStatusUI();
+      
       // 确保扭矩开启
       await writeTorqueEnableRaw(servoId, 1);
       
@@ -546,11 +668,24 @@ async function writeServoAcceleration(servoId, acceleration) {
         acceleration
       );
       
-      if (result !== COMM_SUCCESS) {
+      // 更新舵机状态
+      if (result === COMM_SUCCESS) {
+        servoCommStatus[servoId].status = 'success';
+        servoCommStatus[servoId].lastError = null;
+      } else {
+        servoCommStatus[servoId].status = 'error';
+        servoCommStatus[servoId].lastError = `Acceleration control error ${error} (code: ${result})`;
         console.error(`Failed to write acceleration to servo ${servoId}: ${error}`);
       }
+      updateServoStatusUI();
+      
+      return result === COMM_SUCCESS;
     } catch (error) {
       console.error(`Error writing acceleration to servo ${servoId}:`, error);
+      servoCommStatus[servoId].status = 'error';
+      servoCommStatus[servoId].lastError = error.message || 'Communication error';
+      updateServoStatusUI();
+      throw error;
     }
   });
 }
@@ -565,6 +700,11 @@ async function writeServoSpeed(servoId, speed) {
   
   return queueCommand(async () => {
     try {
+      // 更新舵机状态为处理中
+      servoCommStatus[servoId].status = 'pending';
+      servoCommStatus[servoId].lastError = null;
+      updateServoStatusUI();
+      
       // 确保扭矩开启
       await writeTorqueEnableRaw(servoId, 1);
       
@@ -577,11 +717,24 @@ async function writeServoSpeed(servoId, speed) {
         speed
       );
       
-      if (result !== COMM_SUCCESS) {
+      // 更新舵机状态
+      if (result === COMM_SUCCESS) {
+        servoCommStatus[servoId].status = 'success';
+        servoCommStatus[servoId].lastError = null;
+      } else {
+        servoCommStatus[servoId].status = 'error';
+        servoCommStatus[servoId].lastError = `Speed control error ${error} (code: ${result})`;
         console.error(`Failed to write speed to servo ${servoId}: ${error}`);
       }
+      updateServoStatusUI();
+      
+      return result === COMM_SUCCESS;
     } catch (error) {
       console.error(`Error writing speed to servo ${servoId}:`, error);
+      servoCommStatus[servoId].status = 'error';
+      servoCommStatus[servoId].lastError = error.message || 'Communication error';
+      updateServoStatusUI();
+      throw error;
     }
   });
 }
@@ -596,6 +749,11 @@ async function writeTorqueEnable(servoId, enable) {
   
   return queueCommand(async () => {
     try {
+      // 更新舵机状态为处理中
+      servoCommStatus[servoId].status = 'pending';
+      servoCommStatus[servoId].lastError = null;
+      updateServoStatusUI();
+      
       const [result, error] = await packetHandler.write1ByteTxRx(
         portHandler, 
         servoId, 
@@ -603,11 +761,69 @@ async function writeTorqueEnable(servoId, enable) {
         enable ? 1 : 0
       );
       
-      if (result !== COMM_SUCCESS) {
+      // 更新舵机状态
+      if (result === COMM_SUCCESS) {
+        servoCommStatus[servoId].status = 'success';
+        servoCommStatus[servoId].lastError = null;
+      } else {
+        servoCommStatus[servoId].status = 'error';
+        servoCommStatus[servoId].lastError = `Torque control error ${error} (code: ${result})`;
         console.error(`Failed to write torque enable to servo ${servoId}: ${error}`);
       }
+      updateServoStatusUI();
+      
+      return result === COMM_SUCCESS;
     } catch (error) {
       console.error(`Error writing torque enable to servo ${servoId}:`, error);
+      servoCommStatus[servoId].status = 'error';
+      servoCommStatus[servoId].lastError = error.message || 'Communication error';
+      updateServoStatusUI();
+      throw error;
     }
   });
-} 
+}
+
+/**
+ * 更新舵机通信状态UI
+ */
+function updateServoStatusUI() {
+  // 检查是否存在状态显示区域
+  const statusContainer = document.getElementById('servoStatusContainer');
+  if (!statusContainer) {
+    return;
+  }
+  
+  // 更新每个舵机的状态
+  for (let servoId = 1; servoId <= 6; servoId++) {
+    const statusElement = document.getElementById(`servo-${servoId}-status`);
+    if (statusElement) {
+      const servoStatus = servoCommStatus[servoId];
+      
+      // 根据状态设置颜色
+      let statusColor = '#888'; // 默认灰色 (idle)
+      
+      if (servoStatus.status === 'success') {
+        statusColor = '#4CAF50'; // 绿色
+      } else if (servoStatus.status === 'error') {
+        statusColor = '#F44336'; // 红色
+      } else if (servoStatus.status === 'pending') {
+        statusColor = '#2196F3'; // 蓝色
+      }
+      
+      // 更新状态文本和颜色
+      statusElement.style.color = statusColor;
+      statusElement.textContent = servoStatus.status;
+      
+      // 更新错误信息提示
+      const errorElement = document.getElementById(`servo-${servoId}-error`);
+      if (errorElement) {
+        if (servoStatus.lastError) {
+          errorElement.textContent = servoStatus.lastError;
+          errorElement.style.display = 'block';
+        } else {
+          errorElement.style.display = 'none';
+        }
+      }
+    }
+  }
+}
