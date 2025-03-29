@@ -293,7 +293,7 @@ export class PacketHandler {
     return 1.0;
   }
   
-  // 新增获取当前协议端设置的方法
+  // 获取当前协议端设置的方法
   getProtocolEnd() {
     return SCS_END;
   }
@@ -382,7 +382,7 @@ export class PacketHandler {
     let rxpacket = [];
     let result = COMM_RX_FAIL;
     
-    let waitLength = 6; // minimum length (HEADER0 HEADER1 ID LENGTH ERROR CHKSUM)
+    let waitLength = 6; // minimum length (HEADER0 HEADER1 ID LENGTH)
     
     while (true) {
       const data = await port.readPort(waitLength - rxpacket.length);
@@ -430,15 +430,6 @@ export class PacketHandler {
           
           // Verify checksum
           if (rxpacket[waitLength - 1] === checksum) {
-            // Check if it's a status packet - INST_STATUS can be 0x55 but sometimes other values 
-            // are returned due to variations in firmware. Be more tolerant here.
-            if (rxpacket[PKT_ERROR] === INST_STATUS) {
-              console.log("Received correct INST_STATUS in status packet");
-            } else {
-              console.log(`Warning: Expected INST_STATUS (0x55) but got 0x${rxpacket[PKT_ERROR].toString(16)} - continuing anyway`);
-              // Proceed anyway as this is likely a valid response packet
-            }
-            
             result = COMM_SUCCESS;
           } else {
             result = COMM_RX_CORRUPT;
@@ -458,7 +449,11 @@ export class PacketHandler {
       }
     }
     
-    console.log(`rxPacket result: ${result}, packet: ${rxpacket.map(b => '0x' + b.toString(16).padStart(2,'0')).join(' ')}`);
+    if (result !== COMM_SUCCESS) {
+      console.log(`rxPacket result: ${result}, packet: ${rxpacket.map(b => '0x' + b.toString(16).padStart(2,'0')).join(' ')}`);
+    } else {
+      console.debug(`rxPacket successful: ${rxpacket.map(b => '0x' + b.toString(16).padStart(2,'0')).join(' ')}`);
+    }
     return [rxpacket, result];
   }
   
@@ -487,6 +482,7 @@ export class PacketHandler {
         await port.clearPort();
         
         result = await this.txPacket(port, txpacket);
+        console.log(`TX attempt ${txAttempts} result: ${result}`);
         if (result !== COMM_SUCCESS) {
           console.log(`TX attempt ${txAttempts} failed with result: ${result}, ${txAttempts < maxTxAttempts ? 'retrying...' : 'giving up'}`);
           
@@ -593,64 +589,30 @@ export class PacketHandler {
 
       console.log(`Pinging servo ID ${scsId}...`);
       
-      // Use direct ping method first
+      // 发送ping指令并获取响应
       const [rxpacket, result, err] = await this.txRxPacket(port, txpacket);
       error = err;
-
-      if (result === COMM_SUCCESS && rxpacket) {
-        console.log(`Received ping response packet: ${rxpacket.map(b => '0x' + b.toString(16).padStart(2,'0')).join(' ')}`);
+      
+      // 与Python SDK保持一致：如果ping成功，尝试读取地址3的型号信息
+      if (result === COMM_SUCCESS) {
+        console.log(`Ping to servo ID ${scsId} succeeded, reading model number from address 3`);
+        // 读取地址3的型号信息（2字节）
+        const [data, dataResult, dataError] = await this.readTxRx(port, scsId, 3, 2);
         
-        // Special case: Some servo models return a short packet (6 bytes) with no model number
-        if (rxpacket.length === 6) {
-          console.log("Received short packet response from servo - trying to determine model separately");
-          
-          // Try a follow-up read for model number at address 3
-          try {
-            console.log("Reading model number from address 3...");
-            const [data, dataResult, dataError] = await this.readTxRx(port, scsId, 3, 2);
-            
-            if (dataResult === COMM_SUCCESS && data && data.length >= 2) {
-              modelNumber = SCS_MAKEWORD(data[0], data[1]);
-              console.log(`Successfully read model number: ${modelNumber}`);
-            } else {
-              // If model number read fails, use a default based on protocol type
-              console.log(`Could not read model number, using default (777) for ID ${scsId}`);
-              modelNumber = 777; // Default for most SCS servos
-            }
-          } catch (ex) {
-            console.error("Exception during model number read:", ex);
-            modelNumber = 777; // Default on exception
-          }
-        } 
-        // Normal case: Longer packet with model number parameters
-        else if (rxpacket.length >= 8) {
-          // Extract the model number from parameters in ping response
-          const param1 = rxpacket[PKT_PARAMETER0];
-          const param2 = rxpacket[PKT_PARAMETER0 + 1];
-          
-          console.log(`Model number bytes from ping: [${PKT_PARAMETER0}]=0x${param1.toString(16).padStart(2,'0')}, [${PKT_PARAMETER0+1}]=0x${param2.toString(16).padStart(2,'0')}`);
-          
-          // Determine model number based on protocol end
-          if (SCS_END === 0) {
-            modelNumber = SCS_MAKEWORD(param1, param2);
-            console.log(`Using STS/SMS byte order: ${modelNumber}`);
-          } else {
-            modelNumber = SCS_MAKEWORD(param2, param1);
-            console.log(`Using SCS byte order: ${modelNumber}`);
-          }
+        if (dataResult === COMM_SUCCESS && data && data.length >= 2) {
+          modelNumber = SCS_MAKEWORD(data[0], data[1]);
+          console.log(`Model number read: ${modelNumber}`);
         } else {
-          console.log(`Unexpected packet length ${rxpacket.length}, using default model number`);
-          modelNumber = 777; // Default for unknown cases
+          console.log(`Could not read model number: ${this.getTxRxResult(dataResult)}`);
         }
       } else {
         console.log(`Ping failed with result: ${result}, error: ${error}`);
       }
-
-      // Return the rxpacket as well for debugging
-      return [modelNumber, result, error, rxpacket];
-    } catch (ex) {
-      console.error("Exception in ping method:", ex);
-      return [0, COMM_RX_FAIL, 0, null];
+      
+      return [modelNumber, result, error];
+    } catch (error) {
+      console.error(`Exception in ping():`, error);
+      return [0, COMM_RX_FAIL, 0];
     }
   }
   
@@ -896,42 +858,30 @@ export class PacketHandler {
     }
   }
   
-  // 特殊方法用于处理响应数据包中的 Model Number 参数
+  /**
+   * 从响应包中解析舵机型号
+   * @param {Array} rxpacket - 响应数据包
+   * @returns {number} 舵机型号
+   */
   parseModelNumber(rxpacket) {
-    if (!rxpacket || rxpacket.length < PKT_PARAMETER0 + 2) {
+    if (!rxpacket || rxpacket.length < 7) {
       return 0;
     }
     
-    // 提取参数字节
+    // 检查是否有参数字段
+    if (rxpacket.length <= PKT_PARAMETER0 + 1) {
+      return 0;
+    }
+    
     const param1 = rxpacket[PKT_PARAMETER0];
     const param2 = rxpacket[PKT_PARAMETER0 + 1];
     
-    // 尝试不同的组合方式解析 Model Number
-    const options = [
-      { value: (param1 & 0xFF) | ((param2 & 0xFF) << 8), desc: "param1 | (param2 << 8)" },
-      { value: (param2 & 0xFF) | ((param1 & 0xFF) << 8), desc: "param2 | (param1 << 8)" },
-      { value: param1, desc: "param1 only" },
-      { value: param2, desc: "param2 only" },
-      { value: (param1 << 8) | param2, desc: "(param1 << 8) | param2" },
-      { value: (param2 << 8) | param1, desc: "(param2 << 8) | param1" },
-    ];
-    
-    console.log("Model number parsing options:");
-    for (const option of options) {
-      console.log(`- ${option.desc}: ${option.value} (0x${option.value.toString(16)})`);
-      
-      // 如果找到了期望的 777 值，马上返回
-      if (option.value === 777) {
-        console.log("Found exact match for expected value 777!");
-        return option.value;
-      }
-    }
-    
-    // 默认使用当前协议端规则
     if (SCS_END === 0) {
-      return options[0].value; // STS/SMS 协议
+      // STS/SMS 协议的字节顺序
+      return SCS_MAKEWORD(param1, param2);
     } else {
-      return options[1].value; // SCS 协议
+      // SCS 协议的字节顺序
+      return SCS_MAKEWORD(param2, param1);
     }
   }
   
