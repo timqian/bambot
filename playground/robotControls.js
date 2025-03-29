@@ -11,7 +11,12 @@ import {
   ADDR_SCS_GOAL_ACC,
   ADDR_SCS_GOAL_POSITION,
   ADDR_SCS_GOAL_SPEED,
-  ADDR_SCS_PRESENT_POSITION
+  ADDR_SCS_PRESENT_POSITION,
+  ERRBIT_VOLTAGE,
+  ERRBIT_ANGLE,
+  ERRBIT_OVERHEAT,
+  ERRBIT_OVERELE,
+  ERRBIT_OVERLOAD
 } from './feetech/scsservo_constants.mjs';
 
 // Servo control variables
@@ -332,6 +337,66 @@ function setupCollapsibleSections() {
   });
 }
 
+/**
+ * 通用舵机错误处理函数
+ * @param {number} servoId - 舵机ID (1-6)
+ * @param {number} result - 通信结果代码
+ * @param {number} error - 错误代码
+ * @param {string} operation - 操作类型描述（如'read'、'position'等）
+ * @param {boolean} isWarning - 是否作为警告处理（而非错误）
+ * @returns {boolean} 操作是否成功
+ */
+function handleServoError(servoId, result, error, operation, isWarning = false) {
+  if (!servoCommStatus[servoId]) return false;
+  
+  if (result === COMM_SUCCESS && !isWarning) {
+    servoCommStatus[servoId].status = 'success';
+    servoCommStatus[servoId].lastError = null;
+    return true;
+  }
+  
+  // 设置状态（警告或错误）
+  servoCommStatus[servoId].status = isWarning ? 'warning' : 'error';
+  
+  // 构造状态前缀
+  const statusPrefix = isWarning ? '' : (result !== COMM_SUCCESS ? 'Communication failed: ' : '');
+  
+  // 检查错误码
+  if (error & ERRBIT_OVERLOAD) {
+    servoCommStatus[servoId].lastError = `${statusPrefix}Overload or stuck${!isWarning ? ` (code: ${result})` : ''}`;
+    const logFn = isWarning ? console.warn : console.error;
+    logFn(`Servo ${servoId} ${operation} ${isWarning ? 'warning' : 'failed'} with overload error (${error})`);
+  } else if (error & ERRBIT_OVERHEAT) {
+    servoCommStatus[servoId].lastError = `${statusPrefix}Overheat${!isWarning ? ` (code: ${result})` : ''}`;
+    const logFn = isWarning ? console.warn : console.error;
+    logFn(`Servo ${servoId} ${operation} ${isWarning ? 'warning' : 'failed'} with overheat error (${error})`);
+  } else if (error & ERRBIT_VOLTAGE) {
+    servoCommStatus[servoId].lastError = `${statusPrefix}Voltage error${!isWarning ? ` (code: ${result})` : ''}`;
+    const logFn = isWarning ? console.warn : console.error;
+    logFn(`Servo ${servoId} ${operation} ${isWarning ? 'warning' : 'failed'} with voltage error (${error})`);
+  } else if (error & ERRBIT_ANGLE) {
+    servoCommStatus[servoId].lastError = `${statusPrefix}Angle sensor error${!isWarning ? ` (code: ${result})` : ''}`;
+    const logFn = isWarning ? console.warn : console.error;
+    logFn(`Servo ${servoId} ${operation} ${isWarning ? 'warning' : 'failed'} with angle sensor error (${error})`);
+  } else if (error & ERRBIT_OVERELE) {
+    servoCommStatus[servoId].lastError = `${statusPrefix}Overcurrent${!isWarning ? ` (code: ${result})` : ''}`;
+    const logFn = isWarning ? console.warn : console.error;
+    logFn(`Servo ${servoId} ${operation} ${isWarning ? 'warning' : 'failed'} with overcurrent error (${error})`);
+  } else if (error !== 0 || result !== COMM_SUCCESS) {
+    servoCommStatus[servoId].lastError = `${statusPrefix}${isWarning ? 'Unknown error code' : operation + ' failed'}: ${error}${!isWarning ? ` (code: ${result})` : ''}`;
+    const logFn = isWarning ? console.warn : console.error;
+    logFn(`Servo ${servoId} ${isWarning ? 'returned unknown error code' : operation + ' failed'}: ${error}`);
+  } else {
+    // 不太可能到达这里，但以防万一
+    servoCommStatus[servoId].status = 'success';
+    servoCommStatus[servoId].lastError = null;
+    return true;
+  }
+  
+  updateServoStatusUI();
+  return false;
+}
+
 // 添加真实机器人操作相关的函数
 /**
  * 切换真实机器人连接状态
@@ -395,6 +460,9 @@ async function toggleRealRobotConnection() {
           // 更新舵机状态为处理中
           servoCommStatus[servoId].status = 'pending';
           updateServoStatusUI();
+          
+          // 先启用扭矩 - 集中一次性处理
+          await writeTorqueEnable(servoId, 1);
           
           // 按顺序执行，等待每个操作完成
           await writeServoAcceleration(servoId, 10);
@@ -501,9 +569,6 @@ async function readServoPosition(servoId) {
         updateServoStatusUI();
       }
       
-      // 确保能够读取舵机位置
-      await writeTorqueEnableRaw(servoId, 1);
-      
       // 读取当前位置
       const [rawPosition, result, error] = await packetHandler.read4ByteTxRx(
         portHandler,
@@ -511,23 +576,8 @@ async function readServoPosition(servoId) {
         ADDR_SCS_PRESENT_POSITION
       );
       
-      // 更新舵机状态
-      if (servoCommStatus[servoId]) {
-        if (result === COMM_SUCCESS) {
-          servoCommStatus[servoId].status = 'success';
-          servoCommStatus[servoId].lastError = null;
-        } else {
-          servoCommStatus[servoId].status = 'error';
-          servoCommStatus[servoId].lastError = `Read error ${error} (code: ${result})`;
-          console.error(`Failed to read position from servo ${servoId}: ${error}`);
-          updateServoStatusUI();
-          return null;
-        }
-        updateServoStatusUI();
-      }
-      
-      if (result !== COMM_SUCCESS) {
-        console.error(`Failed to read position from servo ${servoId}: ${error}`);
+      // 使用通用错误处理函数
+      if (!handleServoError(servoId, result, error, 'position reading')) {
         return null;
       }
       
@@ -596,9 +646,6 @@ async function writeServoPosition(servoId, position) {
       servoCommStatus[servoId].lastError = null;
       updateServoStatusUI();
       
-      // 如果有必要，先确保扭矩开启
-      await writeTorqueEnableRaw(servoId, 1);
-      
       // Write position to servo
       position = Math.max(0, Math.min(4095, position)); // Clamp to valid range
       
@@ -609,9 +656,6 @@ async function writeServoPosition(servoId, position) {
       const highByte = (position & 0x00FF) << 8; // 取低字节并左移到高位
       const adjustedPosition = (position & 0xFFFF0000) | highByte | lowByte;
       
-      // 调试输出
-      console.log(`Writing servo ${servoId} position: ${position} (0x${position.toString(16)}) -> adjusted: ${adjustedPosition & 0xFFFF} (0x${(adjustedPosition & 0xFFFF).toString(16)})`);
-      
       const [result, error] = await packetHandler.write4ByteTxRx(
         portHandler, 
         servoId, 
@@ -619,18 +663,17 @@ async function writeServoPosition(servoId, position) {
         adjustedPosition & 0xFFFF // 只使用低16位
       );
       
-      // 更新舵机状态
-      if (result === COMM_SUCCESS) {
-        servoCommStatus[servoId].status = 'success';
-        servoCommStatus[servoId].lastError = null;
+      // 使用通用错误处理函数，通信成功但有错误时作为警告处理
+      const isSuccess = result === COMM_SUCCESS;
+      if (isSuccess && error !== 0) {
+        // 通信成功但有硬件警告
+        handleServoError(servoId, result, error, 'position control', true);
       } else {
-        servoCommStatus[servoId].status = 'error';
-        servoCommStatus[servoId].lastError = `Error ${error} (code: ${result})`;
-        console.error(`Failed to write position to servo ${servoId}: ${error}`);
+        // 通信失败或无错误
+        handleServoError(servoId, result, error, 'position control');
       }
-      updateServoStatusUI();
       
-      return result === COMM_SUCCESS;
+      return isSuccess;
     } catch (error) {
       console.error(`Error writing position to servo ${servoId}:`, error);
       servoCommStatus[servoId].status = 'error';
@@ -656,9 +699,6 @@ async function writeServoAcceleration(servoId, acceleration) {
       servoCommStatus[servoId].lastError = null;
       updateServoStatusUI();
       
-      // 确保扭矩开启
-      await writeTorqueEnableRaw(servoId, 1);
-      
       acceleration = Math.max(0, Math.min(254, acceleration)); // Clamp to valid range
       
       const [result, error] = await packetHandler.write1ByteTxRx(
@@ -668,18 +708,8 @@ async function writeServoAcceleration(servoId, acceleration) {
         acceleration
       );
       
-      // 更新舵机状态
-      if (result === COMM_SUCCESS) {
-        servoCommStatus[servoId].status = 'success';
-        servoCommStatus[servoId].lastError = null;
-      } else {
-        servoCommStatus[servoId].status = 'error';
-        servoCommStatus[servoId].lastError = `Acceleration control error ${error} (code: ${result})`;
-        console.error(`Failed to write acceleration to servo ${servoId}: ${error}`);
-      }
-      updateServoStatusUI();
-      
-      return result === COMM_SUCCESS;
+      // 使用通用错误处理函数
+      return handleServoError(servoId, result, error, 'acceleration control');
     } catch (error) {
       console.error(`Error writing acceleration to servo ${servoId}:`, error);
       servoCommStatus[servoId].status = 'error';
@@ -705,9 +735,6 @@ async function writeServoSpeed(servoId, speed) {
       servoCommStatus[servoId].lastError = null;
       updateServoStatusUI();
       
-      // 确保扭矩开启
-      await writeTorqueEnableRaw(servoId, 1);
-      
       speed = Math.max(0, Math.min(2000, speed)); // Clamp to valid range
       
       const [result, error] = await packetHandler.write2ByteTxRx(
@@ -717,18 +744,8 @@ async function writeServoSpeed(servoId, speed) {
         speed
       );
       
-      // 更新舵机状态
-      if (result === COMM_SUCCESS) {
-        servoCommStatus[servoId].status = 'success';
-        servoCommStatus[servoId].lastError = null;
-      } else {
-        servoCommStatus[servoId].status = 'error';
-        servoCommStatus[servoId].lastError = `Speed control error ${error} (code: ${result})`;
-        console.error(`Failed to write speed to servo ${servoId}: ${error}`);
-      }
-      updateServoStatusUI();
-      
-      return result === COMM_SUCCESS;
+      // 使用通用错误处理函数
+      return handleServoError(servoId, result, error, 'speed control');
     } catch (error) {
       console.error(`Error writing speed to servo ${servoId}:`, error);
       servoCommStatus[servoId].status = 'error';
@@ -761,18 +778,8 @@ async function writeTorqueEnable(servoId, enable) {
         enable ? 1 : 0
       );
       
-      // 更新舵机状态
-      if (result === COMM_SUCCESS) {
-        servoCommStatus[servoId].status = 'success';
-        servoCommStatus[servoId].lastError = null;
-      } else {
-        servoCommStatus[servoId].status = 'error';
-        servoCommStatus[servoId].lastError = `Torque control error ${error} (code: ${result})`;
-        console.error(`Failed to write torque enable to servo ${servoId}: ${error}`);
-      }
-      updateServoStatusUI();
-      
-      return result === COMM_SUCCESS;
+      // 使用通用错误处理函数
+      return handleServoError(servoId, result, error, 'torque control');
     } catch (error) {
       console.error(`Error writing torque enable to servo ${servoId}:`, error);
       servoCommStatus[servoId].status = 'error';
@@ -808,6 +815,8 @@ function updateServoStatusUI() {
         statusColor = '#F44336'; // 红色
       } else if (servoStatus.status === 'pending') {
         statusColor = '#2196F3'; // 蓝色
+      } else if (servoStatus.status === 'warning') {
+        statusColor = '#FF9800'; // 橙色（警告状态）
       }
       
       // 更新状态文本和颜色

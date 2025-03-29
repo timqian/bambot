@@ -460,6 +460,7 @@ export class PacketHandler {
   async txRxPacket(port, txpacket) {
     let rxpacket = null;
     let error = 0;
+    let result = COMM_TX_FAIL;
     
     try {
       // Check if port is already in use
@@ -471,30 +472,12 @@ export class PacketHandler {
       // TX packet
       console.log("Sending packet:", txpacket.map(b => '0x' + b.toString(16).padStart(2,'0')).join(' '));
       
-      // Try transmission up to 3 times
-      let txAttempts = 0;
-      const maxTxAttempts = 3;
-      let result = COMM_TX_FAIL;
-      
-      while (txAttempts < maxTxAttempts && result !== COMM_SUCCESS) {
-        txAttempts++;
-        // Flush before sending
-        await port.clearPort();
-        
-        result = await this.txPacket(port, txpacket);
-        console.log(`TX attempt ${txAttempts} result: ${result}`);
-        if (result !== COMM_SUCCESS) {
-          console.log(`TX attempt ${txAttempts} failed with result: ${result}, ${txAttempts < maxTxAttempts ? 'retrying...' : 'giving up'}`);
-          
-          if (txAttempts < maxTxAttempts) {
-            // Wait a bit before retrying
-            await new Promise(resolve => setTimeout(resolve, 20));
-          }
-        }
-      }
+      // Remove retry logic and just send once
+      result = await this.txPacket(port, txpacket);
+      console.log(`TX result: ${result}`);
       
       if (result !== COMM_SUCCESS) {
-        console.error("All TX attempts failed");
+        console.log(`TX failed with result: ${result}`);
         port.isUsing = false; // Important: Release the port on TX failure
         return [rxpacket, result, error];
       }
@@ -517,54 +500,41 @@ export class PacketHandler {
         console.log(`Set standard packet timeout for 10 bytes`);
       }
       
-      // RX packet
-      let retryCount = 0;
-      const maxRetries = 5; // Increase retries
+      // RX packet - no retries, just attempt once
+      console.log(`Receiving packet`);
       
-      while (retryCount < maxRetries) {
-        console.log(`Receiving packet attempt ${retryCount + 1}/${maxRetries}`);
-        
-        // Clear port before receiving to ensure clean state
-        if (retryCount > 0) {
-          await port.clearPort();
-        }
-        
-        const [rxpacketResult, resultRx] = await this.rxPacket(port);
-        rxpacket = rxpacketResult;
-        
-        // Check if received packet is valid
-        if (resultRx !== COMM_SUCCESS) {
-          console.log(`Rx failed with result: ${resultRx}, retrying...`);
-          retryCount++;
-          
-          // Wait a bit before retrying
-          await new Promise(resolve => setTimeout(resolve, 50 * retryCount)); // Increasing wait times
-          continue;
-        }
-        
-        // Verify packet structure
-        if (rxpacket.length < 6) {
-          console.log(`Received packet too short (${rxpacket.length} bytes), retrying...`);
-          retryCount++;
-          continue;
-        }
-        
-        // Verify packet ID matches the sent ID
-        if (rxpacket[PKT_ID] !== txpacket[PKT_ID]) {
-          console.log(`Received packet ID (${rxpacket[PKT_ID]}) doesn't match sent ID (${txpacket[PKT_ID]}), retrying...`);
-          retryCount++;
-          continue;
-        }
-        
-        // Packet looks valid
-        error = rxpacket[PKT_ERROR];
-        port.isUsing = false; // Release port on success
+      // Clear port before receiving to ensure clean state
+      await port.clearPort();
+      
+      const [rxpacketResult, resultRx] = await this.rxPacket(port);
+      rxpacket = rxpacketResult;
+      
+      // Check if received packet is valid
+      if (resultRx !== COMM_SUCCESS) {
+        console.log(`Rx failed with result: ${resultRx}`);
+        port.isUsing = false;
         return [rxpacket, resultRx, error];
       }
       
-      console.log("Max receive retries reached, giving up");
-      port.isUsing = false; // Make sure to release port on failure
-      return [rxpacket, COMM_RX_TIMEOUT, error];
+      // Verify packet structure
+      if (rxpacket.length < 6) {
+        console.log(`Received packet too short (${rxpacket.length} bytes)`);
+        port.isUsing = false;
+        return [rxpacket, COMM_RX_CORRUPT, error];
+      }
+      
+      // Verify packet ID matches the sent ID
+      if (rxpacket[PKT_ID] !== txpacket[PKT_ID]) {
+        console.log(`Received packet ID (${rxpacket[PKT_ID]}) doesn't match sent ID (${txpacket[PKT_ID]})`);
+        port.isUsing = false;
+        return [rxpacket, COMM_RX_CORRUPT, error];
+      }
+      
+      // Packet looks valid
+      error = rxpacket[PKT_ERROR];
+      port.isUsing = false; // Release port on success
+      return [rxpacket, resultRx, error];
+      
     } catch (err) {
       console.error("Exception in txRxPacket:", err);
       port.isUsing = false; // Release port on exception
@@ -1057,54 +1027,21 @@ export class GroupSyncRead {
         return result;
       }
 
-      // Set a small delay between TX and RX to allow devices to process
-      await new Promise(resolve => setTimeout(resolve, 20));
+      // Get a single response with a standard timeout
+      console.log(`Attempting to receive a response...`);
       
-      // Receive response with timeout handling
-      const rxStartTime = performance.now();
-      const rxTimeout = 500; // 500ms timeout for receiving responses
+      // Receive a single response
+      result = await this.rxPacket();
       
-      result = COMM_RX_TIMEOUT; // Default to timeout unless we get success
+      // Release port
+      this.port.isUsing = false;
       
-      // Try to receive packets from all servos
-      let receivedResponses = 0;
-      const totalServos = this.isAvailableServiceID.size;
-      
-      console.log(`Attempting to receive responses from ${totalServos} servos...`);
-      
-      while (performance.now() - rxStartTime < rxTimeout && receivedResponses < totalServos) {
-        const rxResult = await this.rxPacket();
-        
-        if (rxResult === COMM_SUCCESS) {
-          result = COMM_SUCCESS; // At least one success
-          receivedResponses++;
-          console.log(`Successfully received response from servo (${receivedResponses}/${totalServos})`);
-        } else if (rxResult === COMM_RX_TIMEOUT) {
-          console.log("Timeout while waiting for more responses");
-          break; // Exit on timeout
-        } else {
-          console.log(`Error receiving packet: ${rxResult}`);
-          // Continue trying other packets
-        }
-      }
-      
-      if (receivedResponses === 0) {
-        console.log("No responses received from any servo");
-        return COMM_RX_TIMEOUT;
-      } else if (receivedResponses < totalServos) {
-        console.log(`Only received ${receivedResponses}/${totalServos} responses`);
-        // Still return SUCCESS if we got at least one response
-      }
-
       return result;
     } catch (error) {
       console.error("Exception in GroupSyncRead txRxPacket:", error);
       // Make sure port is released
       this.port.isUsing = false;
       return COMM_RX_FAIL;
-    } finally {
-      // Always ensure port is released
-      this.port.isUsing = false;
     }
   }
 
