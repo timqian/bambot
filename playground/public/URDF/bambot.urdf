@@ -1,17 +1,27 @@
-<?xml version='1.0' encoding='utf-8'?>
-<robot name="so_arm100">
-  <!-- Materials -->
+<?xml version="1.0"?>
+<robot name="bambot">
+
   <material name="green">
-    <color rgba="0.2 0.4 0.1 1.0"/>
+    <color rgba="0.06 0.4 0.1 1.0"/>
   </material>
   <material name="black">
-    <color rgba="0.1 0.1 0.1 1.0"/>
+    <color rgba="0.06 0.1 0.1 1.0"/>
   </material>
 
-  <!-- Base Link -->
-  <link name="Base">
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <mesh filename="meshes/Bambot_Body.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <origin xyz="-0.5 0 0.4" rpy="0 0 0"/>
+      <material name="green"/>
+    </visual>
+  </link>
+
+  <!-- Left Arm Components -->
+  <!-- Left Arm Base -->
+  <link name="left_arm_Base">
     <inertial>
-      <!-- Approximate inertial values -->
       <mass value="1.0"/>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/>
@@ -35,8 +45,8 @@
     </collision>
   </link>
 
-  <!-- Rotation_Pitch Link -->
-  <link name="Rotation_Pitch">
+  <!-- Left Arm Rotation_Pitch -->
+  <link name="left_arm_Rotation_Pitch">
     <inertial>
       <mass value="0.119226"/>
       <origin xyz="-9.07886e-05 0.0590972 0.031089" rpy="0 0 0"/>
@@ -61,8 +71,8 @@
     </collision>
   </link>
 
-  <!-- Upper_Arm Link -->
-  <link name="Upper_Arm">
+  <!-- Left Arm Upper_Arm -->
+  <link name="left_arm_Upper_Arm">
     <inertial>
       <mass value="0.162409"/>
       <origin xyz="-1.72052e-05 0.0701802 0.00310545" rpy="0 0 0"/>
@@ -87,8 +97,8 @@
     </collision>
   </link>
 
-  <!-- Lower_Arm Link -->
-  <link name="Lower_Arm">
+  <!-- Left Arm Lower_Arm -->
+  <link name="left_arm_Lower_Arm">
     <inertial>
       <mass value="0.147968"/>
       <origin xyz="-0.00339604 0.00137796 0.0768007" rpy="0 0 0"/>
@@ -113,8 +123,8 @@
     </collision>
   </link>
 
-  <!-- Wrist_Pitch_Roll Link -->
-  <link name="Wrist_Pitch_Roll">
+  <!-- Left Arm Wrist_Pitch_Roll -->
+  <link name="left_arm_Wrist_Pitch_Roll">
     <inertial>
       <mass value="0.0661321"/>
       <origin xyz="-0.00852653 -0.0352279 -2.34622e-05" rpy="0 0 0"/>
@@ -139,8 +149,8 @@
     </collision>
   </link>
 
-  <!-- Fixed_Jaw Link -->
-  <link name="Fixed_Jaw">
+  <!-- Left Arm Fixed_Jaw -->
+  <link name="left_arm_Fixed_Jaw">
     <inertial>
       <mass value="0.0929859"/>
       <origin xyz="0.00552377 -0.0280167 0.000483583" rpy="0 0 0"/>
@@ -160,8 +170,8 @@
     </visual>
   </link>
 
-  <!-- Moving_Jaw Link -->
-  <link name="Moving_Jaw">
+  <!-- Left Arm Moving_Jaw -->
+  <link name="left_arm_Moving_Jaw">
     <inertial>
       <mass value="0.0202444"/>
       <origin xyz="-0.00161745 -0.0303473 0.000449646" rpy="0 0 0"/>
@@ -175,121 +185,280 @@
     </visual>
   </link>
 
+  <!-- Left Arm Joints -->
+  <joint name="left_arm_to_base" type="fixed">
+    <parent link="base_link"/>
+    <child link="left_arm_Base"/>
+    <origin xyz="-0.18 -0.07 0.64" rpy="0 3.14158 1.5708"/>
+  </joint>
 
-  <!-- Joints -->
-  <joint name="Rotation" type="revolute">
-    <parent link="Base"/>
-    <child link="Rotation_Pitch"/>
+  <joint name="left_arm_Rotation" type="revolute">
+    <parent link="left_arm_Base"/>
+    <child link="left_arm_Rotation_Pitch"/>
     <origin xyz="0 -0.0452 0.0165" rpy="1.57079 0 0"/>
     <axis xyz="0 1 0"/>
-    <limit lower="-2.2" upper="2.2" effort="35" velocity="1"/>
+    <limit lower="-2" upper="2" effort="35" velocity="1"/>
   </joint>
 
-  <joint name="Pitch" type="revolute">
-    <parent link="Rotation_Pitch"/>
-    <child link="Upper_Arm"/>
-    <origin xyz="0 0.1025 0.0306" rpy="-1.8 0 0"/>
+  <joint name="left_arm_Pitch" type="revolute">
+    <parent link="left_arm_Rotation_Pitch"/>
+    <child link="left_arm_Upper_Arm"/>
+    <origin xyz="0 0.1025 0.0306" rpy="-0.1 0 0"/>
     <axis xyz="1 0 0"/>
-    <limit lower="-3.14158" upper="0.2" effort="35" velocity="1"/>
+    <limit lower="0" upper="3.5" effort="35" velocity="1"/>
   </joint>
 
-  <joint name="Elbow" type="revolute">
-    <parent link="Upper_Arm"/>
-    <child link="Lower_Arm"/>
-    <origin xyz="0 0.11257 0.028" rpy="1.57079 0 0"/>
+  <joint name="left_arm_Elbow" type="revolute">
+    <parent link="left_arm_Upper_Arm"/>
+    <child link="left_arm_Lower_Arm"/>
+    <origin xyz="0 0.11257 0.028" rpy="-1.57079 0 0"/>
     <axis xyz="1 0 0"/>
-    <limit lower="0" upper="3.14158" effort="35" velocity="1"/>
+    <limit lower="-3.14158" upper="0" effort="35" velocity="1"/>
   </joint>
 
-  <joint name="Wrist_Pitch" type="revolute">
-    <parent link="Lower_Arm"/>
-    <child link="Wrist_Pitch_Roll"/>
-    <origin xyz="0 0.0052 0.1349" rpy="-1 0 0"/>
+  <joint name="left_arm_Wrist_Pitch" type="revolute">
+    <parent link="left_arm_Lower_Arm"/>
+    <child link="left_arm_Wrist_Pitch_Roll"/>
+    <origin xyz="0 0.0052 0.1349" rpy="-1.57079 0 0"/>
     <axis xyz="1 0 0"/>
-    <limit lower="-2.0" upper="1.8" effort="35" velocity="1"/>
+    <limit lower="-2.5" upper="1.2" effort="35" velocity="1"/>
   </joint>
 
-  <joint name="Wrist_Roll" type="revolute">
-    <parent link="Wrist_Pitch_Roll"/>
-    <child link="Fixed_Jaw"/>
-    <origin xyz="0 -0.0601 0" rpy="0 1.57079 0"/>
+  <joint name="left_arm_Wrist_Roll" type="revolute">
+    <parent link="left_arm_Wrist_Pitch_Roll"/>
+    <child link="left_arm_Fixed_Jaw"/>
+    <origin xyz="0 -0.0601 0" rpy="0 0 0"/>
     <axis xyz="0 1 0"/>
     <limit lower="-3.14158" upper="3.14158" effort="35" velocity="1"/>
   </joint>
 
-  <joint name="Jaw" type="revolute">
-    <parent link="Fixed_Jaw"/>
-    <child link="Moving_Jaw"/>
+  <joint name="left_arm_Jaw" type="revolute">
+    <parent link="left_arm_Fixed_Jaw"/>
+    <child link="left_arm_Moving_Jaw"/>
     <origin xyz="-0.0202 -0.0244 0" rpy="0 3.14158 0"/>
     <axis xyz="0 0 1"/>
     <limit lower="-0.2" upper="2.0" effort="35" velocity="1"/>
   </joint>
 
-  
-  <!-- Transmission -->
-  <transmission name="Rotation_trans">
-    <type>transmission_interface/SimpleTransmission</type>
-    <joint name="Rotation">
-      <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
-    </joint>
-    <actuator name="Rotation_motor">
-      <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
-      <mechanicalReduction>1</mechanicalReduction>
-    </actuator>
-  </transmission>
+  <!-- Right Arm Components -->
+  <!-- Right Arm Base -->
+  <link name="right_arm_Base">
+    <inertial>
+      <mass value="1.0"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="meshes/Base.stl"/>
+      </geometry>
+      <material name="green"/>
+    </visual>
+    <visual>
+      <geometry>
+        <mesh filename="meshes/Base_Motor.stl"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="meshes/Base.stl"/>
+      </geometry>
+    </collision>
+  </link>
 
-  <transmission name="Pitch_trans">
-    <type>transmission_interface/SimpleTransmission</type>
-    <joint name="Pitch">
-      <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
-    </joint>
-    <actuator name="Pitch_motor">
-      <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
-      <mechanicalReduction>1</mechanicalReduction>
-    </actuator>
-  </transmission>
+  <!-- Right Arm Rotation_Pitch -->
+  <link name="right_arm_Rotation_Pitch">
+    <inertial>
+      <mass value="0.119226"/>
+      <origin xyz="-9.07886e-05 0.0590972 0.031089" rpy="0 0 0"/>
+      <inertia ixx="5.94278e-05" ixy="0" ixz="0" iyy="5.89975e-05" iyz="0" izz="3.13712e-05"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="meshes/Rotation_Pitch.stl"/>
+      </geometry>
+      <material name="green"/>
+    </visual>
+    <visual>
+      <geometry>
+        <mesh filename="meshes/Rotation_Pitch_Motor.stl"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="meshes/Rotation_Pitch.stl"/>
+      </geometry>
+    </collision>
+  </link>
 
-  <transmission name="Elbow_trans">
-    <type>transmission_interface/SimpleTransmission</type>
-    <joint name="Elbow">
-      <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
-    </joint>
-    <actuator name="Elbow_motor">
-      <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
-      <mechanicalReduction>1</mechanicalReduction>
-    </actuator>
-  </transmission>
+  <!-- Right Arm Upper_Arm -->
+  <link name="right_arm_Upper_Arm">
+    <inertial>
+      <mass value="0.162409"/>
+      <origin xyz="-1.72052e-05 0.0701802 0.00310545" rpy="0 0 0"/>
+      <inertia ixx="0.000213312" ixy="0" ixz="0" iyy="0.000167164" iyz="0" izz="7.01522e-05"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="meshes/Upper_Arm.stl"/>
+      </geometry>
+      <material name="green"/>
+    </visual>
+    <visual>
+      <geometry>
+        <mesh filename="meshes/Upper_Arm_Motor.stl"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="meshes/Upper_Arm.stl"/>
+      </geometry>
+    </collision>
+  </link>
 
-  <transmission name="Wrist_Pitch_trans">
-    <type>transmission_interface/SimpleTransmission</type>
-    <joint name="Wrist_Pitch">
-      <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
-    </joint>
-    <actuator name="Wrist_Pitch_motor">
-      <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
-      <mechanicalReduction>1</mechanicalReduction>
-    </actuator>
-  </transmission>
+  <!-- Right Arm Lower_Arm -->
+  <link name="right_arm_Lower_Arm">
+    <inertial>
+      <mass value="0.147968"/>
+      <origin xyz="-0.00339604 0.00137796 0.0768007" rpy="0 0 0"/>
+      <inertia ixx="0.000138803" ixy="0" ixz="0" iyy="0.000107748" iyz="0" izz="4.84242e-05"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="meshes/Lower_Arm.stl"/>
+      </geometry>
+      <material name="green"/>
+    </visual>
+    <visual>
+      <geometry>
+        <mesh filename="meshes/Lower_Arm_Motor.stl"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="meshes/Lower_Arm.stl"/>
+      </geometry>
+    </collision>
+  </link>
 
-  <transmission name="Wrist_Roll_trans">
-    <type>transmission_interface/SimpleTransmission</type>
-    <joint name="Wrist_Roll">
-      <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
-    </joint>
-    <actuator name="Wrist_Roll_motor">
-      <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
-      <mechanicalReduction>1</mechanicalReduction>
-    </actuator>
-  </transmission>
+  <!-- Right Arm Wrist_Pitch_Roll -->
+  <link name="right_arm_Wrist_Pitch_Roll">
+    <inertial>
+      <mass value="0.0661321"/>
+      <origin xyz="-0.00852653 -0.0352279 -2.34622e-05" rpy="0 0 0"/>
+      <inertia ixx="3.45403e-05" ixy="0" ixz="0" iyy="2.39041e-05" iyz="0" izz="1.94704e-05"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="meshes/Wrist_Pitch_Roll.stl"/>
+      </geometry>
+      <material name="green"/>
+    </visual>
+    <visual>
+      <geometry>
+        <mesh filename="meshes/Wrist_Pitch_Roll_Motor.stl"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <geometry>
+        <mesh filename="meshes/Wrist_Pitch_Roll.stl"/>
+      </geometry>
+    </collision>
+  </link>
 
-  <transmission name="Jaw_trans">
-    <type>transmission_interface/SimpleTransmission</type>
-    <joint name="Jaw">
-      <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
-    </joint>
-    <actuator name="Jaw_motor">
-      <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
-      <mechanicalReduction>1</mechanicalReduction>
-    </actuator>
-  </transmission>
-</robot> 
+  <!-- Right Arm Fixed_Jaw -->
+  <link name="right_arm_Fixed_Jaw">
+    <inertial>
+      <mass value="0.0929859"/>
+      <origin xyz="0.00552377 -0.0280167 0.000483583" rpy="0 0 0"/>
+      <inertia ixx="5.03136e-05" ixy="0" ixz="0" iyy="4.64098e-05" iyz="0" izz="2.72961e-05"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="meshes/Fixed_Jaw.stl"/>
+      </geometry>
+      <material name="green"/>
+    </visual>
+    <visual>
+      <geometry>
+        <mesh filename="meshes/Fixed_Jaw_Motor.stl"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+  </link>
+
+  <!-- Right Arm Moving_Jaw -->
+  <link name="right_arm_Moving_Jaw">
+    <inertial>
+      <mass value="0.0202444"/>
+      <origin xyz="-0.00161745 -0.0303473 0.000449646" rpy="0 0 0"/>
+      <inertia ixx="1.11265e-05" ixy="0" ixz="0" iyy="8.99651e-06" iyz="0" izz="2.99548e-06"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <mesh filename="meshes/Moving_Jaw.stl"/>
+      </geometry>
+      <material name="green"/>
+    </visual>
+  </link>
+
+  <!-- Right Arm Joints -->
+  <joint name="right_arm_to_base" type="fixed">
+    <parent link="base_link"/>
+    <child link="right_arm_Base"/>
+    <origin xyz="-0.17 -0.42 0.64" rpy="0 3.14158 1.5708"/>
+  </joint>
+
+  <joint name="right_arm_Rotation" type="revolute">
+    <parent link="right_arm_Base"/>
+    <child link="right_arm_Rotation_Pitch"/>
+    <origin xyz="0 -0.0452 0.0165" rpy="1.57079 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-2" upper="2" effort="35" velocity="1"/>
+  </joint>
+
+  <joint name="right_arm_Pitch" type="revolute">
+    <parent link="right_arm_Rotation_Pitch"/>
+    <child link="right_arm_Upper_Arm"/>
+    <origin xyz="0 0.1025 0.0306" rpy="-0.1 0 0"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="0" upper="3.5" effort="35" velocity="1"/>
+  </joint>
+
+  <joint name="right_arm_Elbow" type="revolute">
+    <parent link="right_arm_Upper_Arm"/>
+    <child link="right_arm_Lower_Arm"/>
+    <origin xyz="0 0.11257 0.028" rpy="-1.57079 0 0"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="-3.14158" upper="0" effort="35" velocity="1"/>
+  </joint>
+
+  <joint name="right_arm_Wrist_Pitch" type="revolute">
+    <parent link="right_arm_Lower_Arm"/>
+    <child link="right_arm_Wrist_Pitch_Roll"/>
+    <origin xyz="0 0.0052 0.1349" rpy="-1.57079 0 0"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="-2.5" upper="1.2" effort="35" velocity="1"/>
+  </joint>
+
+  <joint name="right_arm_Wrist_Roll" type="revolute">
+    <parent link="right_arm_Wrist_Pitch_Roll"/>
+    <child link="right_arm_Fixed_Jaw"/>
+    <origin xyz="0 -0.0601 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-3.14158" upper="3.14158" effort="35" velocity="1"/>
+  </joint>
+
+  <joint name="right_arm_Jaw" type="revolute">
+    <parent link="right_arm_Fixed_Jaw"/>
+    <child link="right_arm_Moving_Jaw"/>
+    <origin xyz="-0.0202 -0.0244 0" rpy="0 3.14158 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-0.2" upper="2.0" effort="35" velocity="1"/>
+  </joint>
+</robot>
