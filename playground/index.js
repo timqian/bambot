@@ -40,7 +40,7 @@ function init() {
   scene.background = new Color(0x263238);
 
   camera = new PerspectiveCamera();
-  camera.position.set(5, 5, 5);
+  camera.position.set(13, 18, -15);
   camera.lookAt(0, 0, 0);
 
   renderer = new WebGLRenderer({ antialias: true });
