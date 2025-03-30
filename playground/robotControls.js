@@ -187,7 +187,8 @@ export function setupKeyboardControls(robot) {
   };
   
   // 获取机器人实际的关节名称
-  const jointNames = robot && robot.joints ? Object.keys(robot.joints) : [];
+  const jointNames = robot && robot.joints ? 
+    Object.keys(robot.joints).filter(name => robot.joints[name].jointType !== 'fixed') : [];
   console.log('Available joints:', jointNames);
   
   // Function to set the div as active
