@@ -464,11 +464,6 @@
     </head>
     <body>
         <div class="controls">
-            <select id="modelSelect">
-                <option value="bambot">Bambot</option>
-                <option value="so_arm100">SO-Arm100</option>
-                <!-- <option value="lekiwi">Lekiwi</option> -->
-            </select>
             <a href="https://github.com/timqian/bambot" target="_blank" class="github-link">GitHub</a>
         </div>
         
@@ -478,7 +473,13 @@
         
         <div class="control-panel" id="controlPanel">
             <div class="panel-header">
-                <h3>Play with the Robot!</h3>
+                <h3>Play with 
+                    <select id="modelSelect" style="display: inline-block; background: rgba(0, 0, 0, 0.3); color: white; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 4px; padding: 2px 8px; margin-left: 5px; vertical-align: middle; font-size: 16px; font-weight: bold; cursor: pointer;">
+                        <option value="bambot">Bambot</option>
+                        <option value="so_arm100">SO-Arm100</option>
+                        <!-- <option value="lekiwi">Lekiwi</option> -->
+                    </select>
+                </h3>
                 <span id="hideControls" style="cursor: pointer; padding: 0 5px;">×</span>
             </div>
             
