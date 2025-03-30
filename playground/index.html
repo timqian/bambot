@@ -596,11 +596,11 @@
                             <tbody>
                                 <tr>
                                     <td>Forward/Back</td>
-                                    <td colspan="2"><span class="key" data-key="ArrowUp">↑</span> <span class="direction-plus">+</span> <span class="key" data-key="ArrowDown">↓</span> <span class="direction-minus">-</span></td>
+                                    <td colspan="2"><span class="key" data-key="arrowup">↑</span> <span class="direction-plus">+</span> <span class="key" data-key="arrowdown">↓</span> <span class="direction-minus">-</span></td>
                                 </tr>
                                 <tr>
                                     <td>Turn Left/Right</td>
-                                    <td colspan="2"><span class="key" data-key="ArrowLeft">←</span> <span class="direction-plus">+</span> <span class="key" data-key="ArrowRight">→</span> <span class="direction-minus">-</span></td>
+                                    <td colspan="2"><span class="key" data-key="arrowleft">←</span> <span class="direction-plus">+</span> <span class="key" data-key="arrowright">→</span> <span class="direction-minus">-</span></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -621,23 +621,21 @@
                         </div>
                     </div>
                 </div>
-                
-                <!-- Placeholder for VR Controls (future) -->
-                <div class="collapsible" id="vrControlSection">
-                    <div class="collapsible-header">
-                        <span>VR Controls</span>
-                        <span class="collapsible-icon">▼</span>
-                    </div>
-                    <div class="collapsible-content">
-                        <button id="connectVR" class="connect-button">Connect VR</button>
-                        <div class="control-info">
-                            <p>VR controls will be available after connecting.</p>
-                            <!-- VR control details will be added here -->
+
+                <br/>
+                <div class="help-wrapper">
+                    <button id="connectRealRobot" class="connect-button">Connect Real Robot</button>
+                    <div class="help-icon" id="connectHelpIcon">?
+                        <div class="tooltip">
+                            <strong>Before connecting:</strong>
+                            <ul>
+                                <li>Select the correct device when prompted</li>
+                                <li>Ensure your physical robot's position matches the virtual robot's position</li>
+                            </ul>
                         </div>
                     </div>
                 </div>
-
-                <br>
+                <br/>
                 <!-- Servo Status Section (initially hidden) -->
                 <div class="collapsible" id="servoStatusContainer" style="display: none;">
                     <div class="collapsible-header">
@@ -780,18 +778,6 @@
                     </div>
                 </div>
 
-                <div class="help-wrapper">
-                    <button id="connectRealRobot" class="connect-button">Connect Real Robot</button>
-                    <div class="help-icon" id="connectHelpIcon">?
-                        <div class="tooltip">
-                            <strong>Before connecting:</strong>
-                            <ul>
-                                <li>Select the correct device when prompted</li>
-                                <li>Ensure your physical robot's position matches the virtual robot's position</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
 
             </div>
         </div>
