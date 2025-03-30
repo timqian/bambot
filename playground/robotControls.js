@@ -172,18 +172,33 @@ export function setupKeyboardControls(robot) {
   
   // 默认的按键-关节映射
   const keyMappings = {
-    '1': { jointIndex: 0, direction: 1 },
-    'q': { jointIndex: 0, direction: -1 },
-    '2': { jointIndex: 1, direction: 1 },
-    'w': { jointIndex: 1, direction: -1 },
-    '3': { jointIndex: 2, direction: 1 },
-    'e': { jointIndex: 2, direction: -1 },
-    '4': { jointIndex: 3, direction: 1 },
-    'r': { jointIndex: 3, direction: -1 },
-    '5': { jointIndex: 4, direction: 1 },
-    't': { jointIndex: 4, direction: -1 },
-    '6': { jointIndex: 5, direction: 1 },
-    'y': { jointIndex: 5, direction: -1 },
+    // Left arm controls (using number keys)
+    '1': { jointIndex: 0, direction: 1 },  // Left Rotation +
+    'q': { jointIndex: 0, direction: -1 }, // Left Rotation -
+    '2': { jointIndex: 1, direction: 1 },  // Left Pitch +
+    'w': { jointIndex: 1, direction: -1 }, // Left Pitch -
+    '3': { jointIndex: 2, direction: 1 },  // Left Elbow +
+    'e': { jointIndex: 2, direction: -1 }, // Left Elbow -
+    '4': { jointIndex: 3, direction: 1 },  // Left Wrist Pitch +
+    'r': { jointIndex: 3, direction: -1 }, // Left Wrist Pitch -
+    '5': { jointIndex: 4, direction: 1 }, // Left Wrist Roll +
+    't': { jointIndex: 4, direction: -1 },// Left Wrist Roll -
+    '6': { jointIndex: 5, direction: 1 }, // Left Jaw +
+    'y': { jointIndex: 5, direction: -1 },// Left Jaw -
+    
+    // Right arm controls (using ASDFGH and ZXCVBN keys)
+    'a': { jointIndex: 6, direction: 1 },  // Right Rotation +
+    'z': { jointIndex: 6, direction: -1 }, // Right Rotation -
+    's': { jointIndex: 7, direction: 1 },  // Right Pitch +
+    'x': { jointIndex: 7, direction: -1 }, // Right Pitch -
+    'd': { jointIndex: 8, direction: 1 },  // Right Elbow +
+    'c': { jointIndex: 8, direction: -1 }, // Right Elbow -
+    'f': { jointIndex: 9, direction: 1 },  // Right Wrist Pitch +
+    'v': { jointIndex: 9, direction: -1 }, // Right Wrist Pitch -
+    'g': { jointIndex: 10, direction: 1 },  // Right Wrist Roll +
+    'b': { jointIndex: 10, direction: -1 }, // Right Wrist Roll -
+    'h': { jointIndex: 11, direction: 1 },  // Right Jaw +
+    'n': { jointIndex: 11, direction: -1 }, // Right Jaw -
   };
   
   // 获取机器人实际的关节名称
@@ -961,43 +976,31 @@ async function writeTorqueEnable(servoId, enable) {
  * 更新舵机通信状态UI
  */
 function updateServoStatusUI() {
-  // 检查是否存在状态显示区域
-  const statusContainer = document.getElementById('servoStatusContainer');
-  if (!statusContainer) {
-    return;
-  }
-  
-  // 更新每个舵机的状态
-  for (let servoId = 1; servoId <= 6; servoId++) {
-    const statusElement = document.getElementById(`servo-${servoId}-status`);
+  // For each servo, update its status display
+  for (let id = 1; id <= 12; id++) {
+    const statusElement = document.getElementById(`servo-${id}-status`);
+    const errorElement = document.getElementById(`servo-${id}-error`);
+    
     if (statusElement) {
-      const servoStatus = servoCommStatus[servoId];
-      
-      // 根据状态设置颜色
-      let statusColor = '#888'; // 默认灰色 (idle)
-      
-      if (servoStatus.status === 'success') {
-        statusColor = '#4CAF50'; // 绿色
-      } else if (servoStatus.status === 'error') {
-        statusColor = '#F44336'; // 红色
-      } else if (servoStatus.status === 'pending') {
-        statusColor = '#2196F3'; // 蓝色
-      } else if (servoStatus.status === 'warning') {
-        statusColor = '#FF9800'; // 橙色（警告状态）
-      }
-      
-      // 更新状态文本和颜色
-      statusElement.style.color = statusColor;
-      statusElement.textContent = servoStatus.status;
-      
-      // 更新错误信息提示
-      const errorElement = document.getElementById(`servo-${servoId}-error`);
-      if (errorElement) {
-        if (servoStatus.lastError) {
-          errorElement.textContent = servoStatus.lastError;
-          errorElement.style.display = 'block';
-        } else {
-          errorElement.style.display = 'none';
+      // Map servo IDs 1-6 to left arm and 7-12 to right arm 
+      // Display appropriate status
+      if (servoCommStatus[id]) {
+        statusElement.textContent = servoCommStatus[id].status;
+        
+        // Add visual styling based on status
+        statusElement.className = 'servo-status';
+        if (servoCommStatus[id].status === 'error') {
+          statusElement.classList.add('warning');
+        }
+        
+        // Handle error message display
+        if (errorElement) {
+          if (servoCommStatus[id].lastError) {
+            errorElement.textContent = servoCommStatus[id].lastError;
+            errorElement.style.display = 'block';
+          } else {
+            errorElement.style.display = 'none';
+          }
         }
       }
     }
