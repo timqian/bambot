@@ -748,11 +748,11 @@ export function setupJoyconControls(robot) {
   // Visualize function to handle joycon inputs
   function visualize(joyConSide, buttons, orientation, joystick) {
     if (joyConSide === 'left') {
-      rootStyle.setProperty('--left-alpha', `${orientation.alpha}deg`);
+      // rootStyle.setProperty('--left-alpha', `${orientation.alpha}deg`);
       rootStyle.setProperty('--left-beta', `${orientation.beta}deg`);
       rootStyle.setProperty('--left-gamma', `${orientation.gamma}deg`);
     } else if (joyConSide === 'right') {
-      rootStyle.setProperty('--right-alpha', `${orientation.alpha}deg`);
+      // rootStyle.setProperty('--right-alpha', `${orientation.alpha}deg`);
       rootStyle.setProperty('--right-beta', `${orientation.beta}deg`);
       rootStyle.setProperty('--right-gamma', `${orientation.gamma}deg`);
     }
@@ -1453,7 +1453,13 @@ function updateServoStatusUI() {
       // Map servo IDs 1-6 to left arm and 7-12 to right arm 
       // Display appropriate status
       if (servoCommStatus[id]) {
-        statusElement.textContent = servoCommStatus[id].status;
+        // Show position value alongside status if connected
+        if (isConnectedToRealRobot && servoCommStatus[id].status !== 'error') {
+          const position = servoCurrentPositions[id] || 0;
+          statusElement.textContent = `${servoCommStatus[id].status} (pos: ${position})`;
+        } else {
+          statusElement.textContent = servoCommStatus[id].status;
+        }
         
         // Add visual styling based on status
         statusElement.className = 'servo-status';
