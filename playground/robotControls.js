@@ -186,6 +186,14 @@ function isJointWithinLimits(joint, newValue) {
   }
 }
 
+// Add configuration object for orientation thresholds
+const joyconConfig = {
+  orientationThresholds: {
+    pitch: 30,  // Beta angle threshold (up/down)
+    roll: 30    // Gamma angle threshold (left/right)
+  }
+};
+
 /**
  * Core robot control functions that can be used by any input method (keyboard, joycon, etc.)
  */
@@ -297,35 +305,6 @@ export const robotControl = {
   },
 
   /**
-   * Control a servo with specific speed or magnitude (for analog inputs)
-   * @param {Object} robot - Robot object
-   * @param {number} jointIndex - Joint index
-   * @param {number} direction - Direction (-1 or 1)
-   * @param {number} magnitude - Magnitude (0.0-1.0) to scale the movement
-   * @returns {Promise<boolean>} Whether operation was successful
-   */
-  controlJointWithMagnitude: async function(robot, jointIndex, direction, magnitude) {
-    // Get joint name from index
-    const jointName = this.getJointNameByIndex(robot, jointIndex);
-    if (!jointName) return false;
-    
-    // Store original step size
-    const originalStepSize = stepSize;
-    
-    try {
-      // Scale stepSize by magnitude temporarily
-      const scaledStepSize = originalStepSize * magnitude;
-      stepSize = scaledStepSize;
-      
-      // Use the refactored controlJoint function
-      return await this.controlJoint(robot, jointIndex, direction);
-    } finally {
-      // Restore original stepSize regardless of success/failure
-      stepSize = originalStepSize;
-    }
-  },
-
-  /**
    * Stop wheel servo motion
    * @param {number} servoId - Servo ID (13-15)
    * @returns {Promise<boolean>} Whether operation was successful
@@ -397,62 +376,6 @@ export const robotControl = {
     }
   },
 
-  /**
-   * Set joint position using a normalized value (0-1) between its limits
-   * @param {Object} robot - Robot object
-   * @param {number} jointIndex - Joint index
-   * @param {number} normalizedPosition - Position value between 0 and 1
-   * @param {boolean} [invertDirection=false] - Whether to invert the direction (0 becomes 1, 1 becomes 0)
-   * @returns {Promise<boolean>} Whether operation was successful
-   */
-  setJointPositionNormalized: async function(robot, jointIndex, normalizedPosition, invertDirection = false) {
-    // Get joint name from index
-    const jointName = this.getJointNameByIndex(robot, jointIndex);
-    if (!jointName) {
-      console.warn(`Invalid joint index: ${jointIndex}`);
-      return false;
-    }
-
-    // Invert the normalized position if requested
-    if (invertDirection) {
-      normalizedPosition = 1 - normalizedPosition;
-    }
-
-    // Get joint and its limits
-    const joint = robot.joints[jointName];
-    const jointMin = joint.limit.lower;
-    const jointMax = joint.limit.upper;
-    
-    // Calculate the actual joint position
-    const position = jointMin + (normalizedPosition * (jointMax - jointMin));
-    
-    // Clamp the position to joint limits
-    const clampedPosition = Math.max(jointMin, Math.min(jointMax, position));
-    
-    // Get servo ID
-    const servoId = getServoIdFromJointIndex(jointIndex);
-    
-    // Convert joint position to servo position (0-4095)
-    const servoPosition = Math.round((clampedPosition / (2 * Math.PI)) * 4096);
-    
-    // Update servo position if connected to real robot
-    if (isConnectedToRealRobot) {
-      try {
-        await writeServoPosition(servoId, servoPosition);
-      } catch (error) {
-        console.error(`Error setting servo ${servoId} position:`, error);
-        return false;
-      }
-    }
-    
-    // Update virtual joint
-    joint.setJointValue(clampedPosition);
-    
-    // Update robot's matrix world
-    this.updateRobot(robot);
-    
-    return true;
-  }
 };
 
 // Get initial stepSize from the HTML slider
@@ -712,13 +635,16 @@ export function setupJoyconControls(robot) {
     rightStickUp: false,
     rightStickDown: false,
     
-    // 扁平化的方向数据
-    leftOrientationAlpha: 0,
-    leftOrientationBeta: 0,
-    leftOrientationGamma: 0,
-    rightOrientationAlpha: 0,
-    rightOrientationBeta: 0,
-    rightOrientationGamma: 0,
+    // Replace old orientation flags with better names
+    leftPitchUp: false,    // was leftOrientationBetaGreaterThan45
+    leftPitchDown: false,  // was leftOrientationBetaLessThanMinus45
+    leftRollRight: false,  // was leftOrientationGammaGreaterThan45
+    leftRollLeft: false,   // was leftOrientationGammaLessThanMinus45
+    
+    rightPitchUp: false,   // was rightOrientationBetaGreaterThan45
+    rightPitchDown: false, // was rightOrientationBetaLessThanMinus45
+    rightRollRight: false, // was rightOrientationGammaGreaterThan45
+    rightRollLeft: false,  // was rightOrientationGammaLessThanMinus45
     
     // 扁平化摇杆数据 - 直接作为按钮状态
     leftStickRight: false,
@@ -744,6 +670,10 @@ export function setupJoyconControls(robot) {
     'b': [{ jointIndex: 1, direction: -1 }],
     'r': [{jointIndex: 5, direction: 1}],
     'zr': [{jointIndex: 5, direction: -1}],
+    'rightPitchUp': [{jointIndex: 3, direction: -1}],
+    'rightPitchDown': [{jointIndex: 3, direction: 1}],
+    'rightRollRight': [{jointIndex: 4, direction: -1}],
+    'rightRollLeft': [{jointIndex: 4, direction: 1}],
 
 
     'leftStickRight': [{ jointIndex: 6, direction: 1 }], // Left shoulder right
@@ -754,6 +684,10 @@ export function setupJoyconControls(robot) {
     'down': [{ jointIndex: 7, direction: -1 }],
     'l': [{jointIndex: 11, direction: 1}],
     'zl': [{jointIndex: 11, direction: -1}],
+    'leftPitchUp': [{jointIndex: 9, direction: -1}],
+    'leftPitchDown': [{jointIndex: 9, direction: 1}],
+    'leftRollRight': [{jointIndex: 10, direction: -1}],
+    'leftRollLeft': [{jointIndex: 10, direction: 1}],
 
 
     'plus': [
@@ -893,10 +827,11 @@ export function setupJoyconControls(robot) {
 
         // update joyconState with flattened structure
         if (joyCon instanceof JoyConLeft) {
-          // Update orientation and analog stick
-          joyconState.leftOrientationAlpha = orientation.alpha;
-          joyconState.leftOrientationBeta = orientation.beta;
-          joyconState.leftOrientationGamma = orientation.gamma;
+          // Update orientation checks with configurable thresholds
+          joyconState.leftPitchUp = orientation.beta > joyconConfig.orientationThresholds.pitch;
+          joyconState.leftPitchDown = orientation.beta < -joyconConfig.orientationThresholds.pitch;
+          joyconState.leftRollRight = orientation.gamma > joyconConfig.orientationThresholds.roll;
+          joyconState.leftRollLeft = orientation.gamma < -joyconConfig.orientationThresholds.roll;
           joyconState.leftConnected = true;
           
           // Update buttons from left Joy-Con
@@ -915,10 +850,11 @@ export function setupJoyconControls(robot) {
           
           visualize('left', buttons, orientation, analogStickLeft);
         } else if (joyCon instanceof JoyConRight) {
-          // Update orientation and analog stick
-          joyconState.rightOrientationAlpha = orientation.alpha;
-          joyconState.rightOrientationBeta = orientation.beta;
-          joyconState.rightOrientationGamma = orientation.gamma;
+          // Update orientation checks with configurable thresholds
+          joyconState.rightPitchUp = orientation.beta > joyconConfig.orientationThresholds.pitch;
+          joyconState.rightPitchDown = orientation.beta < -joyconConfig.orientationThresholds.pitch;
+          joyconState.rightRollRight = orientation.gamma > joyconConfig.orientationThresholds.roll;
+          joyconState.rightRollLeft = orientation.gamma < -joyconConfig.orientationThresholds.roll;
           joyconState.rightConnected = true;
           // Update buttons from right Joy-Con
           joyconState.a = buttons.a;
@@ -955,36 +891,6 @@ export function setupJoyconControls(robot) {
         });
       }
     });
-
-    // Helper function to map orientation to joint position
-    const mapOrientationToJoint = (angle, jointIndex, invertDirection = false) => {
-      // Clamp angle to -90 to 90 degrees range
-      const clampedAngle = Math.max(-90, Math.min(90, angle));
-      
-      // Calculate normalized position (0 to 1)
-      const normalizedPosition = (clampedAngle + 90) / 180;
-      
-      // Set joint position with optional direction inversion
-      robotControl.setJointPositionNormalized(robot, jointIndex, normalizedPosition, invertDirection);
-    };
-
-    // Add orientation controls for right Joy-Con
-    if (joyconState.rightConnected) {
-      // Beta controls joint 3 (index 2)
-      mapOrientationToJoint(joyconState.rightOrientationBeta, 3, true);
-      
-      // Gamma controls joint 4 (index 3)
-      mapOrientationToJoint(joyconState.rightOrientationGamma, 4, true);
-    }
-    
-    // Add orientation controls for left Joy-Con
-    if (joyconState.leftConnected) {
-      // Beta controls joint 9 (index 8)
-      mapOrientationToJoint(joyconState.leftOrientationBeta, 9, true);
-      
-      // Gamma controls joint 10 (index 9)
-      mapOrientationToJoint(joyconState.leftOrientationGamma, 10, true);
-    }
     
     // Update robot's matrix world
     robotControl.updateRobot(robot);
