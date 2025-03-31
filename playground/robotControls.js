@@ -787,16 +787,26 @@ export function setupJoyconControls(robot) {
   const rightJoycon = document.getElementById('joycon-r');
   // Function to update UI based on connected joycons
   function updateJoyconDisplay() {
+    const joyconHelpIcon = document.getElementById('joyconHelpIcon');
+    let anyJoyconConnected = false;
+    
     for (const joyCon of connectedJoyCons.values()) {
       if (joyCon instanceof JoyConLeft) {
         // Hide button and show joycon figure
         connectLeftButton.style.display = 'none';
         if (leftJoycon) leftJoycon.style.display = 'inline-block';
+        anyJoyconConnected = true;
       } else if (joyCon instanceof JoyConRight) {
         // Hide button and show joycon figure
         connectRightButton.style.display = 'none';
         if (rightJoycon) rightJoycon.style.display = 'inline-block';
+        anyJoyconConnected = true;
       }
+    }
+    
+    // Show help icon when any Joycon is connected
+    if (joyconHelpIcon) {
+      joyconHelpIcon.style.display = anyJoyconConnected ? 'inline-flex' : 'none';
     }
   }
 

@@ -309,6 +309,7 @@
                 display: flex;
                 flex-direction: column;
                 align-items: center;
+                position: relative;
                 /* margin-bottom: 15px; */
             }
             
@@ -336,14 +337,19 @@
                 padding: 9px;
                 cursor: pointer;
                 display: flex;
-                justify-content: space-between;
+                justify-content: flex-start;
                 align-items: center;
                 font-weight: bold;
                 font-size: 14px;
+                gap: 8px;
             }
             
             .collapsible-header:hover {
                 background: rgba(255, 255, 255, 0.15);
+            }
+            
+            .collapsible-header .collapsible-icon {
+                margin-left: auto;
             }
             
             .collapsible-content {
@@ -679,6 +685,19 @@
                                 <strong class="back-buttons" id="r"></strong>
                               </div>
                             </figure>
+                            
+                            <!-- Move help icon here with absolute positioning -->
+                            <div class="help-icon" id="joyconHelpIcon" style="display: none; position: absolute; bottom: 10px; right: 10px; z-index: 1000; overflow: visible;">?
+                                <div class="tooltip" style="bottom: 30px; left:auto; right: 0; top: auto; width: 220px;">
+                                    <strong>How to use Joycon:</strong>
+                                    <ul>
+                                        <li>Left stick: Move left arm</li>
+                                        <li>Right stick: Move right arm</li>
+                                        <li>L/R buttons: Control grippers</li>
+                                        <li>Directional buttons: Movement control</li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
