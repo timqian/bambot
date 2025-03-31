@@ -6,6 +6,7 @@
         
         <title>Simple URDF Loading Example</title>
 
+        <link rel="stylesheet" href="joycon.css" />
         <style>
             html, body {
                 box-sizing: border-box;
@@ -291,6 +292,37 @@
                 background: #3d8b40;
             }
             
+            /* Joycon figure positioning */
+            figure {
+                position: relative !important;
+                transform: none !important;
+                top: auto !important;
+                left: auto !important;
+                z-index: 900;
+                /* margin: 20px auto !important; */
+                height: auto !important;
+                text-align: center;
+            }
+            
+            /* Joycon container for positioning the figures */
+            .joycon-container {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                /* margin-bottom: 15px; */
+            }
+            
+            .joycon-connect-area {
+                display: flex;
+                gap: 10px;
+                width: 100%;
+            }
+            
+            /* Show joycon graphics when connected */
+            .connect-button.connected ~ figure {
+                display: block;
+            }
+            
             /* Collapsible section styles */
             .collapsible {
                 background: rgba(255, 255, 255, 0.1);
@@ -540,7 +572,7 @@
             <!-- Control methods section with collapsible panels -->
             <div class="control-methods">
                 <!-- Keyboard Controls -->
-                <div class="collapsible open" id="keyboardControlSection">
+                <div class="collapsible" id="keyboardControlSection">
                     <div class="collapsible-header">
                         <span>Keyboard Controls</span>
                         <span class="collapsible-icon">▼</span>
@@ -608,16 +640,45 @@
                 </div>
                 
                 <!-- Placeholder for Joycon Controls (future) -->
-                <div class="collapsible" id="joyconControlSection">
+                <div class="collapsible open" id="joyconControlSection">
                     <div class="collapsible-header">
                         <span>Joycon Controls</span>
                         <span class="collapsible-icon">▼</span>
                     </div>
                     <div class="collapsible-content">
-                        <button id="connectJoycon" class="connect-button">Connect Joycon</button>
-                        <div class="control-info">
-                            <p>Joycon controls will be available after connecting.</p>
-                            <!-- Joycon control details will be added here -->
+                        <div class="joycon-container">
+                            <div class="joycon-connect-area">
+                                <button id="connectLeftJoycon" class="connect-button" style="background: #00C3E3; white-space: nowrap;">Connect Left Joycon</button>
+                                <button id="connectRightJoycon" class="connect-button" style="background: #FF4554; white-space: nowrap;">Connect Right Joycon</button>
+                            </div>
+                            
+                            <!-- Joycon figures are initially hidden and will replace buttons when connected -->
+                            <figure style="display: block; margin: 0;">
+                              <div id="joycon-l" class="joycon productId8198" style="display: none;">
+                                <div id="joystick-left" class="joystick"></div>
+                                <div class="buttons">
+                                  <button id="up"></button>
+                                  <button id="left"></button>
+                                  <button id="down"></button>
+                                  <button id="right"></button>
+                                </div>
+                                <span id="minus"></span>
+                                <i id="capture"></i>
+                                <strong class="back-buttons" id="l"></strong>
+                              </div>
+                              <div id="joycon-r" class="joycon productId8199" style="display: none;">
+                                <div id="joystick-right" class="joystick"></div>
+                                <div class="buttons">
+                                  <button id="x"></button>
+                                  <button id="y"></button>
+                                  <button id="b"></button>
+                                  <button id="a"></button>
+                                </div>
+                                <span id="plus"></span>
+                                <i id="home"></i>
+                                <strong class="back-buttons" id="r"></strong>
+                              </div>
+                            </figure>
                         </div>
                     </div>
                 </div>

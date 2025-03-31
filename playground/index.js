@@ -23,14 +23,21 @@ import {
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import URDFLoader from 'urdf-loader';
 // 导入控制工具函数
-import { setupKeyboardControls, setupControlPanel } from './robotControls.js';
+import { setupKeyboardControls, setupJoyconControls, setupControlPanel } from './robotControls.js';
+import {
+  connectJoyCon,
+  connectedJoyCons,
+  JoyConLeft,
+  JoyConRight,
+  GeneralController,
+} from 'joy-con-webhid';
 
 // 声明为全局变量
 let scene, camera, renderer, controls;
 // 将robot设为全局变量，便于其他模块访问
 window.robot = null;
 let keyboardUpdate;
-
+let joyconUpdate;
 init();
 render();
 
@@ -146,6 +153,8 @@ function init() {
 
       // Initialize keyboard controls
       keyboardUpdate = setupKeyboardControls(window.robot);
+      // Initialize joycon controls
+      joyconUpdate = setupJoyconControls(window.robot);
     };
   }
 
@@ -196,6 +205,9 @@ function render() {
   // Update joint positions based on keyboard input
   if (keyboardUpdate) {
     keyboardUpdate();
+  }
+  if (joyconUpdate) {
+    joyconUpdate();
   }
   
   renderer.render(scene, camera);

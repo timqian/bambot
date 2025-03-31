@@ -18,6 +18,14 @@ import {
   ERRBIT_OVERELE,
   ERRBIT_OVERLOAD
 } from './feetech/scsservo_constants.mjs';
+// Import Joy-Con WebHID library
+import {
+  connectJoyCon,
+  connectedJoyCons,
+  JoyConLeft,
+  JoyConRight,
+  GeneralController,
+} from 'joy-con-webhid';
 
 // Servo control variables
 let portHandler = null;
@@ -179,6 +187,280 @@ function isJointWithinLimits(joint, newValue) {
 }
 
 /**
+ * Core robot control functions that can be used by any input method (keyboard, joycon, etc.)
+ */
+export const robotControl = {
+  /**
+   * Control a single servo joint movement
+   * @param {Object} robot - Robot object
+   * @param {number} jointIndex - Joint index
+   * @param {number} direction - Movement direction (-1 or 1)
+   * @returns {Promise<boolean>} Whether operation was successful
+   */
+  controlJoint: async function(robot, jointIndex, direction) {
+    // Get joint name from index
+    const jointName = this.getJointNameByIndex(robot, jointIndex);
+    if (!jointName) {
+      console.warn(`Invalid joint index: ${jointIndex}`);
+      return false;
+    }
+
+    // Get current joint value
+    const currentValue = robot.joints[jointName].angle;
+    
+    // Calculate new joint value
+    const newValue = currentValue + direction * stepSize;
+    
+    // Get servo ID (typically jointIndex + 1, but could be different)
+    const servoId = getServoIdFromJointIndex(jointIndex);
+    
+    // Check if exceeding joint limits
+    if (!isJointWithinLimits(robot.joints[jointName], newValue)) {
+      console.warn(`Joint ${jointName} would exceed its limits. Movement prevented.`);
+      // Show virtual joint limit alert
+      showAlert('joint', `Joint ${jointName} has reached its limit!`);
+      return false;
+    }
+    
+    // If not connected to real robot, just update virtual joint
+    if (!isConnectedToRealRobot) {
+      robot.joints[jointName].setJointValue(newValue);
+      return true;
+    }
+    
+    // Handle real robot control
+    const isWheelServo = servoId >= 13 && servoId <= 15;
+    
+    if (isWheelServo) {
+      // Wheel servos use speed control
+      const speedFactor = 500; // Base speed value
+      const wheelSpeed = direction * speedFactor;
+      
+      console.log(`Setting wheel servo ${servoId} speed to ${wheelSpeed}`);
+      
+      try {
+        await writeWheelSpeed(servoId, wheelSpeed);
+        robot.joints[jointName].setJointValue(newValue);
+        servoCommStatus[servoId].status = 'success';
+        updateServoStatusUI();
+        return true;
+      } catch (error) {
+        console.error(`Error controlling wheel servo ${servoId}:`, error);
+        servoCommStatus[servoId].status = 'error';
+        servoCommStatus[servoId].lastError = error.message || 'Communication error';
+        updateServoStatusUI();
+        showAlert('servo', `Wheel servo ${servoId} error: ${error.message || 'Communication failed'}`);
+        return false;
+      }
+    } else {
+      // Non-wheel servos use position control
+      // Calculate servo position change in servo steps
+      const stepChange = Math.round((direction * stepSize) * (4096 / (2 * Math.PI)));
+      
+      // Calculate new position value
+      let newPosition = (servoCurrentPositions[servoId] + stepChange) % 4096;
+      
+      // Store current position (virtual servo not updated yet)
+      const prevPosition = servoCurrentPositions[servoId];
+      // Update current position record
+      servoCurrentPositions[servoId] = newPosition;
+      
+      // Update servo status to pending
+      servoCommStatus[servoId].status = 'pending';
+      updateServoStatusUI();
+      
+      try {
+        // Use queue system to control servo, prevent concurrent access
+        await writeServoPosition(servoId, newPosition);
+        // Update virtual joint
+        robot.joints[jointName].setJointValue(newValue);
+        // Update last safe position
+        servoLastSafePositions[servoId] = newPosition;
+        
+        // Update servo status to success
+        servoCommStatus[servoId].status = 'success';
+        updateServoStatusUI();
+        return true;
+      } catch (error) {
+        // Servo control failed, don't update virtual joint, restore current position
+        servoCurrentPositions[servoId] = prevPosition;
+        console.error(`Error controlling servo ${servoId}:`, error);
+        servoCommStatus[servoId].status = 'error';
+        servoCommStatus[servoId].lastError = error.message || 'Communication error';
+        updateServoStatusUI();
+        
+        // Show servo error alert
+        showAlert('servo', `Servo ${servoId} error: ${error.message || 'Communication failed'}`);
+        return false;
+      }
+    }
+  },
+
+  /**
+   * Control a servo with specific speed or magnitude (for analog inputs)
+   * @param {Object} robot - Robot object
+   * @param {number} jointIndex - Joint index
+   * @param {number} direction - Direction (-1 or 1)
+   * @param {number} magnitude - Magnitude (0.0-1.0) to scale the movement
+   * @returns {Promise<boolean>} Whether operation was successful
+   */
+  controlJointWithMagnitude: async function(robot, jointIndex, direction, magnitude) {
+    // Get joint name from index
+    const jointName = this.getJointNameByIndex(robot, jointIndex);
+    if (!jointName) return false;
+    
+    // Store original step size
+    const originalStepSize = stepSize;
+    
+    try {
+      // Scale stepSize by magnitude temporarily
+      const scaledStepSize = originalStepSize * magnitude;
+      stepSize = scaledStepSize;
+      
+      // Use the refactored controlJoint function
+      return await this.controlJoint(robot, jointIndex, direction);
+    } finally {
+      // Restore original stepSize regardless of success/failure
+      stepSize = originalStepSize;
+    }
+  },
+
+  /**
+   * Stop wheel servo motion
+   * @param {number} servoId - Servo ID (13-15)
+   * @returns {Promise<boolean>} Whether operation was successful
+   */
+  stopWheel: async function(servoId) {
+    if (!isConnectedToRealRobot || servoId < 13 || servoId > 15) return false;
+    
+    console.log(`Stopping wheel servo ${servoId}`);
+    try {
+      await writeWheelSpeed(servoId, 0);
+      console.log(`Wheel servo ${servoId} stopped`);
+      wheelActive[servoId] = false;
+      return true;
+    } catch (error) {
+      console.error(`Error stopping wheel servo ${servoId}:`, error);
+      return false;
+    }
+  },
+  
+  /**
+   * Stop all wheel servo motion
+   * @returns {Promise<boolean>} Whether all operations were successful
+   */
+  stopAllWheels: async function() {
+    if (!isConnectedToRealRobot) return false;
+    
+    console.log('Stopping all wheel servos');
+    const wheelIds = [13, 14, 15];
+    
+    try {
+      // Stop all wheels in parallel
+      await Promise.all(wheelIds.map(id => this.stopWheel(id)));
+      return true;
+    } catch (error) {
+      console.error('Error stopping all wheel servos:', error);
+      return false;
+    }
+  },
+  
+  /**
+   * Get joint name from index
+   * @param {Object} robot - Robot object
+   * @param {number} jointIndex - Joint index
+   * @returns {string|null} - Joint name or null if not found
+   */
+  getJointNameByIndex: function(robot, jointIndex) {
+    const jointNames = robot && robot.joints ? 
+      Object.keys(robot.joints).filter(name => robot.joints[name].jointType !== 'fixed') : [];
+    
+    return jointIndex < jointNames.length ? jointNames[jointIndex] : null;
+  },
+  
+  /**
+   * Check if servo has an error
+   * @param {number} servoId - Servo ID
+   * @returns {boolean} - Whether servo has an error
+   */
+  isServoInErrorState: function(servoId) {
+    return servoCommStatus[servoId] && servoCommStatus[servoId].status === 'error';
+  },
+  
+  /**
+   * Update robot's matrix world
+   * @param {Object} robot - Robot object
+   */
+  updateRobot: function(robot) {
+    if (robot && robot.updateMatrixWorld) {
+      robot.updateMatrixWorld(true);
+    }
+  },
+
+  /**
+   * Set joint position using a normalized value (0-1) between its limits
+   * @param {Object} robot - Robot object
+   * @param {number} jointIndex - Joint index
+   * @param {number} normalizedPosition - Position value between 0 and 1
+   * @param {boolean} [invertDirection=false] - Whether to invert the direction (0 becomes 1, 1 becomes 0)
+   * @returns {Promise<boolean>} Whether operation was successful
+   */
+  setJointPositionNormalized: async function(robot, jointIndex, normalizedPosition, invertDirection = false) {
+    // Get joint name from index
+    const jointName = this.getJointNameByIndex(robot, jointIndex);
+    if (!jointName) {
+      console.warn(`Invalid joint index: ${jointIndex}`);
+      return false;
+    }
+
+    // Invert the normalized position if requested
+    if (invertDirection) {
+      normalizedPosition = 1 - normalizedPosition;
+    }
+
+    // Get joint and its limits
+    const joint = robot.joints[jointName];
+    const jointMin = joint.limit.lower;
+    const jointMax = joint.limit.upper;
+    
+    // Calculate the actual joint position
+    const position = jointMin + (normalizedPosition * (jointMax - jointMin));
+    
+    // Clamp the position to joint limits
+    const clampedPosition = Math.max(jointMin, Math.min(jointMax, position));
+    
+    // Get servo ID
+    const servoId = getServoIdFromJointIndex(jointIndex);
+    
+    // Convert joint position to servo position (0-4095)
+    const servoPosition = Math.round((clampedPosition / (2 * Math.PI)) * 4096);
+    
+    // Update servo position if connected to real robot
+    if (isConnectedToRealRobot) {
+      try {
+        await writeServoPosition(servoId, servoPosition);
+      } catch (error) {
+        console.error(`Error setting servo ${servoId} position:`, error);
+        return false;
+      }
+    }
+    
+    // Update virtual joint
+    joint.setJointValue(clampedPosition);
+    
+    // Update robot's matrix world
+    this.updateRobot(robot);
+    
+    return true;
+  }
+};
+
+// Get initial stepSize from the HTML slider
+const speedControl = document.getElementById('speedControl');
+let stepSize = speedControl ? MathUtils.degToRad(parseFloat(speedControl.value)) : MathUtils.degToRad(0.2);
+
+
+/**
  * 设置键盘控制
  * @param {Object} robot - 要控制的机器人对象
  * @returns {Function} 用于在渲染循环中更新关节的函数
@@ -189,39 +471,36 @@ export function setupKeyboardControls(robot) {
   const keyboardControlSection = document.getElementById('keyboardControlSection');
   let keyboardActiveTimeout;
 
-  // Get initial stepSize from the HTML slider
-  const speedControl = document.getElementById('speedControl');
-  let stepSize = speedControl ? MathUtils.degToRad(parseFloat(speedControl.value)) : MathUtils.degToRad(0.2);
   
   // 默认的按键-关节映射
   const keyMappings = {
     // Left arm controls (using number keys)
-    '1': { jointIndex: 0, direction: 1, servoId: 1 },  // Left Rotation +
-    'q': { jointIndex: 0, direction: -1, servoId: 1 }, // Left Rotation -
-    '2': { jointIndex: 1, direction: 1, servoId: 2 },  // Left Pitch +
-    'w': { jointIndex: 1, direction: -1, servoId: 2 }, // Left Pitch -
-    '3': { jointIndex: 2, direction: 1, servoId: 3 },  // Left Elbow +
-    'e': { jointIndex: 2, direction: -1, servoId: 3 }, // Left Elbow -
-    '4': { jointIndex: 3, direction: 1, servoId: 4 },  // Left Wrist Pitch +
-    'r': { jointIndex: 3, direction: -1, servoId: 4 }, // Left Wrist Pitch -
-    '5': { jointIndex: 4, direction: 1, servoId: 5 }, // Left Wrist Roll +
-    't': { jointIndex: 4, direction: -1, servoId: 5 },// Left Wrist Roll -
-    '6': { jointIndex: 5, direction: 1, servoId: 6 }, // Left Jaw +
-    'y': { jointIndex: 5, direction: -1, servoId: 6 },// Left Jaw -
+    '1': [{ jointIndex: 0, direction: 1, servoId: 1 }],  // Left Rotation +
+    'q': [{ jointIndex: 0, direction: -1, servoId: 1 }], // Left Rotation -
+    '2': [{ jointIndex: 1, direction: 1, servoId: 2 }],  // Left Pitch +
+    'w': [{ jointIndex: 1, direction: -1, servoId: 2 }], // Left Pitch -
+    '3': [{ jointIndex: 2, direction: 1, servoId: 3 }],  // Left Elbow +
+    'e': [{ jointIndex: 2, direction: -1, servoId: 3 }], // Left Elbow -
+    '4': [{ jointIndex: 3, direction: 1, servoId: 4 }],  // Left Wrist Pitch +
+    'r': [{ jointIndex: 3, direction: -1, servoId: 4 }], // Left Wrist Pitch -
+    '5': [{ jointIndex: 4, direction: 1, servoId: 5 }], // Left Wrist Roll +
+    't': [{ jointIndex: 4, direction: -1, servoId: 5 }],// Left Wrist Roll -
+    '6': [{ jointIndex: 5, direction: 1, servoId: 6 }], // Left Jaw +
+    'y': [{ jointIndex: 5, direction: -1, servoId: 6 }],// Left Jaw -
     
     // Right arm controls (using ASDFGH and ZXCVBN keys)
-    'a': { jointIndex: 6, direction: 1, servoId: 7 },  // Right Rotation +
-    'z': { jointIndex: 6, direction: -1, servoId: 7 }, // Right Rotation -
-    's': { jointIndex: 7, direction: 1, servoId: 8 },  // Right Pitch +
-    'x': { jointIndex: 7, direction: -1, servoId: 8 }, // Right Pitch -
-    'd': { jointIndex: 8, direction: 1, servoId: 9 },  // Right Elbow +
-    'c': { jointIndex: 8, direction: -1, servoId: 9 }, // Right Elbow -
-    'f': { jointIndex: 9, direction: 1, servoId: 10 },  // Right Wrist Pitch +
-    'v': { jointIndex: 9, direction: -1, servoId: 10 }, // Right Wrist Pitch -
-    'g': { jointIndex: 10, direction: 1, servoId: 11 },  // Right Wrist Roll +
-    'b': { jointIndex: 10, direction: -1, servoId: 11 }, // Right Wrist Roll -
-    'h': { jointIndex: 11, direction: 1, servoId: 12 },  // Right Jaw +
-    'n': { jointIndex: 11, direction: -1, servoId: 12 }, // Right Jaw -
+    'a': [{ jointIndex: 6, direction: 1, servoId: 7 }],  // Right Rotation +
+    'z': [{ jointIndex: 6, direction: -1, servoId: 7 }], // Right Rotation -
+    's': [{ jointIndex: 7, direction: 1, servoId: 8 }],  // Right Pitch +
+    'x': [{ jointIndex: 7, direction: -1, servoId: 8 }], // Right Pitch -
+    'd': [{ jointIndex: 8, direction: 1, servoId: 9 }],  // Right Elbow +
+    'c': [{ jointIndex: 8, direction: -1, servoId: 9 }], // Right Elbow -
+    'f': [{ jointIndex: 9, direction: 1, servoId: 10 }],  // Right Wrist Pitch +
+    'v': [{ jointIndex: 9, direction: -1, servoId: 10 }], // Right Wrist Pitch -
+    'g': [{ jointIndex: 10, direction: 1, servoId: 11 }],  // Right Wrist Roll +
+    'b': [{ jointIndex: 10, direction: -1, servoId: 11 }], // Right Wrist Roll -
+    'h': [{ jointIndex: 11, direction: 1, servoId: 12 }],  // Right Jaw +
+    'n': [{ jointIndex: 11, direction: -1, servoId: 12 }], // Right Jaw -
     
     // Wheel controls using arrow keys (based on robotConfig.js)
     'arrowup': [
@@ -243,11 +522,6 @@ export function setupKeyboardControls(robot) {
       { jointIndex: 14, direction: -1, servoId: 15 }
     ],
   };
-  
-  // 获取机器人实际的关节名称
-  const jointNames = robot && robot.joints ? 
-    Object.keys(robot.joints).filter(name => robot.joints[name].jointType !== 'fixed') : [];
-  console.log('Available joints:', jointNames);
   
   // Function to set the div as active
   const setKeyboardSectionActive = () => {
@@ -359,120 +633,12 @@ export function setupKeyboardControls(robot) {
           // 如果需要停止，发送停止命令
           if (shouldStop) {
             console.log(`Stopping wheel servo ${servoId} (key ${key} released)`);
-            writeWheelSpeed(servoId, 0)
-              .then(() => {
-                console.log(`Wheel servo ${servoId} stopped`);
-                wheelActive[servoId] = false;
-              })
-              .catch(error => {
-                console.error(`Error stopping wheel servo ${servoId}:`, error);
-              });
+            robotControl.stopWheel(servoId);
           }
         }
       });
     }
   }
-
-  /**
-   * 控制单个舵机移动
-   * @param {Object} robot - 机器人对象 
-   * @param {string} jointName - 关节名称
-   * @param {number} currentValue - 当前关节值
-   * @param {number} direction - 移动方向
-   * @param {number} stepSize - 步长
-   * @param {number} servoId - 舵机ID
-   * @returns {Promise<boolean>} 操作是否成功
-   */
-  async function controlSingleServo(robot, jointName, currentValue, direction, stepSize, servoId) {
-    // 计算新的关节值
-    const newValue = currentValue + direction * stepSize;
-    
-    // 检查是否超出关节限制
-    if (!isJointWithinLimits(robot.joints[jointName], newValue)) {
-      console.warn(`Joint ${jointName} would exceed its limits. Movement prevented.`);
-      // 显示虚拟关节限位提醒
-      showAlert('joint', `Joint ${jointName} has reached its limit!`);
-      return false; // 关节超出限位
-    }
-    
-    // 如果没有连接真实机器人，直接更新虚拟关节
-    if (!isConnectedToRealRobot) {
-      robot.joints[jointName].setJointValue(newValue);
-      return true;
-    }
-    
-    // 以下是连接真实机器人的处理
-    
-    // 判断是否是轮子舵机
-    const isWheelServo = servoId >= 13 && servoId <= 15;
-    
-    if (isWheelServo) {
-      // 轮子舵机使用速度控制
-      const speedFactor = 500; // 基础速度值
-      const wheelSpeed = direction * speedFactor;
-      
-      console.log(`Setting wheel servo ${servoId} speed to ${wheelSpeed}`);
-      
-      try {
-        // 使用专门的轮子速度控制函数
-        await writeWheelSpeed(servoId, wheelSpeed);
-          robot.joints[jointName].setJointValue(newValue);
-          servoCommStatus[servoId].status = 'success';
-          updateServoStatusUI();
-          return true;
-      } catch (error) {
-        console.error(`Error controlling wheel servo ${servoId}:`, error);
-        servoCommStatus[servoId].status = 'error';
-        servoCommStatus[servoId].lastError = error.message || 'Communication error';
-        updateServoStatusUI();
-        showAlert('servo', `Wheel servo ${servoId} error: ${error.message || 'Communication failed'}`);
-        return false;
-      }
-    } else {
-      // 非轮子舵机使用位置控制
-      // 计算舵机相对位移量 (角度变化量转换为舵机步数)
-      const stepChange = Math.round((direction * stepSize) * (4096 / (2 * Math.PI)));
-      
-      // 计算新的位置值
-      let newPosition = (servoCurrentPositions[servoId] + stepChange) % 4096;
-      
-      // 暂存舵机位置（虚拟舵机还没更新）
-      const prevPosition = servoCurrentPositions[servoId];
-      // 更新当前位置记录
-      servoCurrentPositions[servoId] = newPosition;
-      
-      // 更新舵机状态为待处理
-      servoCommStatus[servoId].status = 'pending';
-      updateServoStatusUI();
-      
-      try {
-        // 使用队列系统控制舵机，防止并发访问
-        await writeServoPosition(servoId, newPosition);
-          // 更新虚拟关节
-          robot.joints[jointName].setJointValue(newValue);
-          // 更新最后安全位置
-          servoLastSafePositions[servoId] = newPosition;
-          
-          // 更新舵机状态为成功
-          servoCommStatus[servoId].status = 'success';
-          updateServoStatusUI();
-          return true;
-      } catch (error) {
-        // 舵机控制失败，不更新虚拟关节，恢复当前位置记录
-        servoCurrentPositions[servoId] = prevPosition;
-        console.error(`Error controlling servo ${servoId}:`, error);
-        servoCommStatus[servoId].status = 'error';
-        servoCommStatus[servoId].lastError = error.message || 'Communication error';
-        updateServoStatusUI();
-        
-        // 显示舵机错误提醒
-        showAlert('servo', `Servo ${servoId} error: ${error.message || 'Communication failed'}`);
-
-        return false;
-      }
-    }
-  }
-
 
   function updateJoints() {
     if (!robot || !robot.joints) return;
@@ -484,55 +650,19 @@ export function setupKeyboardControls(robot) {
       if (keyState[key] && keyMappings[key]) {
         keyPressed = true;
         
-        // Handle arrow keys for wheel movement (array of joint movements)
-        if (Array.isArray(keyMappings[key])) {
-          keyMappings[key].forEach(mapping => {
-            const { jointIndex, direction, servoId } = mapping;
-            
-            // 根据索引获取关节名称（如果可用）
-            if (jointIndex < jointNames.length) {
-              const jointName = jointNames[jointIndex];
-              
-              // 检查关节是否存在于机器人中
-              if (robot.joints[jointName]) {
-                // 如果连接到真实机器人，先检查该舵机是否有错误状态
-                if (isConnectedToRealRobot && servoCommStatus[servoId].status === 'error') {
-                  console.warn(`Servo ${servoId} is in error state. Virtual movement prevented.`);
-                  return; // 跳过这个关节的更新
-                }
-                
-                // 获取当前关节值
-                const currentValue = robot.joints[jointName].angle;
-                
-                // 使用通用舵机控制函数
-                controlSingleServo(robot, jointName, currentValue, direction, stepSize, servoId);
-              }
-            }
-          });
-        } else {
-          // 处理普通的单一关节映射
-          const { jointIndex, direction, servoId } = keyMappings[key];
+        // Process all mappings for this key (now all are arrays)
+        keyMappings[key].forEach(mapping => {
+          const { jointIndex, direction, servoId } = mapping;
           
-          // 根据索引获取关节名称（如果可用）
-          if (jointIndex < jointNames.length) {
-            const jointName = jointNames[jointIndex];
-            
-            // 检查关节是否存在于机器人中
-            if (robot.joints[jointName]) {
-              // 如果连接到真实机器人，先检查该舵机是否有错误状态
-              if (isConnectedToRealRobot && servoCommStatus[servoId].status === 'error') {
-                console.warn(`Servo ${servoId} is in error state. Virtual movement prevented.`);
-                return; // 跳过这个关节的更新
-              }
-              
-              // 获取当前关节值
-              const currentValue = robot.joints[jointName].angle;
-              
-              // 使用通用舵机控制函数
-              controlSingleServo(robot, jointName, currentValue, direction, stepSize, servoId);
-            }
+          // 检查关节是否存在于机器人中
+          if (isConnectedToRealRobot && servoCommStatus[servoId].status === 'error') {
+            console.warn(`Servo ${servoId} is in error state. Virtual movement prevented.`);
+            return; // 跳过这个关节的更新
           }
-        }
+          
+          // 使用通用舵机控制函数
+          robotControl.controlJoint(robot, jointIndex, direction);
+        });
       }
     });
 
@@ -542,12 +672,313 @@ export function setupKeyboardControls(robot) {
     }
 
     // 更新机器人
-    if (robot.updateMatrixWorld) {
-      robot.updateMatrixWorld(true);
+    robotControl.updateRobot(robot);
+  }
+
+  
+  // 返回更新函数，以便可以在渲染循环中调用
+  return updateJoints;
+}
+
+export function setupJoyconControls(robot) {
+  // 扁平化 joyconState，直接记录按钮状态
+  const joyconState = {
+    // 按钮状态
+    up: false,
+    down: false,
+    left: false,
+    right: false,
+    a: false,
+    b: false,
+    x: false,
+    y: false,
+    l: false,
+    zl: false,
+    r: false,
+    zr: false,
+    plus: false,
+    minus: false,
+    // 右摇杆
+    home: false,
+    capture: false,
+
+
+    leftStickRight: false,
+    leftStickLeft: false,
+    leftStickUp: false,
+    leftStickDown: false,
+    rightStickRight: false,
+    rightStickLeft: false,
+    rightStickUp: false,
+    rightStickDown: false,
+    
+    // 扁平化的方向数据
+    leftOrientationAlpha: 0,
+    leftOrientationBeta: 0,
+    leftOrientationGamma: 0,
+    rightOrientationAlpha: 0,
+    rightOrientationBeta: 0,
+    rightOrientationGamma: 0,
+    
+    // 扁平化摇杆数据 - 直接作为按钮状态
+    leftStickRight: false,
+    leftStickLeft: false,
+    leftStickUp: false, 
+    leftStickDown: false,
+    rightStickRight: false,
+    rightStickLeft: false,
+    rightStickUp: false,
+    rightStickDown: false,
+    
+    // 记录哪些控制器已连接
+    leftConnected: false,
+    rightConnected: false
+  };
+
+  const buttonMapping = {
+    'rightStickRight': [{ jointIndex: 0, direction: 1 }], // Base rotation right
+    'rightStickLeft': [{ jointIndex: 0, direction: -1 }], // Base rotation left
+    'rightStickUp': [{ jointIndex: 2, direction: -1 }], // Right shoulder up
+    'rightStickDown': [{ jointIndex: 2, direction: 1 }], // Right shoulder down
+    'x': [{ jointIndex: 1, direction: 1 }],
+    'b': [{ jointIndex: 1, direction: -1 }],
+    'r': [{jointIndex: 5, direction: 1}],
+    'zr': [{jointIndex: 5, direction: -1}],
+
+
+    'leftStickRight': [{ jointIndex: 6, direction: 1 }], // Left shoulder right
+    'leftStickLeft': [{ jointIndex: 6, direction: -1 }], // Left shoulder left
+    'leftStickUp': [{ jointIndex: 8, direction: -1 }],
+    'leftStickDown': [{ jointIndex: 8, direction: 1 }],
+    'up': [{ jointIndex: 7, direction: 1 }],
+    'down': [{ jointIndex: 7, direction: -1 }],
+    'l': [{jointIndex: 11, direction: 1}],
+    'zl': [{jointIndex: 11, direction: -1}],
+
+
+    'plus': [
+      { jointIndex: 12, direction: 1 }, // Left wheel forward
+      { jointIndex: 14, direction: -1 } // Right wheel forward
+    ],
+    'minus': [
+      { jointIndex: 12, direction: -1 }, // Left wheel backward
+      { jointIndex: 14, direction: 1 } // Right wheel backward
+    ],
+    'y': [
+      { jointIndex: 12, direction: 1, servoId: 13 },
+      { jointIndex: 13, direction: 1, servoId: 14 },
+      { jointIndex: 14, direction: 1, servoId: 15 }
+    ], // 左转 - 所有轮子正向
+    'a': [
+      { jointIndex: 12, direction: -1, servoId: 13 },
+      { jointIndex: 13, direction: -1, servoId: 14 },
+      { jointIndex: 14, direction: -1, servoId: 15 }
+    ], // 右转 - 所有轮子反向
+  }
+
+  const connectLeftButton = document.getElementById('connectLeftJoycon');
+  const connectRightButton = document.getElementById('connectRightJoycon');  
+  connectLeftButton.addEventListener('click', connectJoyCon);
+  connectRightButton.addEventListener('click', connectJoyCon);
+
+  console.log('connectedJoyCons in setupJoyconControls', connectedJoyCons);
+
+  const leftJoycon = document.getElementById('joycon-l');
+  const rightJoycon = document.getElementById('joycon-r');
+  // Function to update UI based on connected joycons
+  function updateJoyconDisplay() {
+    for (const joyCon of connectedJoyCons.values()) {
+      if (joyCon instanceof JoyConLeft) {
+        // Hide button and show joycon figure
+        connectLeftButton.style.display = 'none';
+        if (leftJoycon) leftJoycon.style.display = 'inline-block';
+      } else if (joyCon instanceof JoyConRight) {
+        // Hide button and show joycon figure
+        connectRightButton.style.display = 'none';
+        if (rightJoycon) rightJoycon.style.display = 'inline-block';
+      }
     }
   }
 
-  // 返回更新函数，以便可以在渲染循环中调用
+  const rootStyle = document.documentElement.style;
+  // Visualize function to handle joycon inputs
+  function visualize(joyConSide, buttons, orientation, joystick) {
+    if (joyConSide === 'left') {
+      rootStyle.setProperty('--left-alpha', `${orientation.alpha}deg`);
+      rootStyle.setProperty('--left-beta', `${orientation.beta}deg`);
+      rootStyle.setProperty('--left-gamma', `${orientation.gamma}deg`);
+    } else if (joyConSide === 'right') {
+      rootStyle.setProperty('--right-alpha', `${orientation.alpha}deg`);
+      rootStyle.setProperty('--right-beta', `${orientation.beta}deg`);
+      rootStyle.setProperty('--right-gamma', `${orientation.gamma}deg`);
+    }
+  
+    if (joyConSide === 'left') {
+      const joystickMultiplier = 10;
+      document.querySelector('#joystick-left').style.transform = `translateX(${
+        joystick.horizontal * joystickMultiplier
+      }px) translateY(${joystick.vertical * joystickMultiplier}px)`;
+  
+      document.querySelector('#up').classList.toggle('highlight', buttons.up);
+      document.querySelector('#down').classList.toggle('highlight', buttons.down);
+      document.querySelector('#left').classList.toggle('highlight', buttons.left);
+      document
+        .querySelector('#right')
+        .classList.toggle('highlight', buttons.right);
+      document
+        .querySelector('#capture')
+        .classList.toggle('highlight', buttons.capture);
+      document
+        .querySelector('#l')
+        .classList.toggle('highlight', buttons.l || buttons.zl);
+      document
+        .querySelector('#minus')
+        .classList.toggle('highlight', buttons.minus);
+      document
+        .querySelector('#joystick-left')
+        .classList.toggle('highlight', buttons.leftStick);
+    }
+    if (joyConSide === 'right') {
+      const joystickMultiplier = 10;
+      document.querySelector('#joystick-right').style.transform = `translateX(${
+        joystick.horizontal * joystickMultiplier
+      }px) translateY(${joystick.vertical * joystickMultiplier}px)`;
+  
+      document.querySelector('#a').classList.toggle('highlight', buttons.a);
+      document.querySelector('#b').classList.toggle('highlight', buttons.b);
+      document.querySelector('#x').classList.toggle('highlight', buttons.x);
+      document.querySelector('#y').classList.toggle('highlight', buttons.y);
+      document.querySelector('#home').classList.toggle('highlight', buttons.home);
+      document
+        .querySelector('#r')
+        .classList.toggle('highlight', buttons.r || buttons.zr);
+      document.querySelector('#plus').classList.toggle('highlight', buttons.plus);
+      document
+        .querySelector('#joystick-right')
+        .classList.toggle('highlight', buttons.rightStick);
+    }
+  }
+
+  setInterval(async () => {
+    // Update UI based on connected joycons
+    updateJoyconDisplay();
+    
+    for (const joyCon of connectedJoyCons.values()) {
+      if (joyCon.eventListenerAttached) {
+        continue;
+      }
+      joyCon.eventListenerAttached = true;
+      // await joyCon.enableVibration();
+      joyCon.addEventListener('hidinput', (event) => {
+        const packet = event.detail;
+        if (!packet || !packet.actualOrientation) {
+          return;
+        }
+        const {
+          buttonStatus: buttons,
+          actualOrientation: orientation,
+          analogStickLeft: analogStickLeft,
+          analogStickRight: analogStickRight,
+        } = packet;
+
+        // update joyconState with flattened structure
+        if (joyCon instanceof JoyConLeft) {
+          // Update orientation and analog stick
+          joyconState.leftOrientationAlpha = orientation.alpha;
+          joyconState.leftOrientationBeta = orientation.beta;
+          joyconState.leftOrientationGamma = orientation.gamma;
+          joyconState.leftConnected = true;
+          
+          // Update buttons from left Joy-Con
+          joyconState.up = buttons.up;
+          joyconState.down = buttons.down;
+          joyconState.left = buttons.left;
+          joyconState.right = buttons.right;
+          joyconState.l = buttons.l;
+          joyconState.zl = buttons.zl;
+          joyconState.minus = buttons.minus;
+          joyconState.capture = buttons.capture;
+          joyconState.leftStickRight = analogStickLeft.horizontal > 0.2;
+          joyconState.leftStickLeft = analogStickLeft.horizontal < -0.2;
+          joyconState.leftStickUp = analogStickLeft.vertical > 0.2;
+          joyconState.leftStickDown = analogStickLeft.vertical < -0.2;
+          
+          visualize('left', buttons, orientation, analogStickLeft);
+        } else if (joyCon instanceof JoyConRight) {
+          // Update orientation and analog stick
+          joyconState.rightOrientationAlpha = orientation.alpha;
+          joyconState.rightOrientationBeta = orientation.beta;
+          joyconState.rightOrientationGamma = orientation.gamma;
+          joyconState.rightConnected = true;
+          // Update buttons from right Joy-Con
+          joyconState.a = buttons.a;
+          joyconState.b = buttons.b;
+          joyconState.x = buttons.x;
+          joyconState.y = buttons.y;
+          joyconState.r = buttons.r;
+          joyconState.zr = buttons.zr;
+          joyconState.plus = buttons.plus;
+          joyconState.home = buttons.home;
+          joyconState.rightStickRight = analogStickRight.horizontal > 0.2;
+          joyconState.rightStickLeft = analogStickRight.horizontal < -0.2;
+          joyconState.rightStickUp = analogStickRight.vertical > 0.2;
+          joyconState.rightStickDown = analogStickRight.vertical < -0.2;
+          
+          visualize('right', buttons, orientation, analogStickRight);
+        }
+      });
+    }
+  }, 2000);
+
+  function updateJoints() {
+    if (!robot || !robot.joints || !joyconState) return;
+    
+    // Check if any Joy-Con is connected
+    if (!joyconState.leftConnected && !joyconState.rightConnected) return;
+
+    // Process all button mappings directly
+    Object.keys(buttonMapping).forEach(button => {
+      if (joyconState[button]) {
+        buttonMapping[button].forEach(mapping => {
+          const { jointIndex, direction } = mapping;
+          robotControl.controlJoint(robot, jointIndex, direction);
+        });
+      }
+    });
+
+    // Helper function to map orientation to joint position
+    const mapOrientationToJoint = (angle, jointIndex, invertDirection = false) => {
+      // Clamp angle to -90 to 90 degrees range
+      const clampedAngle = Math.max(-90, Math.min(90, angle));
+      
+      // Calculate normalized position (0 to 1)
+      const normalizedPosition = (clampedAngle + 90) / 180;
+      
+      // Set joint position with optional direction inversion
+      robotControl.setJointPositionNormalized(robot, jointIndex, normalizedPosition, invertDirection);
+    };
+
+    // Add orientation controls for right Joy-Con
+    if (joyconState.rightConnected) {
+      // Beta controls joint 3 (index 2)
+      mapOrientationToJoint(joyconState.rightOrientationBeta, 3, true);
+      
+      // Gamma controls joint 4 (index 3)
+      mapOrientationToJoint(joyconState.rightOrientationGamma, 4, true);
+    }
+    
+    // Add orientation controls for left Joy-Con
+    if (joyconState.leftConnected) {
+      // Beta controls joint 9 (index 8)
+      mapOrientationToJoint(joyconState.leftOrientationBeta, 9, true);
+      
+      // Gamma controls joint 10 (index 9)
+      mapOrientationToJoint(joyconState.leftOrientationGamma, 10, true);
+    }
+    
+    // Update robot's matrix world
+    robotControl.updateRobot(robot);
+  }
   return updateJoints;
 }
 
@@ -589,16 +1020,6 @@ export function setupControlPanel() {
   if (connectButton) {
     connectButton.addEventListener('click', () => toggleRealRobotConnection(servoGroups.all));
   }
-  
-  // Joycon和VR连接按钮的占位处理（未来实现）
-  const connectJoyconButton = document.getElementById('connectJoycon');
-  if (connectJoyconButton) {
-    connectJoyconButton.addEventListener('click', () => {
-      console.log('Joycon connection not yet implemented');
-      alert('Joycon connection will be implemented in the future.');
-    });
-  }
-  
 }
 
 /**
@@ -941,30 +1362,6 @@ async function readServoPosition(servoId) {
       return null;
     }
   });
-}
-
-/**
- * 直接写入舵机扭矩使能（不使用队列，仅供内部使用）
- * @param {number} servoId - 舵机ID (1-6)
- * @param {number} enable - 0: 关闭, 1: 开启
- */
-async function writeTorqueEnableRaw(servoId, enable) {
-  if (!portHandler || !packetHandler) return;
-  
-  try {
-    const [result, error] = await packetHandler.write1ByteTxRx(
-      portHandler, 
-      servoId, 
-      ADDR_SCS_TORQUE_ENABLE, 
-      enable ? 1 : 0
-    );
-    
-    if (result !== COMM_SUCCESS) {
-      console.error(`Failed to write torque enable to servo ${servoId}: ${error}`);
-    }
-  } catch (error) {
-    console.error(`Error writing torque enable to servo ${servoId}:`, error);
-  }
 }
 
 /**
