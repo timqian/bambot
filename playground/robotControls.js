@@ -628,7 +628,11 @@ export function setupJoyconControls(robot) {
     // 右摇杆
     home: false,
     capture: false,
-
+    // 新增 SR/SL 按钮状态
+    leftSl: false,
+    leftSr: false,
+    rightSl: false,
+    rightSr: false,
 
     leftStickRight: false,
     leftStickLeft: false,
@@ -693,21 +697,22 @@ export function setupJoyconControls(robot) {
     'leftRollRight': [{jointIndex: 10, direction: -1}],
     'leftRollLeft': [{jointIndex: 10, direction: 1}],
 
-
-    'plus': [
+    // 更新按键映射，使用右 SR/SL 代替 plus/minus
+    'rightSr': [
       { jointIndex: 12, direction: 1 }, // Left wheel forward
       { jointIndex: 14, direction: -1 } // Right wheel forward
     ],
-    'minus': [
+    'rightSl': [
       { jointIndex: 12, direction: -1 }, // Left wheel backward
       { jointIndex: 14, direction: 1 } // Right wheel backward
     ],
-    'y': [
+    // 更新按键映射，使用左 SR/SL 代替 y/a
+    'leftSr': [
       { jointIndex: 12, direction: 1, servoId: 13 },
       { jointIndex: 13, direction: 1, servoId: 14 },
       { jointIndex: 14, direction: 1, servoId: 15 }
     ], // 左转 - 所有轮子正向
-    'a': [
+    'leftSl': [
       { jointIndex: 12, direction: -1, servoId: 13 },
       { jointIndex: 13, direction: -1, servoId: 14 },
       { jointIndex: 14, direction: -1, servoId: 15 }
@@ -807,6 +812,41 @@ export function setupJoyconControls(robot) {
     }
   }
 
+  // 添加按钮状态跟踪对象，用于检测按钮首次按下
+  const previousPlusMinusButtonState = {
+    plus: false,
+    minus: false
+  };
+
+  /**
+   * 更新控制速度
+   * @param {string} direction - 速度调整方向 ('increase' 或 'decrease')
+   */
+  function updateControlSpeed(direction) {
+    const speedControl = document.getElementById('speedControl');
+    const speedDisplay = document.getElementById('speedValue');
+    
+    if (speedControl && speedDisplay) {
+      let currentSpeed = parseFloat(speedControl.value);
+      const speedStep = 0.1;
+      
+      if (direction === 'increase') {
+        // 增加速度
+        currentSpeed = Math.min(1.0, currentSpeed + speedStep);
+        console.log('Speed increased to:', currentSpeed.toFixed(1));
+      } else if (direction === 'decrease') {
+        // 减小速度
+        currentSpeed = Math.max(0.1, currentSpeed - speedStep);
+        console.log('Speed decreased to:', currentSpeed.toFixed(1));
+      }
+      
+      // 更新UI和系统中的速度值
+      speedControl.value = currentSpeed.toFixed(1);
+      speedDisplay.textContent = currentSpeed.toFixed(1);
+      stepSize = MathUtils.degToRad(currentSpeed);
+    }
+  }
+
   setInterval(async () => {
     // Update UI based on connected joycons
     updateJoyconDisplay();
@@ -847,12 +887,24 @@ export function setupJoyconControls(robot) {
           joyconState.zl = buttons.zl;
           joyconState.minus = buttons.minus;
           joyconState.capture = buttons.capture;
+          // 更新左 Joy-Con 的 SR/SL 按钮状态
+          joyconState.leftSl = buttons.sl;
+          joyconState.leftSr = buttons.sr;
           joyconState.leftStickRight = analogStickLeft.horizontal > joyconConfig.stickThresholds.left;
           joyconState.leftStickLeft = analogStickLeft.horizontal < -joyconConfig.stickThresholds.left;
           joyconState.leftStickUp = analogStickLeft.vertical > joyconConfig.stickThresholds.left;
           joyconState.leftStickDown = analogStickLeft.vertical < -joyconConfig.stickThresholds.left;
           
           visualize('left', buttons, orientation, analogStickLeft);
+          
+          // 处理左侧minus键控制速度
+          if (buttons.minus && !previousPlusMinusButtonState.minus) {
+            // 只在按钮状态由未按下变为按下时执行
+            updateControlSpeed('decrease');
+          }
+          // 更新按钮状态跟踪
+          previousPlusMinusButtonState.minus = buttons.minus;
+          
         } else if (joyCon instanceof JoyConRight) {
           // Update orientation checks with configurable thresholds
           joyconState.rightPitchUp = orientation.beta > joyconConfig.orientationThresholds.pitch;
@@ -869,12 +921,23 @@ export function setupJoyconControls(robot) {
           joyconState.zr = buttons.zr;
           joyconState.plus = buttons.plus;
           joyconState.home = buttons.home;
+          // 更新右 Joy-Con 的 SR/SL 按钮状态
+          joyconState.rightSl = buttons.sl;
+          joyconState.rightSr = buttons.sr;
           joyconState.rightStickRight = analogStickRight.horizontal > joyconConfig.stickThresholds.right;
           joyconState.rightStickLeft = analogStickRight.horizontal < -joyconConfig.stickThresholds.right;
           joyconState.rightStickUp = analogStickRight.vertical > joyconConfig.stickThresholds.right;
           joyconState.rightStickDown = analogStickRight.vertical < -joyconConfig.stickThresholds.right;
           
           visualize('right', buttons, orientation, analogStickRight);
+          
+          // 处理右侧plus键控制速度
+          if (buttons.plus && !previousPlusMinusButtonState.plus) {
+            // 只在按钮状态由未按下变为按下时执行
+            updateControlSpeed('increase');
+          }
+          // 更新按钮状态跟踪
+          previousPlusMinusButtonState.plus = buttons.plus;
         }
       });
     }
