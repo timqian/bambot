@@ -191,6 +191,10 @@ const joyconConfig = {
   orientationThresholds: {
     pitch: 30,  // Beta angle threshold (up/down)
     roll: 30    // Gamma angle threshold (left/right)
+  },
+  stickThresholds: {
+    left: 0.3,  // Left stick sensitivity threshold
+    right: 0.3  // Right stick sensitivity threshold
   }
 };
 
@@ -843,10 +847,10 @@ export function setupJoyconControls(robot) {
           joyconState.zl = buttons.zl;
           joyconState.minus = buttons.minus;
           joyconState.capture = buttons.capture;
-          joyconState.leftStickRight = analogStickLeft.horizontal > 0.2;
-          joyconState.leftStickLeft = analogStickLeft.horizontal < -0.2;
-          joyconState.leftStickUp = analogStickLeft.vertical > 0.2;
-          joyconState.leftStickDown = analogStickLeft.vertical < -0.2;
+          joyconState.leftStickRight = analogStickLeft.horizontal > joyconConfig.stickThresholds.left;
+          joyconState.leftStickLeft = analogStickLeft.horizontal < -joyconConfig.stickThresholds.left;
+          joyconState.leftStickUp = analogStickLeft.vertical > joyconConfig.stickThresholds.left;
+          joyconState.leftStickDown = analogStickLeft.vertical < -joyconConfig.stickThresholds.left;
           
           visualize('left', buttons, orientation, analogStickLeft);
         } else if (joyCon instanceof JoyConRight) {
@@ -865,10 +869,10 @@ export function setupJoyconControls(robot) {
           joyconState.zr = buttons.zr;
           joyconState.plus = buttons.plus;
           joyconState.home = buttons.home;
-          joyconState.rightStickRight = analogStickRight.horizontal > 0.2;
-          joyconState.rightStickLeft = analogStickRight.horizontal < -0.2;
-          joyconState.rightStickUp = analogStickRight.vertical > 0.2;
-          joyconState.rightStickDown = analogStickRight.vertical < -0.2;
+          joyconState.rightStickRight = analogStickRight.horizontal > joyconConfig.stickThresholds.right;
+          joyconState.rightStickLeft = analogStickRight.horizontal < -joyconConfig.stickThresholds.right;
+          joyconState.rightStickUp = analogStickRight.vertical > joyconConfig.stickThresholds.right;
+          joyconState.rightStickDown = analogStickRight.vertical < -joyconConfig.stickThresholds.right;
           
           visualize('right', buttons, orientation, analogStickRight);
         }
