@@ -31,6 +31,8 @@ import {
   JoyConRight,
   GeneralController,
 } from 'joy-con-webhid';
+// Import language system
+import { initLanguageSystem } from './language.js';
 
 // 声明为全局变量
 let scene, camera, renderer, controls;
@@ -42,6 +44,8 @@ init();
 render();
 
 function init() {
+  // Initialize language system
+  initLanguageSystem();
 
   scene = new Scene();
   scene.background = new Color(0x263238);

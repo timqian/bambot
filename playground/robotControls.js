@@ -26,6 +26,8 @@ import {
   JoyConRight,
   GeneralController,
 } from 'joy-con-webhid';
+// Import language system
+import { initLanguageSystem, t } from './language.js';
 
 // Servo control variables
 let portHandler = null;
@@ -100,8 +102,19 @@ function showAlert(type, message, duration = 3000) {
   const alertElement = document.getElementById(alertId);
   
   if (alertElement) {
+    // Use translation system for alerts
+    let translatedMessage = '';
+    
+    if (type === 'joint') {
+      translatedMessage = t('joint-limit', { name: message.replace('Joint ', '').replace(' has reached its limit!', '') });
+    } else if (type === 'servo') {
+      translatedMessage = t('servo-limit', { id: message.replace('Servo ', '').replace(' has reached its limit!', '') });
+    } else {
+      translatedMessage = message;
+    }
+    
     // 设置消息并显示
-    alertElement.textContent = message;
+    alertElement.textContent = translatedMessage;
     alertElement.style.display = 'block';
     
     // 设置定时器，自动隐藏
@@ -977,6 +990,9 @@ export function setupJoyconControls(robot) {
  * 设置控制面板UI
  */
 export function setupControlPanel() {
+  // Initialize language system
+  initLanguageSystem();
+  
   const controlPanel = document.getElementById('controlPanel');
   const togglePanel = document.getElementById('togglePanel');
   const hideControls = document.getElementById('hideControls');

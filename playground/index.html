@@ -400,6 +400,33 @@
             font-weight: bold;
         }
 
+        /* Language switcher styles */
+        .language-switcher {
+            display: flex;
+            align-items: center;
+            margin-right: auto;
+            margin-left: 15px;
+        }
+
+        .language-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.3s;
+        }
+
+        .language-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .language-btn.active {
+            background: rgba(76, 175, 80, 0.6);
+        }
+
         /* Help tooltip styles */
         .help-wrapper {
             position: relative;
@@ -571,6 +598,9 @@
     <div class="control-panel" id="controlPanel">
         <div class="panel-header">
             <h3>Play with Bambot</h3>
+            <div class="language-switcher">
+                <button id="langToggle" class="language-btn">文</button>
+            </div>
             <span id="hideControls" style="cursor: pointer; padding: 0 5px;">×</span>
         </div>
 
