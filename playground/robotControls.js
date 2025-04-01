@@ -159,7 +159,7 @@ async function processCommandQueue() {
   
   try {
     // 在执行下一个命令前等待一小段时间
-    await new Promise(resolve => setTimeout(resolve, 5));
+    // await new Promise(resolve => setTimeout(resolve, 1));
     const result = await command.execute();
     command.resolve(result);
   } catch (error) {
@@ -198,6 +198,13 @@ function isJointWithinLimits(joint, newValue) {
     return newValue >= joint.limit.lower && newValue <= joint.limit.upper;
   }
 }
+
+// Add configuration object for robot control parameters
+const robotConfig = {
+  wheelControl: {
+    speedFactor: 1500  // Base speed value for wheel servos
+  }
+};
 
 // Add configuration object for orientation thresholds
 const joyconConfig = {
@@ -258,8 +265,8 @@ export const robotControl = {
     
     if (isWheelServo) {
       // Wheel servos use speed control
-      const speedFactor = 500; // Base speed value
-      const wheelSpeed = direction * speedFactor;
+      // Use speedFactor from config instead of local declaration
+      const wheelSpeed = direction * robotConfig.wheelControl.speedFactor;
       
       console.log(`Setting wheel servo ${servoId} speed to ${wheelSpeed}`);
       
@@ -286,9 +293,9 @@ export const robotControl = {
       let newPosition = servoCurrentPositions[servoId] + stepChange;
       
       // Check if the new position is outside the valid range (1-4095)
-      if (newPosition < 1 || newPosition > 4095) {
+      if (newPosition < 100 || newPosition > 4000) {
         // Show an alert to inform the user
-        showAlert('servo', `Servo ${servoId} position (${newPosition}) exceeds valid range (1-4095). Movement prevented.`);
+        showAlert('servo', `Servo ${servoId} position (${newPosition}) exceeds valid range (100-4000). Movement prevented.`);
         console.warn(`Servo ${servoId} position (${newPosition}) exceeds valid range. Movement prevented.`);
         return false;
       }
@@ -481,10 +488,10 @@ export function setupKeyboardControls(robot) {
         clearTimeout(keyboardActiveTimeout);
       }
       
-      // Set timeout to remove the active class after 2 seconds of inactivity
+      // Set timeout to remove the active class after 1 seconds of inactivity
       keyboardActiveTimeout = setTimeout(() => {
         keyboardControlSection.classList.remove('control-active');
-      }, 2000);
+      }, 1000);
     }
   };
   
@@ -1194,7 +1201,9 @@ async function toggleRealRobotConnection(targetServos) {
           // 区分轮子舵机和非轮子舵机的初始化
           if (servoId >= 13 && servoId <= 15) {
             // 轮子舵机设置为轮模式（连续旋转模式）
+            console.log('set wheel mode');
             const wheelModeSuccess = await setWheelMode(servoId);
+            console.log('after set wheel mode', wheelModeSuccess);
             if (!wheelModeSuccess) {
               console.warn(`Failed to set wheel mode for servo ${servoId}`);
             }
@@ -1339,12 +1348,15 @@ async function readServoPosition(servoId) {
         servoId,
         ADDR_SCS_PRESENT_POSITION
       );
+
+      
       
       // 使用通用错误处理函数
       if (!handleServoError(servoId, result, error, 'position reading')) {
         return null;
       }
       
+      console.log('readServoPosition', servoId, rawPosition);
       // 修复字节顺序问题 - 通常SCS舵机使用小端序(Little Endian)
       // 从0xD04变为0x40D (从3332变为1037)
       // 我们只关心最低的两个字节，所以可以通过位运算修复
@@ -1397,6 +1409,9 @@ async function writeServoPosition(servoId, position, skipLimitCheck = false) {
       const highByte = (position & 0x00FF) << 8; // 取低字节并左移到高位
       const adjustedPosition = (position & 0xFFFF0000) | highByte | lowByte;
       
+      
+      console.log('writeServoPosition', servoId, position, adjustedPosition & 0xFFFF);
+
       const [result, error] = await packetHandler.write4ByteTxRx(
         portHandler, 
         servoId, 
@@ -1581,6 +1596,8 @@ function updateServoStatusUI() {
 async function writeWheelSpeed(servoId, speed) {
   if (!isConnectedToRealRobot || !portHandler || !packetHandler) return false;
   
+  console.log('writeWheelSpeed!!', speed);
+
   return queueCommand(async () => {
     try {
       // 更新舵机状态为处理中
@@ -1590,24 +1607,39 @@ async function writeWheelSpeed(servoId, speed) {
       
       // 将速度限制在有效范围内并处理方向
       // 注意：速度为0是停止，正负值表示不同方向
-      const absSpeed = Math.min(Math.abs(speed), 2000);
-      
+      const absSpeed = Math.min(Math.abs(speed), 2500);
+      console.log('absSpeed', absSpeed);
+
       // 舵机速度控制有两个部分：方向位和速度值
-      // Feetech舵机的速度寄存器通常高位表示方向(0为正向，1为反向)
-      let speedValue = absSpeed & 0x07FF; // 只取低11位作为速度值
+      // Feetech舵机的速度寄存器使用bit 15作为方向位(0为正向，1为反向)
+      let speedValue = absSpeed & 0x7FFF; // 只取低15位作为速度值
       if (speed < 0) {
         // 设置方向位，添加反向标记
-        speedValue |= 0x0800; // 设置第12位为1表示反向
+        speedValue |= 0x8000; // 设置第15位为1表示反向
       }
       
       console.log(`Setting wheel servo ${servoId} speed to ${speed > 0 ? '+' : ''}${speed} (raw: 0x${speedValue.toString(16)})`);
-      
-      const [result, error] = await packetHandler.write2ByteTxRx(
+      // Important: write2ByteTxRx 有问题，这里用两个1Byte的寄存器来写
+      // 获取 speedValue 的低 8 位
+      const lowByte = speedValue & 0xFF;
+      // 获取 speedValue 的高 8 位
+      const highByte = (speedValue & 0xFF00) >> 8;
+
+      const [result, error] = await packetHandler.write1ByteTxRx(
         portHandler, 
         servoId, 
         ADDR_SCS_GOAL_SPEED, 
-        speedValue
+        lowByte
       );
+
+      const [result1, error1] = await packetHandler.write1ByteTxRx(
+        portHandler, 
+        servoId, 
+        47,
+        highByte
+      );
+
+      console.log('writeWheelSpeed result', result, error, result1, error1);
       
       // 使用通用错误处理函数
       return handleServoError(servoId, result, error, 'wheel speed control');
@@ -1627,46 +1659,54 @@ async function writeWheelSpeed(servoId, speed) {
  * @returns {Promise<boolean>} 操作是否成功
  */
 async function setWheelMode(servoId) {
-  if (!isConnectedToRealRobot || !portHandler || !packetHandler) return false;
-  
-  return queueCommand(async () => {
-    try {
-      console.log(`Setting servo ${servoId} to wheel mode`);
-      
-      // 在Feetech SCS舵机中，设置位置限制为0可以启用轮模式（连续旋转）
-      // 注意：确切的寄存器地址和值可能需要根据具体舵机型号调整
-      const ADDR_SCS_MIN_POSITION = 9;  // 最小位置限制地址
-      const ADDR_SCS_MAX_POSITION = 11; // 最大位置限制地址
-      
-      // 设置最小位置限制为0
-      let [result1, error1] = await packetHandler.write2ByteTxRx(
-        portHandler,
-        servoId,
-        ADDR_SCS_MIN_POSITION,
-        0
-      );
-      
-      // 设置最大位置限制为0
-      let [result2, error2] = await packetHandler.write2ByteTxRx(
-        portHandler,
-        servoId,
-        ADDR_SCS_MAX_POSITION,
-        0
-      );
-      
-      // 检查是否设置成功
-      const success = (result1 === COMM_SUCCESS && result2 === COMM_SUCCESS);
-      
-      if (success) {
-        console.log(`Successfully set servo ${servoId} to wheel mode`);
-      } else {
-        console.error(`Failed to set servo ${servoId} to wheel mode`, error1, error2);
-      }
-      
-      return success;
-    } catch (error) {
-      console.error(`Error setting wheel mode for servo ${servoId}:`, error);
-      return false;
+  if (!portHandler || !packetHandler) return false;
+  try {
+    console.log(`Setting servo ${servoId} to wheel mode`);
+    
+    // 定义控制寄存器地址
+    const ADDR_SCS_MODE = 33;  // 运行模式地址
+    const ADDR_SCS_LOCK = 55;  // 锁定地址
+    
+    // 解锁舵机配置
+    let [result1, error1] = await packetHandler.write1ByteTxRx(
+      portHandler,
+      servoId,
+      ADDR_SCS_LOCK,
+      0  // 0 = 解锁
+    );
+    
+    // 设置为速度模式 (Mode = 1)
+    let [result2, error2] = await packetHandler.write1ByteTxRx(
+      portHandler,
+      servoId,
+      ADDR_SCS_MODE,
+      1  // 1 = 速度模式/轮模式
+    );
+    
+    // 锁定配置，防止意外更改
+    let [result3, error3] = await packetHandler.write1ByteTxRx(
+      portHandler,
+      servoId,
+      ADDR_SCS_LOCK,
+      1  // 1 = 锁定
+    );
+    
+
+    console.log('set wheelMode errors:', error1, error2, error3);
+
+    // 检查是否设置成功
+    const success = (result1 === COMM_SUCCESS && result2 === COMM_SUCCESS && result3 === COMM_SUCCESS);
+    
+    if (success) {
+      console.log(`Successfully set servo ${servoId} to wheel mode`);
+    } else {
+      console.error(`Failed to set servo ${servoId} to wheel mode`, error1, error2, error3);
     }
-  });
+    
+    return success;
+  } catch (error) {
+    console.error(`Error setting wheel mode for servo ${servoId}:`, error);
+    return false;
+  }
+
 }
