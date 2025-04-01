@@ -57,7 +57,7 @@
             padding: 14px;
             border-radius: 8px;
             z-index: 1000;
-            max-width: 340px;
+            min-width: 300px;
             min-height: 260px;
             max-height: 90%;
             overflow: scroll;
@@ -447,7 +447,7 @@
             font-size: 11px;
             font-weight: bold;
             margin-left: 8px;
-            cursor: help;
+            cursor: pointer;
         }
 
         .tooltip {
@@ -461,7 +461,7 @@
             border-radius: 4px;
             padding: 8px;
             width: 220px;
-            font-size: 11px;
+            font-size: 13px;
             z-index: 1002;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
             opacity: 0;
@@ -583,6 +583,60 @@
                 transform: translate(-50%, 0);
             }
         }
+
+        /* Modal styles for Joycon help */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+        }
+
+        .modal {
+            background: #222;
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 90%;
+            max-height: 90%;
+            overflow: auto;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .modal img {
+            max-width: 100%;
+            max-height: 80vh; /* Limit image height to 80% of viewport height */
+            display: block;
+            margin: 0 auto;
+            object-fit: contain; /* Maintain aspect ratio */
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+            cursor: pointer;
+            color: white;
+            width: 30px;
+            height: 30px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            line-height: 0;
+        }
+
+        .modal-close:hover {
+            background: rgba(0, 0, 0, 0.5);
+        }
     </style>
 </head>
 
@@ -594,6 +648,44 @@
     <!-- 添加舵机限位和错误提醒框 -->
     <div id="servoLimitAlert"></div>
     <div id="jointLimitAlert"></div>
+
+    <!-- Joycon help modal -->
+    <div class="modal-overlay" id="joyconHelpModal">
+        <div class="modal">
+            <span class="modal-close" id="closeModal">×</span>
+            <img id="joyconHelpImage" src="" alt="Joycon Controls Guide">
+        </div>
+    </div>
+
+    <!-- Connect Robot help modal -->
+    <div class="modal-overlay" id="connectHelpModal">
+        <div class="modal">
+            <span class="modal-close" id="closeConnectModal">×</span>
+            <div style="color: white; padding: 20px;">
+                <h3 data-i18n="connecting-to-real-robot">Connecting to Real Robot</h3>
+                <div style="margin-top: 15px; line-height: 1.5;">
+                    <p><strong data-i18n="before-connecting">Before connecting:</strong></p>
+                    <ul style="margin-bottom: 15px;">
+                        <li data-i18n="power-on-robot">Power on your robot</li>
+                        <li data-i18n="match-position">Ensure your physical robot's position matches the virtual robot's position</li>
+                        <li data-i18n="select-device">Select the correct serial device when prompted</li>
+                    </ul>
+                    <p><strong data-i18n="after-connecting">After connecting:</strong></p>
+                    <ul style="margin-bottom: 15px;">
+                        <li data-i18n="servo-status-appear">Servo status will appear showing the state of each servo</li>
+                        <li data-i18n="start-slow">Start with slow movements to ensure safety</li>
+                        <li data-i18n="check-errors">If servos show errors, check connections and power</li>
+                    </ul>
+                    <p><strong data-i18n="safety-tips">Safety tips:</strong></p>
+                    <ul>
+                        <li data-i18n="keep-hands-clear">Keep hands clear of moving parts</li>
+                        <li data-i18n="use-slow-speed">Use slower speed settings when first connecting</li>
+                        <li data-i18n="disconnect-if-issues">Disconnect immediately if unexpected behavior occurs</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="control-panel" id="controlPanel">
         <div class="panel-header">
@@ -750,15 +842,6 @@
                         <div class="help-icon" id="joyconHelpIcon"
                             style="display: none; position: absolute; bottom: 10px; right: 10px; z-index: 1000; overflow: visible;">
                             ?
-                            <div class="tooltip" style="bottom: 30px; left:auto; right: 0; top: auto; width: 220px;">
-                                <strong>How to use Joycon:</strong>
-                                <ul>
-                                    <li>Left stick: Move left arm</li>
-                                    <li>Right stick: Move right arm</li>
-                                    <li>L/R buttons: Control grippers</li>
-                                    <li>Directional buttons: Movement control</li>
-                                </ul>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -767,15 +850,7 @@
             <br />
             <div class="help-wrapper">
                 <button id="connectRealRobot" class="connect-button">Connect Real Robot</button>
-                <div class="help-icon" id="connectHelpIcon">?
-                    <div class="tooltip">
-                        <strong>Before connecting:</strong>
-                        <ul>
-                            <li>Select the correct device when prompted</li>
-                            <li>Ensure your physical robot's position matches the virtual robot's position</li>
-                        </ul>
-                    </div>
-                </div>
+                <div class="help-icon" id="connectHelpIcon" style="cursor: pointer;">?</div>
             </div>
             <br />
             <!-- Servo Status Section (initially hidden) -->

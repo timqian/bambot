@@ -32,7 +32,7 @@ import {
   GeneralController,
 } from 'joy-con-webhid';
 // Import language system
-import { initLanguageSystem } from './language.js';
+import { initLanguageSystem, t } from './language.js';
 
 // 声明为全局变量
 let scene, camera, renderer, controls;

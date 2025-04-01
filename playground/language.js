@@ -9,13 +9,13 @@ const translations = {
     
     // Sections
     'keyboard-controls': 'Keyboard Controls',
-    'joycon-controls': 'Joycon Controls',
+    'joycon-controls': 'Joy-Con Controls',
     'servo-status': 'Servo Status',
     
     // Button Labels
     'connect-real-robot': 'Connect Real Robot',
-    'connect-left-joycon': 'Connect Left Joycon',
-    'connect-right-joycon': 'Connect Right Joycon',
+    'connect-left-joycon': 'Connect Left Joy-Con',
+    'connect-right-joycon': 'Connect Right Joy-Con',
     'show-controls': 'Show Controls',
     
     // Table Headers
@@ -42,7 +42,7 @@ const translations = {
     // Help text
     'connect-help': 'Before connecting:',
     'connect-help-1': 'Select the correct device when prompted',
-    'connect-help-2': 'Ensure your physical robot\'s position matches the virtual robot\'s position',
+    'connect-help-2': 'Ensure each joint of your physical robot matches the virtual robot\'s position',
     'joycon-help': 'How to use Joycon:',
     'joycon-help-1': 'Left stick: Move left arm',
     'joycon-help-2': 'Right stick: Move right arm',
@@ -65,7 +65,22 @@ const translations = {
     'right-elbow': 'Right Elbow',
     'right-wrist-pitch': 'Right Wrist Pitch',
     'right-wrist-roll': 'Right Wrist Roll',
-    'right-jaw': 'Right Jaw'
+    'right-jaw': 'Right Jaw',
+    
+    // Connect modal content
+    'connecting-to-real-robot': 'Connecting to Real Robot',
+    'before-connecting': 'Before connecting:',
+    'power-on-robot': 'Power on your robot',
+    'match-position': 'Ensure your physical robot\'s position matches the virtual robot\'s position',
+    'select-device': 'Select the correct serial device when prompted',
+    'after-connecting': 'After connecting:',
+    'servo-status-appear': 'Servo status will appear showing the state of each servo',
+    'start-slow': 'Start with slow movements to ensure safety',
+    'check-errors': 'If servos show errors, check connections and power',
+    'safety-tips': 'Safety tips:',
+    'keep-hands-clear': 'Keep hands clear of moving parts',
+    'use-slow-speed': 'Use slower speed settings when first connecting',
+    'disconnect-if-issues': 'Disconnect immediately if unexpected behavior occurs'
   },
   zh: {
     // 面板标题
@@ -76,13 +91,13 @@ const translations = {
     
     // 部分标题
     'keyboard-controls': '键盘控制',
-    'joycon-controls': '手柄控制',
+    'joycon-controls': 'Joy-Con 控制',
     'servo-status': '舵机状态',
     
     // 按钮标签
     'connect-real-robot': '连接实体机器人',
-    'connect-left-joycon': '连接左手柄',
-    'connect-right-joycon': '连接右手柄',
+    'connect-left-joycon': '连接左 Joy-Con',
+    'connect-right-joycon': '连接右 Joy-Con',
     'show-controls': '显示控制面板',
     
     // 表格标题
@@ -109,8 +124,8 @@ const translations = {
     // 帮助文本
     'connect-help': '连接前请注意：',
     'connect-help-1': '选择正确的设备',
-    'connect-help-2': '确保实体机器人的位置与虚拟机器人匹配',
-    'joycon-help': '如何使用手柄：',
+    'connect-help-2': '确保实体机器人各关节位置与虚拟机器人匹配',
+    'joycon-help': '如何使用Joy-Con：',
     'joycon-help-1': '左摇杆：控制左臂',
     'joycon-help-2': '右摇杆：控制右臂',
     'joycon-help-3': 'L/R按钮：控制夹爪',
@@ -132,8 +147,29 @@ const translations = {
     'right-elbow': '右臂肘部',
     'right-wrist-pitch': '右腕俯仰',
     'right-wrist-roll': '右腕旋转',
-    'right-jaw': '右夹爪'
+    'right-jaw': '右夹爪',
+    
+    // Connect modal content (Chinese)
+    'connecting-to-real-robot': '连接实体机器人',
+    'before-connecting': '连接前准备:',
+    'power-on-robot': '开启机器人电源',
+    'match-position': '确保实体机器人的各关节位置与虚拟机器人位置一致',
+    'select-device': '连接时选择正确的串口设备',
+    'after-connecting': '连接后:',
+    'servo-status-appear': '舵机状态面板将显示每个舵机的当前状态',
+    'start-slow': '开始时使用较慢的速度以确保安全',
+    'check-errors': '如果舵机显示错误，请检查连接和电源',
+    'safety-tips': '安全提示:',
+    'keep-hands-clear': '保持手部远离运动部件',
+    'use-slow-speed': '首次连接时使用较慢的速度设置',
+    'disconnect-if-issues': '如遇异常行为，请立即断开连接'
   }
+};
+
+// Joycon help image paths for each language
+const joyconHelpImages = {
+  en: '/joycon_en.jpg',
+  zh: '/joycon_zh.jpg'
 };
 
 // Current language (default: English)
@@ -167,6 +203,12 @@ export function initLanguageSystem() {
     langToggleBtn.addEventListener('click', toggleLanguage);
   }
   
+  // Setup Joycon help modal functionality
+  setupJoyconHelpModal();
+  
+  // Setup Connect help modal functionality
+  setupConnectHelpModal();
+  
   // Check for saved language preference
   const savedLang = localStorage.getItem('bambotLanguage');
   
@@ -177,6 +219,84 @@ export function initLanguageSystem() {
     // Auto-detect user's language
     const detectedLang = detectUserLanguage();
     switchLanguage(detectedLang);
+  }
+}
+
+/**
+ * Set up Joycon help modal functionality
+ */
+function setupJoyconHelpModal() {
+  const joyconHelpIcon = document.getElementById('joyconHelpIcon');
+  const modal = document.getElementById('joyconHelpModal');
+  const closeBtn = document.getElementById('closeModal');
+  
+  if (joyconHelpIcon && modal && closeBtn) {
+    // Show modal when clicking the help icon
+    joyconHelpIcon.addEventListener('click', () => {
+      // Set the correct image based on current language
+      updateJoyconHelpImage();
+      
+      // Display the modal
+      modal.style.display = 'flex';
+    });
+    
+    // Close modal when clicking the close button
+    closeBtn.addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
+    
+    // Close modal when clicking outside the modal content
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) {
+        modal.style.display = 'none';
+      }
+    });
+  }
+}
+
+/**
+ * Set up Connect help modal functionality
+ */
+function setupConnectHelpModal() {
+  const connectHelpIcon = document.getElementById('connectHelpIcon');
+  const modal = document.getElementById('connectHelpModal');
+  const closeBtn = document.getElementById('closeConnectModal');
+  
+  if (connectHelpIcon && modal && closeBtn) {
+    // Show modal when clicking the help icon
+    connectHelpIcon.addEventListener('click', () => {
+      // Update modal elements with current language
+      const modalElements = modal.querySelectorAll('[data-i18n]');
+      modalElements.forEach(element => {
+        const key = element.getAttribute('data-i18n');
+        element.textContent = t(key);
+      });
+      
+      // Display the modal
+      modal.style.display = 'flex';
+    });
+    
+    // Close modal when clicking the close button
+    closeBtn.addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
+    
+    // Close modal when clicking outside the modal content
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) {
+        modal.style.display = 'none';
+      }
+    });
+  }
+}
+
+/**
+ * Update the Joycon help image based on current language
+ */
+function updateJoyconHelpImage() {
+  const joyconHelpImage = document.getElementById('joyconHelpImage');
+  if (joyconHelpImage) {
+    joyconHelpImage.src = joyconHelpImages[currentLanguage] || joyconHelpImages.en;
   }
 }
 
@@ -212,6 +332,19 @@ export function switchLanguage(lang) {
   
   // Update all UI elements
   updateUILanguage();
+  
+  // Update Joycon help image if modal is open
+  updateJoyconHelpImage();
+  
+  // Update connect help modal if it's visible
+  const connectHelpModal = document.getElementById('connectHelpModal');
+  if (connectHelpModal && connectHelpModal.style.display === 'flex') {
+    const modalElements = connectHelpModal.querySelectorAll('[data-i18n]');
+    modalElements.forEach(element => {
+      const key = element.getAttribute('data-i18n');
+      element.textContent = t(key);
+    });
+  }
 }
 
 /**
@@ -321,20 +454,13 @@ function updateSpecificElements() {
     if (element.textContent === 'Right Jaw') element.textContent = t('right-jaw');
   });
   
-  // Help tooltips
+  // Help tooltip for connect
   const connectHelp = document.querySelector('#connectHelpIcon .tooltip strong');
-  const joyconHelp = document.querySelector('#joyconHelpIcon .tooltip strong');
-  
   if (connectHelp) connectHelp.textContent = t('connect-help');
-  if (joyconHelp) joyconHelp.textContent = t('joycon-help');
   
-  // Help tooltip lists
+  // Help tooltip lists for connect
   document.querySelectorAll('#connectHelpIcon .tooltip li').forEach((li, index) => {
     li.textContent = t(`connect-help-${index + 1}`);
-  });
-  
-  document.querySelectorAll('#joyconHelpIcon .tooltip li').forEach((li, index) => {
-    li.textContent = t(`joycon-help-${index + 1}`);
   });
   
   // Toggle panel button
