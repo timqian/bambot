@@ -270,7 +270,15 @@ export const robotControl = {
       const stepChange = Math.round((direction * stepSize) * (4096 / (2 * Math.PI)));
       
       // Calculate new position value
-      let newPosition = (servoCurrentPositions[servoId] + stepChange) % 4096;
+      let newPosition = servoCurrentPositions[servoId] + stepChange;
+      
+      // Check if the new position is outside the valid range (1-4095)
+      if (newPosition < 1 || newPosition > 4095) {
+        // Show an alert to inform the user
+        showAlert('servo', `Servo ${servoId} position (${newPosition}) exceeds valid range (1-4095). Movement prevented.`);
+        console.warn(`Servo ${servoId} position (${newPosition}) exceeds valid range. Movement prevented.`);
+        return false;
+      }
       
       // Store current position (virtual servo not updated yet)
       const prevPosition = servoCurrentPositions[servoId];
