@@ -1273,7 +1273,7 @@ async function toggleRealRobotConnection(targetServos) {
           
           // 先启用扭矩 - 集中一次性处理
           await writeTorqueEnable(servoId, 1);
-          
+ 
           // 区分轮子舵机和非轮子舵机的初始化
           if (servoId >= 13 && servoId <= 15) {
             // 轮子舵机设置为轮模式（连续旋转模式）
@@ -1296,7 +1296,6 @@ async function toggleRealRobotConnection(targetServos) {
             await writeServoSpeed(servoId, 300);
             
             // 读取当前位置并保存
-            // TODO: 需要读取吗？目前的回到没错位置功能是坏的
             const currentPosition = await readServoPosition(servoId);
             if (currentPosition !== null) {
               servoCurrentPositions[servoId] = currentPosition;
@@ -1607,7 +1606,7 @@ async function writeServoSpeed(servoId, speed) {
  * @param {number} enable - 0: 关闭, 1: 开启
  */
 async function writeTorqueEnable(servoId, enable) {
-  if (!isConnectedToRealRobot || !portHandler || !packetHandler) return;
+  if ( !portHandler || !packetHandler) return;
   
   return queueCommand(async () => {
     try {
@@ -1615,14 +1614,12 @@ async function writeTorqueEnable(servoId, enable) {
       servoCommStatus[servoId].status = 'pending';
       servoCommStatus[servoId].lastError = null;
       updateServoStatusUI();
-      
       const [result, error] = await packetHandler.write1ByteTxRx(
         portHandler, 
         servoId, 
         ADDR_SCS_TORQUE_ENABLE, 
         enable ? 1 : 0
       );
-      
       // 使用通用错误处理函数
       return handleServoError(servoId, result, error, 'torque control');
     } catch (error) {
