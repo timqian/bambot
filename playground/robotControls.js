@@ -727,12 +727,12 @@ export function setupJoyconControls(robot) {
 
     // 更新按键映射，使用右 SR/SL 代替 plus/minus
     'rightSr': [
-      { jointIndex: 12, direction: 1 }, // Left wheel forward
-      { jointIndex: 14, direction: -1 } // Right wheel forward
+      { jointIndex: 12, direction: -1, servoId: 13 }, // Left wheel forward
+      { jointIndex: 14, direction: 1, servoId: 15 } // Right wheel forward
     ],
     'rightSl': [
-      { jointIndex: 12, direction: -1 }, // Left wheel backward
-      { jointIndex: 14, direction: 1 } // Right wheel backward
+      { jointIndex: 12, direction: 1, servoId: 13 }, // Left wheel backward
+      { jointIndex: 14, direction: -1, servoId: 15 } // Right wheel backward
     ],
     // 更新按键映射，使用左 SR/SL 代替 y/a
     'leftSr': [
@@ -910,8 +910,22 @@ export function setupJoyconControls(robot) {
           joyconState.minus = buttons.minus;
           joyconState.capture = buttons.capture;
           // 更新左 Joy-Con 的 SR/SL 按钮状态
+          const prevLeftSr = joyconState.leftSr;
+          const prevLeftSl = joyconState.leftSl;
           joyconState.leftSl = buttons.sl;
           joyconState.leftSr = buttons.sr;
+          
+          // Check if buttons were released to stop wheels
+          if (isConnectedToRealRobot) {
+            if (prevLeftSr && !buttons.sr) {
+              stopWheelsForButtons('leftSr');
+            }
+            if (prevLeftSl && !buttons.sl) {
+              stopWheelsForButtons('leftSl');
+            }
+          }
+          
+          // Add back the stick state updates
           joyconState.leftStickRight = analogStickLeft.horizontal > joyconConfig.stickThresholds.left;
           joyconState.leftStickLeft = analogStickLeft.horizontal < -joyconConfig.stickThresholds.left;
           joyconState.leftStickUp = analogStickLeft.vertical > joyconConfig.stickThresholds.left;
@@ -944,8 +958,22 @@ export function setupJoyconControls(robot) {
           joyconState.plus = buttons.plus;
           joyconState.home = buttons.home;
           // 更新右 Joy-Con 的 SR/SL 按钮状态
+          const prevRightSr = joyconState.rightSr;
+          const prevRightSl = joyconState.rightSl;
           joyconState.rightSl = buttons.sl;
           joyconState.rightSr = buttons.sr;
+          
+          // Check if buttons were released to stop wheels
+          if (isConnectedToRealRobot) {
+            if (prevRightSr && !buttons.sr) {
+              stopWheelsForButtons('rightSr');
+            }
+            if (prevRightSl && !buttons.sl) {
+              stopWheelsForButtons('rightSl');
+            }
+          }
+          
+          // Add back the stick state updates
           joyconState.rightStickRight = analogStickRight.horizontal > joyconConfig.stickThresholds.right;
           joyconState.rightStickLeft = analogStickRight.horizontal < -joyconConfig.stickThresholds.right;
           joyconState.rightStickUp = analogStickRight.vertical > joyconConfig.stickThresholds.right;
@@ -964,6 +992,49 @@ export function setupJoyconControls(robot) {
       });
     }
   }, 2000);
+
+  /**
+   * 停止与指定按钮相关的轮子舵机
+   * @param {string} button - 释放的按钮名称
+   */
+  function stopWheelsForButtons(button) {
+    console.log(`Processing wheel stop for button: ${button}`);
+    
+    // Check if button exists in the mapping
+    if (buttonMapping[button] && Array.isArray(buttonMapping[button])) {
+      // Get the servo IDs for this button
+      const mappings = buttonMapping[button];
+      
+      // Check for other buttons that might be controlling wheels
+      const otherWheelButtons = ['rightSr', 'rightSl', 'leftSr', 'leftSl'].filter(b => b !== button && joyconState[b]);
+      console.log(`Other wheel buttons pressed: ${otherWheelButtons.join(', ') || 'none'}`);
+      
+      // For each mapping, check if we need to stop the servo
+      mappings.forEach(mapping => {
+        if (mapping.servoId >= 13 && mapping.servoId <= 15) {
+          // Check if other pressed buttons also control this servo
+          let shouldStop = true;
+          
+          for (const otherButton of otherWheelButtons) {
+            if (buttonMapping[otherButton]) {
+              const controlsThisServo = buttonMapping[otherButton].some(m => m.servoId === mapping.servoId);
+              if (controlsThisServo) {
+                shouldStop = false;
+                console.log(`Servo ${mapping.servoId} still controlled by ${otherButton}, not stopping`);
+                break;
+              }
+            }
+          }
+          
+          // If no other buttons control this servo, stop it
+          if (shouldStop) {
+            console.log(`Stopping wheel servo ${mapping.servoId} (button ${button} released)`);
+            robotControl.stopWheel(mapping.servoId);
+          }
+        }
+      });
+    }
+  }
 
   function updateJoints() {
     if (!robot || !robot.joints || !joyconState) return;
