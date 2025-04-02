@@ -464,7 +464,7 @@
     </head>
     <body>
         <div class="controls">
-            <a href="https://github.com/timqian/bambot" target="_blank" class="github-link">GitHub</a>
+            <a class="github-button" href="https://github.com/timqian/bambot/tree/playground-for-so-arm100" data-color-scheme="no-preference: light; light: light; dark: dark;" data-show-count="true" aria-label="Star timqian/bambot on GitHub">Star</a>
         </div>
         
         <!-- 添加舵机限位和错误提醒框 -->
@@ -473,13 +473,7 @@
         
         <div class="control-panel" id="controlPanel">
             <div class="panel-header">
-                <h3>Play with 
-                    <select id="modelSelect" style="display: inline-block; background: rgba(0, 0, 0, 0.3); color: white; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 4px; padding: 2px 8px; margin-left: 5px; vertical-align: middle; font-size: 16px; font-weight: bold; cursor: pointer;">
-                        <option value="bambot">Bambot</option>
-                        <option value="so_arm100">SO-Arm100</option>
-                        <!-- <option value="lekiwi">Lekiwi</option> -->
-                    </select>
-                </h3>
+                <h3>Play with SO-Arm100 </h3>
                 <span id="hideControls" style="cursor: pointer; padding: 0 5px;">×</span>
             </div>
             
@@ -528,36 +522,6 @@
                         <div class="joint-control">
                             <div class="joint-name">Jaw:</div>
                             <div class="joint-keys"><span class="key" data-key="6">6</span> <span class="direction-plus">+</span> <span class="key" data-key="y">Y</span> <span class="direction-minus">-</span></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Placeholder for Joycon Controls (future) -->
-                <div class="collapsible" id="joyconControlSection">
-                    <div class="collapsible-header">
-                        <span>Joycon Controls</span>
-                        <span class="collapsible-icon">▼</span>
-                    </div>
-                    <div class="collapsible-content">
-                        <button id="connectJoycon" class="connect-button">Connect Joycon</button>
-                        <div class="control-info">
-                            <p>Joycon controls will be available after connecting.</p>
-                            <!-- Joycon control details will be added here -->
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Placeholder for VR Controls (future) -->
-                <div class="collapsible" id="vrControlSection">
-                    <div class="collapsible-header">
-                        <span>VR Controls</span>
-                        <span class="collapsible-icon">▼</span>
-                    </div>
-                    <div class="collapsible-content">
-                        <button id="connectVR" class="connect-button">Connect VR</button>
-                        <div class="control-info">
-                            <p>VR controls will be available after connecting.</p>
-                            <!-- VR control details will be added here -->
                         </div>
                     </div>
                 </div>
@@ -657,5 +621,6 @@
         <div class="toggle-panel" id="togglePanel">Show Controls</div>
         
         <script type="module" src="./index.js"></script>
+        <script async defer src="https://buttons.github.io/buttons.js"></script>
     </body>
 </html>

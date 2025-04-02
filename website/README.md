@@ -1,1 +1,0 @@
-## Source code of bambot.org

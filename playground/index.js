@@ -115,27 +115,10 @@ function init() {
   controls.target.y = 1;
   controls.update();
 
-  // 添加模型切换功能
-  const modelSelect = document.getElementById('modelSelect');
-  modelSelect.addEventListener('change', (e) => {
-    const selectedModel = e.target.value;
-    window.location.hash = selectedModel;
-    window.location.reload();
-
-  });
-
   // 根据URL hash或默认加载模型
   function loadModelFromHash() {
     // 获取URL hash（去掉#号）
-    let modelToLoad = window.location.hash.substring(1);
-    
-    // 如果hash为空或无效，使用默认模型
-    if (!modelToLoad || (modelToLoad !== 'bambot' && modelToLoad !== 'so_arm100' && modelToLoad !== 'lekiwi')) {
-      modelToLoad = 'bambot'; // 默认为bambot
-    }
-    
-    // 设置下拉框的值为当前模型
-    modelSelect.value = modelToLoad;
+    let modelToLoad = 'so_arm100';
     
     // 加载模型
     const manager = new LoadingManager();
