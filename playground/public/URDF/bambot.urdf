@@ -549,14 +549,13 @@
   <!-- Wheel Joints -->
   <!-- Front Left Wheel Joint -->
 
-
-  <!-- Front Right Wheel Joint -->
-  <joint name="front_right_wheel_joint" type="continuous">
+  <joint name="front_left_wheel_joint" type="continuous">
     <parent link="base_link"/>
-    <child link="front_right_wheel"/>
-    <origin xyz="-0.1 -0.48 -0.03" rpy="0 1.5708 2.0944"/> <!-- -120 degrees -->
+    <child link="front_left_wheel"/>
+    <origin xyz="-0.1 0.0 -0.03" rpy="0 1.5708 -2.0944"/> <!-- 120 degrees -->
     <axis xyz="0 0 1"/>
   </joint>
+
 
   <!-- Rear Wheel Joint -->
   <joint name="rear_wheel_joint" type="continuous">
@@ -565,11 +564,12 @@
     <origin xyz="-0.52 -0.25 -0.03" rpy="0 1.5708 0"/> <!-- 0 degrees (rear) -->
     <axis xyz="0 0 1"/>
   </joint>
-
-  <joint name="front_left_wheel_joint" type="continuous">
+  <!-- Front Right Wheel Joint -->
+  <joint name="front_right_wheel_joint" type="continuous">
     <parent link="base_link"/>
-    <child link="front_left_wheel"/>
-    <origin xyz="-0.1 0.0 -0.03" rpy="0 1.5708 -2.0944"/> <!-- 120 degrees -->
+    <child link="front_right_wheel"/>
+    <origin xyz="-0.1 -0.48 -0.03" rpy="0 1.5708 2.0944"/> <!-- -120 degrees -->
     <axis xyz="0 0 1"/>
   </joint>
+
 </robot>

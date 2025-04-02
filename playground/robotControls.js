@@ -293,7 +293,7 @@ export const robotControl = {
       let newPosition = servoCurrentPositions[servoId] + stepChange;
       
       // Check if the new position is outside the valid range (1-4095)
-      if (newPosition < 100 || newPosition > 4000) {
+      if (newPosition < 5 || newPosition > 4090) {
         // Show an alert to inform the user
         showAlert('servo', `Servo ${servoId} position (${newPosition}) exceeds valid range (100-4000). Movement prevented.`);
         console.warn(`Servo ${servoId} position (${newPosition}) exceeds valid range. Movement prevented.`);
@@ -459,12 +459,12 @@ export function setupKeyboardControls(robot) {
     
     // Wheel controls using arrow keys (based on robotConfig.js)
     'arrowup': [
-      { jointIndex: 12, direction: 1, servoId: 13 },
-      { jointIndex: 14, direction: -1, servoId: 15 }
-    ],
-    'arrowdown': [
       { jointIndex: 12, direction: -1, servoId: 13 },
       { jointIndex: 14, direction: 1, servoId: 15 }
+    ],
+    'arrowdown': [
+      { jointIndex: 12, direction: 1, servoId: 13 },
+      { jointIndex: 14, direction: -1, servoId: 15 }
     ],
     'arrowleft': [
       { jointIndex: 12, direction: 1, servoId: 13 },
@@ -1030,7 +1030,7 @@ export function setupControlPanel() {
   setupCollapsibleSections();
 
   // 添加真实机器人连接事件处理 - 所有舵机
-  const connectButton = document.getElementById('connectRealRobot');
+  const connectButton = document.getElementById('connectRealRobotBtn');
   if (connectButton) {
     connectButton.addEventListener('click', () => toggleRealRobotConnection(servoGroups.all));
   }
@@ -1131,7 +1131,7 @@ function handleServoError(servoId, result, error, operation, isWarning = false) 
  * @param {Array} [targetServos] - 可选参数，指定要连接的舵机ID数组，不提供则连接所有舵机
  */
 async function toggleRealRobotConnection(targetServos) {
-  const connectButton = document.getElementById('connectRealRobot');
+  const connectButton = document.getElementById('connectRealRobotBtn');
   const servoStatusContainer = document.getElementById('servoStatusContainer');
   
   if (!connectButton) return;
@@ -1343,30 +1343,33 @@ async function readServoPosition(servoId) {
       }
       
       // 读取当前位置
-      const [rawPosition, result, error] = await packetHandler.read4ByteTxRx(
+      // 读取位置的低字节 (地址56)
+      const [lowByte, resultLow, errorLow] = await packetHandler.read1ByteTxRx(
         portHandler,
         servoId,
         ADDR_SCS_PRESENT_POSITION
       );
-
       
+      // 读取位置的高字节 (地址57)
+      const [highByte, resultHigh, errorHigh] = await packetHandler.read1ByteTxRx(
+        portHandler,
+        servoId,
+        ADDR_SCS_PRESENT_POSITION + 1
+      );
       
-      // 使用通用错误处理函数
-      if (!handleServoError(servoId, result, error, 'position reading')) {
+      // 检查两次读取是否都成功
+      if (!handleServoError(servoId, resultLow, errorLow, 'position reading (low byte)') || 
+          !handleServoError(servoId, resultHigh, errorHigh, 'position reading (high byte)')) {
         return null;
       }
       
-      console.log('readServoPosition', servoId, rawPosition);
-      // 修复字节顺序问题 - 通常SCS舵机使用小端序(Little Endian)
-      // 从0xD04变为0x40D (从3332变为1037)
-      // 我们只关心最低的两个字节，所以可以通过位运算修复
-      const lowByte = (rawPosition & 0xFF00) >> 8;  // 取高字节并右移到低位
-      const highByte = (rawPosition & 0x00FF) << 8; // 取低字节并左移到高位
-      const position = (rawPosition & 0xFFFF0000) | highByte | lowByte;
+      // 组合高低字节为一个16位数值
+      const position = (highByte << 8) | lowByte;
+      
+      // console.log('readServoPosition', servoId, position);
       
       // 输出调试信息
-      console.log(`Servo ${servoId} raw: 0x${rawPosition.toString(16)}, fixed: 0x${position.toString(16)}`);
-      
+      // console.log(`Servo ${servoId} position: 0x${position.toString(16)} (${position})`);
       return position & 0xFFFF; // 只取低16位，这是舵机位置的有效范围
     } catch (error) {
       console.error(`Error reading position from servo ${servoId}:`, error);
@@ -1402,22 +1405,32 @@ async function writeServoPosition(servoId, position, skipLimitCheck = false) {
       // Write position to servo
       position = Math.max(0, Math.min(4095, position)); // Clamp to valid range
       
-      // 修复字节顺序问题 - 通常SCS舵机使用小端序(Little Endian)
-      // 从0x40D变为0xD04 (从1037变为3332)
-      // 我们只需要修正低16位中的字节顺序
-      const lowByte = (position & 0xFF00) >> 8;  // 取高字节并右移到低位
-      const highByte = (position & 0x00FF) << 8; // 取低字节并左移到高位
-      const adjustedPosition = (position & 0xFFFF0000) | highByte | lowByte;
+      // 将位置值拆分为两个字节，分别写入地址42和43
+      // 获取位置值的低8位和高8位
+      const lowByte = position & 0xFF;  // 低8位
+      const highByte = (position >> 8) & 0xFF;  // 高8位
       
-      
-      console.log('writeServoPosition', servoId, position, adjustedPosition & 0xFFFF);
+      // console.log(`writeServoPosition: servoId=${servoId}, position=${position}, lowByte=0x${lowByte.toString(16)}, highByte=0x${highByte.toString(16)}`);
 
-      const [result, error] = await packetHandler.write4ByteTxRx(
+      // 先写入低字节到地址42
+      const [resultLow, errorLow] = await packetHandler.write1ByteTxRx(
         portHandler, 
         servoId, 
-        ADDR_SCS_GOAL_POSITION, 
-        adjustedPosition & 0xFFFF // 只使用低16位
+        ADDR_SCS_GOAL_POSITION, // 42
+        lowByte
       );
+      
+      // 再写入高字节到地址43
+      const [resultHigh, errorHigh] = await packetHandler.write1ByteTxRx(
+        portHandler, 
+        servoId, 
+        ADDR_SCS_GOAL_POSITION + 1, // 43
+        highByte
+      );
+      
+      // 合并两次写入的结果
+      const result = (resultLow === COMM_SUCCESS && resultHigh === COMM_SUCCESS) ? COMM_SUCCESS : -2; // -2 is COMM_TX_FAIL
+      const error = errorLow || errorHigh;
       
       // 使用通用错误处理函数，通信成功但有错误时作为警告处理
       const isSuccess = result === COMM_SUCCESS;
@@ -1596,7 +1609,7 @@ function updateServoStatusUI() {
 async function writeWheelSpeed(servoId, speed) {
   if (!isConnectedToRealRobot || !portHandler || !packetHandler) return false;
   
-  console.log('writeWheelSpeed!!', speed);
+  // console.log('writeWheelSpeed!!', speed);
 
   return queueCommand(async () => {
     try {
@@ -1639,7 +1652,7 @@ async function writeWheelSpeed(servoId, speed) {
         highByte
       );
 
-      console.log('writeWheelSpeed result', result, error, result1, error1);
+      // console.log('writeWheelSpeed result', result, error, result1, error1);
       
       // 使用通用错误处理函数
       return handleServoError(servoId, result, error, 'wheel speed control');
