@@ -203,6 +203,14 @@ function isJointWithinLimits(joint, newValue) {
 const robotConfig = {
   wheelControl: {
     speedFactor: 1500  // Base speed value for wheel servos
+  },
+  // Add direction mapping configuration
+  directionMapping: {
+    // Format: jointIndex: boolean
+    // true means reverse direction, false means keep original direction
+    0: true,   // Left arm base rotation
+    6: true,   // Right arm base rotation
+    // Add more mappings as needed
   }
 };
 
@@ -241,7 +249,10 @@ export const robotControl = {
     const currentValue = robot.joints[jointName].angle;
     
     // Calculate new joint value
-    const newValue = currentValue + direction * stepSize;
+    // Apply direction mapping if configured
+    const effectiveDirection = robotConfig.directionMapping[jointIndex] ? -direction : direction;
+    const effectiveStepSize = stepSize;
+    const newValue = currentValue + effectiveDirection * effectiveStepSize;
     
     // Get servo ID (typically jointIndex + 1, but could be different)
     const servoId = getServoIdFromJointIndex(jointIndex);
@@ -266,7 +277,7 @@ export const robotControl = {
     if (isWheelServo) {
       // Wheel servos use speed control
       // Use speedFactor from config instead of local declaration
-      const wheelSpeed = direction * robotConfig.wheelControl.speedFactor;
+      const wheelSpeed = effectiveDirection * robotConfig.wheelControl.speedFactor;
       
       console.log(`Setting wheel servo ${servoId} speed to ${wheelSpeed}`);
       
@@ -287,7 +298,7 @@ export const robotControl = {
     } else {
       // Non-wheel servos use position control
       // Calculate servo position change in servo steps
-      const stepChange = Math.round((direction * stepSize) * (4096 / (2 * Math.PI)));
+      const stepChange = Math.round((effectiveDirection * stepSize) * (4096 / (2 * Math.PI)));
       
       // Calculate new position value
       let newPosition = servoCurrentPositions[servoId] + stepChange;
@@ -429,7 +440,7 @@ export function setupKeyboardControls(robot) {
   
   // 默认的按键-关节映射
   const keyMappings = {
-    // Left arm controls (using number keys)
+    // right arm controls (using number keys)
     '1': [{ jointIndex: 0, direction: 1, servoId: 1 }],  // Left Rotation +
     'q': [{ jointIndex: 0, direction: -1, servoId: 1 }], // Left Rotation -
     '2': [{ jointIndex: 1, direction: 1, servoId: 2 }],  // Left Pitch +
@@ -443,7 +454,7 @@ export function setupKeyboardControls(robot) {
     '6': [{ jointIndex: 5, direction: 1, servoId: 6 }], // Left Jaw +
     'y': [{ jointIndex: 5, direction: -1, servoId: 6 }],// Left Jaw -
     
-    // Right arm controls (using ASDFGH and ZXCVBN keys)
+    // left arm controls (using ASDFGH and ZXCVBN keys)
     'a': [{ jointIndex: 6, direction: 1, servoId: 7 }],  // Right Rotation +
     'z': [{ jointIndex: 6, direction: -1, servoId: 7 }], // Right Rotation -
     's': [{ jointIndex: 7, direction: 1, servoId: 8 }],  // Right Pitch +
