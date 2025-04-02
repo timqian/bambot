@@ -393,7 +393,7 @@ function updateSpecificElements() {
   if (speedLabel) speedLabel.textContent = t('control-speed');
   
   // Connect button
-  const connectBtn = document.getElementById('connectRealRobot');
+  const connectBtn = document.getElementById('connectRealRobotBtn');
   if (connectBtn) connectBtn.textContent = t('connect-real-robot');
   
   // Joycon buttons
