@@ -758,7 +758,6 @@ export function setupJoyconControls(robot) {
   const rightJoycon = document.getElementById('joycon-r');
   // Function to update UI based on connected joycons
   function updateJoyconDisplay() {
-    const joyconHelpIcon = document.getElementById('joyconHelpIcon');
     let anyJoyconConnected = false;
     
     for (const joyCon of connectedJoyCons.values()) {
@@ -773,11 +772,6 @@ export function setupJoyconControls(robot) {
         if (rightJoycon) rightJoycon.style.display = 'inline-block';
         anyJoyconConnected = true;
       }
-    }
-    
-    // Show help icon when any Joycon is connected
-    if (joyconHelpIcon) {
-      joyconHelpIcon.style.display = anyJoyconConnected ? 'inline-flex' : 'none';
     }
   }
 
