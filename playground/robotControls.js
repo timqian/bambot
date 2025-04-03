@@ -204,12 +204,12 @@ const robotConfig = {
   wheelControl: {
     speedFactor: 1500  // Base speed value for wheel servos
   },
-  // Add direction mapping configuration
-  directionMapping: {
-    // Format: jointIndex: boolean
+  // Add direction mapping configuration for servos
+  servoDirectionMapping: {
+    // Format: servoId: boolean
     // true means reverse direction, false means keep original direction
-    0: true,   // Left arm base rotation
-    6: true,   // Right arm base rotation
+    1: true,   // Left arm base rotation servo
+    7: true,   // Right arm base rotation servo
     // Add more mappings as needed
   }
 };
@@ -248,11 +248,8 @@ export const robotControl = {
     // Get current joint value
     const currentValue = robot.joints[jointName].angle;
     
-    // Calculate new joint value
-    // Apply direction mapping if configured
-    const effectiveDirection = robotConfig.directionMapping[jointIndex] ? -direction : direction;
-    const effectiveStepSize = stepSize;
-    const newValue = currentValue + effectiveDirection * effectiveStepSize;
+    // Calculate new joint value - use original direction for virtual joint
+    const newValue = currentValue + direction * stepSize;
     
     // Get servo ID (typically jointIndex + 1, but could be different)
     const servoId = getServoIdFromJointIndex(jointIndex);
@@ -273,6 +270,9 @@ export const robotControl = {
     
     // Handle real robot control
     const isWheelServo = servoId >= 13 && servoId <= 15;
+    
+    // Apply direction mapping for servo control only
+    const effectiveDirection = robotConfig.servoDirectionMapping[servoId] ? -direction : direction;
     
     if (isWheelServo) {
       // Wheel servos use speed control
