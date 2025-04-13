@@ -23,13 +23,13 @@ import {
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import URDFLoader from 'urdf-loader';
 // 导入控制工具函数
-import { setupKeyboardControls, setupControlPanel } from './robotControls.js';
+import { setupKeyboardControls, setupGamepadControls, setupControlPanel } from './robotControls.js';
 
 // 声明为全局变量
 let scene, camera, renderer, controls;
 // 将robot设为全局变量，便于其他模块访问
 window.robot = null;
-let keyboardUpdate;
+let keyboardUpdate, gamepadUpdate;
 
 init();
 render();
@@ -135,7 +135,6 @@ function init() {
       window.robot.traverse(c => {
         c.castShadow = true;
       });
-      console.log(window.robot.joints);
       // 记录关节限制信息到控制台，便于调试
       logJointLimits(window.robot);
       
@@ -150,6 +149,8 @@ function init() {
 
       // Initialize keyboard controls
       keyboardUpdate = setupKeyboardControls(window.robot);
+      // Initialize gamepad controls
+      gamepadUpdate = setupGamepadControls(window.robot);
     };
   }
 
@@ -197,10 +198,9 @@ function onResize() {
 function render() {
   requestAnimationFrame(render);
   
-  // Update joint positions based on keyboard input
-  if (keyboardUpdate) {
-    keyboardUpdate();
-  }
+  // Update joint positions based on keyboard and gamepad input
+  if (keyboardUpdate) keyboardUpdate();
+  if (gamepadUpdate) gamepadUpdate();
   
   renderer.render(scene, camera);
 }

@@ -1,5 +1,8 @@
-## Playground for so-arm100
+## SO-100 Playground
 
-[so-arm100.bambot.org](https://so-arm100.bambot.org/)
+[so100-playground.vercel.app](https://so100-playground.vercel.app/)
 
-<img width="1097" alt="screenshot" src="https://github.com/user-attachments/assets/b3241261-51ee-4d25-8817-d799b8f60183" />
+Inspired by and based on [so-arm100.bambot.org/](https://so-arm100.bambot.org/).
+
+<img width="1496" alt="screenshot" src="https://github.com/user-attachments/assets/285489e9-ccfe-4622-8a28-8025d42d6e5a" />
+
