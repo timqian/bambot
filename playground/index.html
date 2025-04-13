@@ -3,8 +3,9 @@
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
         <meta charset="utf-8"/>
+        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🦾</text></svg>">
         
-        <title>Simple URDF Loading Example</title>
+        <title>SO-Arm100 Playground</title>
 
         <style>
             html, body {
@@ -51,7 +52,7 @@
                 left: 20px;
                 background: rgba(0, 0, 0, 0.7);
                 color: white;
-                padding: 15px;
+                padding: 12px;
                 border-radius: 8px;
                 z-index: 1000;
                 max-width: 350px;
@@ -62,11 +63,11 @@
             
             .control-panel h3 {
                 margin-top: 0;
-                margin-bottom: 10px;
+                margin-bottom: 8px;
             }
             
             .control-info {
-                margin-bottom: 15px;
+                margin-bottom: 10px;
             }
             
             .control-pair {
@@ -97,44 +98,56 @@
             }
             
             .joint-name {
-                flex: 0 0 100px;
+                flex: 0 0 120px;
                 text-align: left;
                 padding-right: 15px;
                 font-weight: 500;
+                font-size: 14px;
+                font-weight: bold;
             }
             
             .joint-keys {
                 flex: 1;
                 white-space: nowrap;
-            }
-            
-            .joint-keys .key:nth-child(3) {
-                margin-left: 10px;
+                display: flex;
+                align-items: center;
+                gap: 4px;
             }
             
             .key {
                 background: rgba(255, 255, 255, 0.2);
-                padding: 2px 6px;
+                padding: 4px 8px;
                 border-radius: 4px;
                 font-family: monospace;
+                min-width: 20px;
+                text-align: center;
+                display: inline-flex;
+                justify-content: center;
+                align-items: center;
+                transition: all 0.2s ease;
             }
             
             .key-pressed {
                 background: rgba(255, 255, 255, 0.6);
                 color: #000;
                 box-shadow: 0 0 8px rgba(76, 175, 80, 0.8);
+                transform: translateY(1px);
             }
             
             .direction-plus {
                 color: #4CAF50;
                 font-weight: bold;
-                margin-left: 4px;
+                width: 15px;
+                text-align: center;
+                display: inline-block;
             }
             
             .direction-minus {
                 color: #F44336;
                 font-weight: bold;
-                margin-left: 4px;
+                width: 15px;
+                text-align: center;
+                display: inline-block;
             }
             
             .control-status {
@@ -177,15 +190,17 @@
             }
             
             .speed-control {
-                margin: 15px 0;
-                padding: 10px;
+                margin: 10px 0;
+                padding: 8px;
                 background: rgba(255, 255, 255, 0.1);
                 border-radius: 6px;
+                width: 300px;
+                box-sizing: border-box;
             }
             
             .speed-control label {
                 display: block;
-                margin-bottom: 5px;
+                margin-bottom: 4px;
                 font-weight: bold;
             }
             
@@ -248,7 +263,7 @@
                 display: block;
                 width: 100%;
                 padding: 8px;
-                margin: 10px 0 15px 0;
+                margin: 8px 0 12px 0;
                 background: #2196F3;
                 color: white;
                 border: none;
@@ -279,13 +294,13 @@
             .collapsible {
                 background: rgba(255, 255, 255, 0.1);
                 border-radius: 6px;
-                margin-bottom: 10px;
+                margin-bottom: 8px;
                 overflow: hidden;
                 width: 300px;
             }
             
             .collapsible-header {
-                padding: 10px;
+                padding: 8px 10px;
                 cursor: pointer;
                 display: flex;
                 justify-content: space-between;
@@ -298,7 +313,7 @@
             }
             
             .collapsible-content {
-                padding: 0 10px 10px 10px;
+                padding: 0 10px 8px 10px;
                 display: none;
             }
             
@@ -323,7 +338,7 @@
             
             /* Global Controls Section */
             .global-controls {
-                margin-bottom: 15px;
+                margin-bottom: 12px;
             }
             
             /* Panel header with title and close button */
@@ -353,8 +368,8 @@
             
             .help-icon {
                 display: inline-flex;
-                justify-content: center;
                 align-items: center;
+                justify-content: center;
                 width: 18px;
                 height: 18px;
                 border-radius: 50%;
@@ -402,6 +417,7 @@
             .servo-status {
                 font-weight: bold;
                 min-width: 60px;
+                font-size: 14px;
             }
             
             .servo-status.warning {
@@ -409,7 +425,7 @@
             }
             
             .servo-error {
-                font-size: 12px;
+                font-size: 14px;
                 color: #F44336;
                 display: none;
                 margin-left: 10px;
@@ -460,11 +476,178 @@
                 0% { opacity: 0; transform: translate(-50%, -20px); }
                 100% { opacity: 1; transform: translate(-50%, 0); }
             }
+
+            /* Specific positioning for gamepad controls tooltip */
+            #gamepadControlSection .tooltip {
+                top: auto;
+                bottom: 100%;
+                right: 0;
+                margin-bottom: 10px;
+                z-index: 1003; /* Ensure it's above other elements */
+            }
+
+            /* Ensure the gamepad section's help icon is properly positioned */
+            #gamepadControlSection .help-wrapper {
+                position: relative;
+                overflow: visible; /* Ensure tooltip is not cut off */
+            }
+
+            #gamepadControlSection .collapsible-content {
+                overflow: visible; /* Allow tooltip to overflow */
+            }
+
+            #gamepadControlSection.collapsible {
+                overflow: visible; /* Allow tooltip to overflow */
+            }
+
+            /* Gamepad type selector styles */
+            .gamepad-type-container {
+                display: flex;
+                align-items: center;
+                margin-bottom: 8px;
+            }
+
+            .gamepad-type-label {
+                flex: 0 0 120px;
+                text-align: left;
+                padding-right: 15px;
+                font-weight: 500;
+                font-size: 14px;
+                font-weight: bold;
+            }
+
+            .gamepad-type-select {
+                width: 120px;
+                padding: 5px 10px;
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(171, 25, 25, 0.2);
+                border-radius: 4px;
+                color: white;
+                font-size: 14px;
+            }
+
+            .gamepad-type-select:focus {
+                outline: none;
+                border-color: rgba(255, 255, 255, 0.4);
+                background: rgba(255, 255, 255, 0.15);
+            }
+
+            br {
+                display: none;
+            }
+
+            .control-methods > .collapsible + .collapsible {
+                margin-top: 8px;
+            }
+
+            /* Servo Status Styles */
+            #servoStatusContainer {
+                margin-top: 15px;
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 6px;
+                margin-bottom: 8px;
+                overflow: hidden;
+                width: 300px;
+            }
+            
+            .servo-status-container {
+                padding: 8px;
+            }
+
+            .servo-status-line {
+                display: flex;
+                align-items: center;
+                padding: 4px 0;
+                margin: 0;
+            }
+
+            .direction-toggle {
+                width: 24px;
+                height: 24px;
+                border-radius: 4px;
+                background-color: #444444;
+                color: #ffffff;
+                border: none;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-right: 8px;
+                font-size: 16px;
+                transition: all 0.2s;
+            }
+
+            .direction-toggle:disabled {
+                cursor: not-allowed;
+                opacity: 0.5;
+            }
+
+            .direction-toggle.inverted {
+                background-color: #e0e0e0;
+                color: #000000;
+            }
+
+            .servo-name {
+                flex: 0 0 100px;
+                text-align: left;
+                padding-right: 15px;
+                font-weight: bold;
+                font-size: 14px;
+                margin: 0;
+                line-height: 1.5;
+            }
+
+            .servo-status-info {
+                flex: 1;
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                gap: 8px;
+                margin: 0;
+            }
+
+            .servo-status {
+                font-size: 14px;
+                font-weight: bold;
+                margin: 0;
+                line-height: 1.5;
+                min-width: 50px;
+            }
+
+            .servo-error {
+                font-size: 10px;
+                color: #F44336;
+                display: none;
+                margin: 0;
+            }
+
+            /* Alert Styles */
+            .alert {
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                padding: 10px 20px;
+                border-radius: 4px;
+                color: white;
+                z-index: 2000;
+                animation: fadeInOut 3s ease-in-out;
+            }
+            
+            .alert-joint { background: #FF9800; }
+            .alert-servo { background: #F44336; }
+            
+            @keyframes fadeInOut {
+                0% { opacity: 0; transform: translate(-50%, -20px); }
+                10% { opacity: 1; transform: translate(-50%, 0); }
+                90% { opacity: 1; transform: translate(-50%, 0); }
+                100% { opacity: 0; transform: translate(-50%, -20px); }
+            }
         </style>
     </head>
     <body>
         <div class="controls">
-            <a class="github-button" href="https://github.com/timqian/bambot/tree/playground-for-so-arm100" data-color-scheme="no-preference: light; light: light; dark: dark;" data-show-count="true" aria-label="Star timqian/bambot on GitHub">Star</a>
+            <a class="github-button" href="https://github.com/timqian/bambot/tree/playground-for-so-arm100" data-color-scheme="no-preference: light; light: light; dark: dark;" aria-label="Star timqian/bambot on GitHub">Star</a>
         </div>
         
         <!-- 添加舵机限位和错误提醒框 -->
@@ -473,7 +656,7 @@
         
         <div class="control-panel" id="controlPanel">
             <div class="panel-header">
-                <h3>Play with SO-Arm100 </h3>
+                <h3>SO-Arm100 Playground</h3>
                 <span id="hideControls" style="cursor: pointer; padding: 0 5px;">×</span>
             </div>
             
@@ -500,28 +683,88 @@
                     </div>
                     <div class="collapsible-content">
                         <div class="joint-control">
-                            <div class="joint-name">Rotation:</div>
-                            <div class="joint-keys"><span class="key" data-key="1">1</span> <span class="direction-plus">+</span> <span class="key" data-key="q">Q</span> <span class="direction-minus">-</span></div>
+                            <div class="joint-name">Rotation</div>
+                            <div class="joint-keys"><span class="key" data-key="rotationPlus">1</span> <span class="direction-plus">+</span> <span class="key" data-key="rotationMinus">Q</span> <span class="direction-minus">-</span></div>
                         </div>
                         <div class="joint-control">
-                            <div class="joint-name">Pitch:</div>
-                            <div class="joint-keys"><span class="key" data-key="2">2</span> <span class="direction-plus">+</span> <span class="key" data-key="w">W</span> <span class="direction-minus">-</span></div>
+                            <div class="joint-name">Pitch</div>
+                            <div class="joint-keys"><span class="key" data-key="pitchPlus">2</span> <span class="direction-plus">+</span> <span class="key" data-key="pitchMinus">W</span> <span class="direction-minus">-</span></div>
                         </div>
                         <div class="joint-control">
-                            <div class="joint-name">Elbow:</div>
-                            <div class="joint-keys"><span class="key" data-key="3">3</span> <span class="direction-plus">+</span> <span class="key" data-key="e">E</span> <span class="direction-minus">-</span></div>
+                            <div class="joint-name">Elbow</div>
+                            <div class="joint-keys"><span class="key" data-key="elbowPlus">3</span> <span class="direction-plus">+</span> <span class="key" data-key="elbowMinus">E</span> <span class="direction-minus">-</span></div>
                         </div>
                         <div class="joint-control">
-                            <div class="joint-name">Wrist Pitch:</div>
-                            <div class="joint-keys"><span class="key" data-key="4">4</span> <span class="direction-plus">+</span> <span class="key" data-key="r">R</span> <span class="direction-minus">-</span></div>
+                            <div class="joint-name">Wrist Pitch</div>
+                            <div class="joint-keys"><span class="key" data-key="wristPitchPlus">4</span> <span class="direction-plus">+</span> <span class="key" data-key="wristPitchMinus">R</span> <span class="direction-minus">-</span></div>
                         </div>
                         <div class="joint-control">
-                            <div class="joint-name">Wrist Roll:</div>
-                            <div class="joint-keys"><span class="key" data-key="5">5</span> <span class="direction-plus">+</span> <span class="key" data-key="t">T</span> <span class="direction-minus">-</span></div>
+                            <div class="joint-name">Wrist Roll</div>
+                            <div class="joint-keys"><span class="key" data-key="wristRollPlus">5</span> <span class="direction-plus">+</span> <span class="key" data-key="wristRollMinus">T</span> <span class="direction-minus">-</span></div>
                         </div>
                         <div class="joint-control">
-                            <div class="joint-name">Jaw:</div>
-                            <div class="joint-keys"><span class="key" data-key="6">6</span> <span class="direction-plus">+</span> <span class="key" data-key="y">Y</span> <span class="direction-minus">-</span></div>
+                            <div class="joint-name">Jaw</div>
+                            <div class="joint-keys"><span class="key" data-key="jawPlus">6</span> <span class="direction-plus">+</span> <span class="key" data-key="jawMinus">Y</span> <span class="direction-minus">-</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <br>
+                <!-- Gamepad Controls -->
+                <div class="collapsible open" id="gamepadControlSection">
+                    <div class="collapsible-header">
+                        <span>Gamepad Controls</span>
+                        <span class="collapsible-icon">▼</span>
+                    </div>
+                    <div class="collapsible-content">
+                        <div class="help-wrapper">
+                            <button id="connectGamepad" class="connect-button">Connect Gamepad</button>
+                            <div class="help-icon">?
+                                <div class="tooltip">
+                                    <strong>Before connecting:</strong>
+                                    <ul>
+                                        <li>Ensure the gamepad is connected to the computer via USB or Bluetooth</li>
+                                        <li>Reload the page and press any button on the gamepad to activate</li>
+                                        <li>Select the gamepad type to get the corresponding button labels</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="gamepad-type-container">
+                            <div class="gamepad-type-label">Gamepad Type:</div>
+                            <select id="gamepadType" class="gamepad-type-select">
+                                <option value="ps">PlayStation</option>
+                                <option value="nintendo">Nintendo</option>
+                                <option value="xbox">Xbox</option>
+                            </select>
+                        </div>
+
+                        <div class="control-info" style="margin-top: 15px;">
+                            <div class="joint-control">
+                                <div class="joint-name">Rotation:</div>
+                                <div class="joint-keys"><span class="key" data-key="rotationPlus" data-ps="□" data-nintendo="Y" data-xbox="X">□</span> <span class="direction-plus">+</span> <span class="key" data-key="rotationMinus" data-ps="○" data-nintendo="A" data-xbox="B">○</span> <span class="direction-minus">-</span></div>
+                            </div>
+                            <div class="joint-control">
+                                <div class="joint-name">Pitch:</div>
+                                <div class="joint-keys"><span class="key" data-key="pitchPlus" data-ps="△" data-nintendo="X" data-xbox="Y">△</span> <span class="direction-plus">+</span> <span class="key" data-key="pitchMinus" data-ps="×" data-nintendo="B" data-xbox="A">×</span> <span class="direction-minus">-</span></div>
+                            </div>
+                            <div class="joint-control">
+                                <div class="joint-name">Elbow:</div>
+                                <div class="joint-keys"><span class="key" data-key="elbowPlus" data-ps="R2" data-nintendo="R2" data-xbox="R2">R2</span> <span class="direction-plus">+</span> <span class="key" data-key="elbowMinus" data-ps="R1" data-nintendo="R1" data-xbox="R1">R1</span> <span class="direction-minus">-</span></div>
+                            </div>
+                            <div class="joint-control">
+                                <div class="joint-name">Wrist Pitch:</div>
+                                <div class="joint-keys"><span class="key" data-key="wristPitchPlus" data-ps="↑" data-nintendo="↑" data-xbox="↑">↑</span> <span class="direction-plus">+</span> <span class="key" data-key="wristPitchMinus" data-ps="↓" data-nintendo="↓" data-xbox="↓">↓</span> <span class="direction-minus">-</span></div>
+                            </div>
+                            <div class="joint-control">
+                                <div class="joint-name">Wrist Roll:</div>
+                                <div class="joint-keys"><span class="key" data-key="wristRollPlus" data-ps="←" data-nintendo="←" data-xbox="←">←</span> <span class="direction-plus">+</span> <span class="key" data-key="wristRollMinus" data-ps="→" data-nintendo="→" data-xbox="→">→</span> <span class="direction-minus">-</span></div>
+                            </div>
+                            <div class="joint-control">
+                                <div class="joint-name">Jaw:</div>
+                                <div class="joint-keys"><span class="key" data-key="jawPlus" data-ps="L2" data-nintendo="L2" data-xbox="L2">L2</span> <span class="direction-plus">+</span> <span class="key" data-key="jawMinus" data-ps="L1" data-nintendo="L1" data-xbox="L1">L1</span> <span class="direction-minus">-</span></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -535,68 +778,125 @@
                     </div>
                     <div class="collapsible-content">
                         <style>
-                            .servo-status-grid {
-                                display: grid;
-                                grid-template-columns: auto 1fr auto;
-                                gap: 5px;
-                                margin-top: 10px;
+                            .servo-status-container {
+                                padding: 8px;
                             }
-                            .servo-status-row {
-                                display: contents;
+
+                            .servo-status-line {
+                                display: flex;
+                                align-items: center;
+                                padding: 4px 0;
+                                margin: 0;
                             }
+
+                            .direction-toggle {
+                                width: 24px;
+                                height: 24px;
+                                border-radius: 4px;
+                                background-color: #444444;
+                                color: #ffffff;
+                                border: none;
+                                cursor: pointer;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                margin-right: 8px;
+                                font-size: 16px;
+                                transition: all 0.2s;
+                            }
+
+                            .direction-toggle:disabled {
+                                cursor: not-allowed;
+                                opacity: 0.5;
+                            }
+
+                            .direction-toggle.inverted {
+                                background-color: #e0e0e0;
+                                color: #000000;
+                            }
+
                             .servo-name {
+                                flex: 0 0 100px;
+                                text-align: left;
+                                padding-right: 15px;
                                 font-weight: bold;
+                                font-size: 14px;
+                                margin: 0;
+                                line-height: 1.5;
                             }
+
+                            .servo-status-info {
+                                flex: 1;
+                                display: flex;
+                                flex-direction: row;
+                                align-items: center;
+                                gap: 8px;
+                                margin: 0;
+                            }
+
                             .servo-status {
-                                text-align: center;
+                                font-size: 14px;
+                                font-weight: bold;
+                                margin: 0;
+                                line-height: 1.5;
+                                min-width: 50px;
                             }
+
                             .servo-error {
-                                grid-column: span 3;
-                                font-size: 12px;
+                                font-size: 10px;
                                 color: #F44336;
                                 display: none;
-                                margin-bottom: 5px;
-                                background: rgba(244, 67, 54, 0.1);
-                                padding: 3px;
-                                border-radius: 3px;
+                                margin: 0;
                             }
                         </style>
-                        <div class="servo-status-grid">
-                            <div class="servo-status-row">
-                                <div class="servo-name">Rotation:</div>
-                                <div class="servo-status-spacer"></div>
-                                <div id="servo-1-status" class="servo-status">idle</div>
-                                <div id="servo-1-error" class="servo-error"></div>
+                        <div class="servo-status-container">
+                            <div class="servo-status-line">
+                                <button class="direction-toggle" data-servo-id="1" title="Toggle direction">↻</button>
+                                <span class="servo-name">Rotation:</span>
+                                <div class="servo-status-info">
+                                    <span id="servo-1-status" class="servo-status">idle</span>
+                                    <span id="servo-1-error" class="servo-error"></span>
+                                </div>
                             </div>
-                            <div class="servo-status-row">
-                                <div class="servo-name">Pitch:</div>
-                                <div class="servo-status-spacer"></div>
-                                <div id="servo-2-status" class="servo-status">idle</div>
-                                <div id="servo-2-error" class="servo-error"></div>
+                            <div class="servo-status-line">
+                                <button class="direction-toggle" data-servo-id="2" title="Toggle direction">↻</button>
+                                <span class="servo-name">Pitch:</span>
+                                <div class="servo-status-info">
+                                    <span id="servo-2-status" class="servo-status">idle</span>
+                                    <span id="servo-2-error" class="servo-error"></span>
+                                </div>
                             </div>
-                            <div class="servo-status-row">
-                                <div class="servo-name">Elbow:</div>
-                                <div class="servo-status-spacer"></div>
-                                <div id="servo-3-status" class="servo-status">idle</div>
-                                <div id="servo-3-error" class="servo-error"></div>
+                            <div class="servo-status-line">
+                                <button class="direction-toggle" data-servo-id="3" title="Toggle direction">↻</button>
+                                <span class="servo-name">Elbow:</span>
+                                <div class="servo-status-info">
+                                    <span id="servo-3-status" class="servo-status">idle</span>
+                                    <span id="servo-3-error" class="servo-error"></span>
+                                </div>
                             </div>
-                            <div class="servo-status-row">
-                                <div class="servo-name">Wrist Pitch:</div>
-                                <div class="servo-status-spacer"></div>
-                                <div id="servo-4-status" class="servo-status">idle</div>
-                                <div id="servo-4-error" class="servo-error"></div>
+                            <div class="servo-status-line">
+                                <button class="direction-toggle" data-servo-id="4" title="Toggle direction">↻</button>
+                                <span class="servo-name">Wrist Pitch:</span>
+                                <div class="servo-status-info">
+                                    <span id="servo-4-status" class="servo-status">idle</span>
+                                    <span id="servo-4-error" class="servo-error"></span>
+                                </div>
                             </div>
-                            <div class="servo-status-row">
-                                <div class="servo-name">Wrist Roll:</div>
-                                <div class="servo-status-spacer"></div>
-                                <div id="servo-5-status" class="servo-status">idle</div>
-                                <div id="servo-5-error" class="servo-error"></div>
+                            <div class="servo-status-line">
+                                <button class="direction-toggle" data-servo-id="5" title="Toggle direction">↻</button>
+                                <span class="servo-name">Wrist Roll:</span>
+                                <div class="servo-status-info">
+                                    <span id="servo-5-status" class="servo-status">idle</span>
+                                    <span id="servo-5-error" class="servo-error"></span>
+                                </div>
                             </div>
-                            <div class="servo-status-row">
-                                <div class="servo-name">Jaw:</div>
-                                <div class="servo-status-spacer"></div>
-                                <div id="servo-6-status" class="servo-status">idle</div>
-                                <div id="servo-6-error" class="servo-error"></div>
+                            <div class="servo-status-line">
+                                <button class="direction-toggle" data-servo-id="6" title="Toggle direction">↻</button>
+                                <span class="servo-name">Jaw:</span>
+                                <div class="servo-status-info">
+                                    <span id="servo-6-status" class="servo-status">idle</span>
+                                    <span id="servo-6-error" class="servo-error"></span>
+                                </div>
                             </div>
                         </div>
                     </div>
