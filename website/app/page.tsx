@@ -50,12 +50,12 @@ export default function Home() {
           <h1 className="text-6xl mb-4 font-bold">BamBot</h1>
           <p className="text-2xl mb-8">Open source, low-cost AI robots 🤖</p>
           {/* Changed from grid to flex for flexible centering */}
-          <div className="container mx-auto p-4 flex flex-wrap justify-center gap-6 relative z-10">
+          <div className="container mx-auto p-4 flex flex-wrap justify-center gap-8 relative z-10">
             {robots.map((robot) => (
               // Added width constraints for responsiveness and max 3 per row on large screens
               <div
                 key={robot.id}
-                className="rounded-lg shadow-lg border border-gray-500 overflow-hidden w-[90%] sm:w-[40%] lg:w-[25%]" // Adjust percentages/basis as needed
+                className="rounded-2xl shadow-lg  shadow-zinc-800 border border-zinc-500 overflow-hidden w-[90%] sm:w-[40%] lg:w-[25%]" // Adjust percentages/basis as needed
               >
                 <div className="relative z-10">
                   <img
@@ -72,13 +72,13 @@ export default function Home() {
                 <div className="flex">
                   <Link
                     href={robot.playLink}
-                    className="bg-black text-white w-1/2 py-2 text-center hover:bg-gray-800 border-r border-t border-gray-500"
+                    className="bg-black text-white w-1/2 py-2 text-center hover:bg-zinc-800 border-r border-t border-zinc-500"
                   >
                     Play
                   </Link>
                   <Link
                     href={robot.assembleLink}
-                    className="bg-black text-white w-1/2 py-2 text-center hover:bg-gray-800 border-r border-t border-gray-500"
+                    className="bg-black text-white w-1/2 py-2 text-center hover:bg-zinc-800 border-t border-zinc-500"
                   >
                     Assemble
                   </Link>
