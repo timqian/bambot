@@ -11,6 +11,8 @@ import {
   Color,
   AmbientLight,
   Box3,
+  Vector3,
+  Object3D,
   LoadingManager,
   MathUtils,
   MeshPhysicalMaterial,
@@ -23,7 +25,11 @@ import {
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import URDFLoader from 'urdf-loader';
 // 导入控制工具函数
-import { setupKeyboardControls, setupJoyconControls, setupControlPanel } from './robotControls.js';
+import {
+  setupKeyboardControls,
+  setupJoyconControls,
+  setupControlPanel,
+} from './robotControls.js';
 import {
   connectJoyCon,
   connectedJoyCons,
@@ -85,38 +91,41 @@ function init() {
     reflectivity: 0.1,
     clearcoat: 0.3,
     side: DoubleSide,
-    transparent: true,     // 启用透明度
-    opacity: 0.7,          // 设置透明度为0.7（可以根据需要调整，1.0为完全不透明）
+    transparent: true, // 启用透明度
+    opacity: 0.7, // 设置透明度为0.7（可以根据需要调整，1.0为完全不透明）
   });
-  
+
   // 创建格子纹理的地面
   const gridSize = 60;
   const divisions = 60;
-  
+
   // 创建网格地面
-  const ground = new Mesh(new PlaneGeometry(gridSize, gridSize, divisions, divisions), groundMaterial);
-  
+  const ground = new Mesh(
+    new PlaneGeometry(gridSize, gridSize, divisions, divisions),
+    groundMaterial,
+  );
+
   // 添加格子纹理
   const geometry = ground.geometry;
   const positionAttribute = geometry.getAttribute('position');
-  
+
   // 创建格子纹理的UV坐标
   const uvs = [];
   const gridScale = 0.01; // 控制格子的密度
-  
+
   for (let i = 0; i < positionAttribute.count; i++) {
     const x = positionAttribute.getX(i);
     const y = positionAttribute.getY(i);
-    
+
     uvs.push(x * gridScale, y * gridScale);
   }
-  
+
   geometry.setAttribute('uv', new Float32BufferAttribute(uvs, 2));
-  
+
   // 更新材质，添加格子纹理
   groundMaterial.map = createGridTexture();
   groundMaterial.roughnessMap = createGridTexture();
-  
+
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
   scene.add(ground);
@@ -131,33 +140,58 @@ function init() {
     const manager = new LoadingManager();
     const loader = new URDFLoader(manager);
 
-    loader.load(`/URDF/bambot.urdf`, result => {
+    loader.load(`/URDF/bambot.urdf`, (result) => {
       window.robot = result;
     });
 
-    // 等待模型加载完成
+    // When the model loads
     manager.onLoad = () => {
-      window.robot.rotation.x = - Math.PI / 2;
-      window.robot.rotation.z = - Math.PI;
-      window.robot.traverse(c => {
-        c.castShadow = true;
-      });
-      console.log(window.robot.joints);
-      // 记录关节限制信息到控制台，便于调试
-      logJointLimits(window.robot);
-      
-      window.robot.updateMatrixWorld(true);
-
+      // First, compute the bounding box to find the center
       const bb = new Box3();
       bb.setFromObject(window.robot);
 
-      window.robot.scale.set(15, 15, 15);
-      window.robot.position.y -= bb.min.y;
-      scene.add(window.robot);
+      // Calculate the center of the robot
+      const center = new Vector3();
+      bb.getCenter(center);
 
-      // Initialize keyboard controls
+      // Create a parent object to act as a pivot point
+      const pivot = new Object3D();
+      scene.add(pivot);
+
+      // Set the robot's rotation
+      window.robot.rotation.x = -Math.PI / 2;
+      window.robot.rotation.z = -Math.PI;
+
+      // Add the robot to the pivot
+      pivot.add(window.robot);
+
+      // Now scale the robot
+      window.robot.scale.set(15, 15, 15);
+
+      // Position the pivot/robot group where you want it
+
+      const bbAfterRotation = new Box3();
+      bbAfterRotation.setFromObject(window.robot);
+
+      pivot.position.y -= bbAfterRotation.min.y;
+      // Calculate the center after rotation
+      const centerAfterRotation = new Vector3();
+      bbAfterRotation.getCenter(centerAfterRotation);
+
+      // Position the robot so its center is at the pivot's origin
+      window.robot.position.x -= centerAfterRotation.x;
+      window.robot.position.z -= centerAfterRotation.z;
+
+      // Set up shadow casting
+      window.robot.traverse((c) => {
+        c.castShadow = true;
+      });
+
+      // Store the pivot for later reference
+      window.robotPivot = pivot;
+
+      // Initialize controls using the pivot instead of the robot directly
       keyboardUpdate = setupKeyboardControls(window.robot);
-      // Initialize joycon controls
       joyconUpdate = setupJoyconControls(window.robot);
     };
   }
@@ -178,15 +212,19 @@ function init() {
  */
 function logJointLimits(robot) {
   if (!robot || !robot.joints) return;
-  
-  console.log("Robot joint limits:");
+
+  console.log('Robot joint limits:');
   Object.entries(robot.joints).forEach(([name, joint]) => {
     console.log(`Joint: ${name}`);
     console.log(`  Type: ${joint.jointType}`);
-    
+
     if (joint.jointType !== 'fixed' && joint.jointType !== 'continuous') {
-      console.log(`  Limits: ${joint.limit.lower.toFixed(4)} to ${joint.limit.upper.toFixed(4)} rad`);
-      console.log(`  Current value: ${Array.isArray(joint.jointValue) ? joint.jointValue.join(', ') : joint.jointValue}`);
+      console.log(
+        `  Limits: ${joint.limit.lower.toFixed(4)} to ${joint.limit.upper.toFixed(4)} rad`,
+      );
+      console.log(
+        `  Current value: ${Array.isArray(joint.jointValue) ? joint.jointValue.join(', ') : joint.jointValue}`,
+      );
     } else if (joint.jointType === 'continuous') {
       console.log(`  No limits (continuous joint)`);
     } else {
@@ -205,7 +243,7 @@ function onResize() {
 
 function render() {
   requestAnimationFrame(render);
-  
+
   // Update joint positions based on keyboard input
   if (keyboardUpdate) {
     keyboardUpdate();
@@ -213,7 +251,7 @@ function render() {
   if (joyconUpdate) {
     joyconUpdate();
   }
-  
+
   renderer.render(scene, camera);
 }
 
@@ -222,39 +260,39 @@ function createGridTexture() {
   const canvas = document.createElement('canvas');
   canvas.width = 512;
   canvas.height = 512;
-  
+
   const context = canvas.getContext('2d');
-  
+
   // 填充底色
   context.fillStyle = '#808080';
   context.fillRect(0, 0, canvas.width, canvas.height);
-  
+
   // 绘制格子线
   context.lineWidth = 1;
   context.strokeStyle = '#606060';
-  
+
   const cellSize = 32; // 每个格子的大小
-  
+
   for (let i = 0; i <= canvas.width; i += cellSize) {
     context.beginPath();
     context.moveTo(i, 0);
     context.lineTo(i, canvas.height);
     context.stroke();
   }
-  
+
   for (let i = 0; i <= canvas.height; i += cellSize) {
     context.beginPath();
     context.moveTo(0, i);
     context.lineTo(canvas.width, i);
     context.stroke();
   }
-  
+
   // 修复: 使用已导入的 CanvasTexture，而不是 THREE.CanvasTexture
   const texture = new CanvasTexture(canvas);
   // 修复: 使用已导入的 RepeatWrapping，而不是 THREE.RepeatWrapping
   texture.wrapS = RepeatWrapping;
   texture.wrapT = RepeatWrapping;
   texture.repeat.set(10, 10);
-  
+
   return texture;
 }
