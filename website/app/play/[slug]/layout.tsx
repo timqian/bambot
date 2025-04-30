@@ -3,9 +3,10 @@ export async function generateMetadata({
 }: {
   params: { slug: string }
 }) {
+  const slug = params.slug as string;
   return {
-    title: `Play with ${params.slug}`,
-    description: `${params.slug} simulation and control`,
+    title: `Play with ${slug}`,
+    description: `${slug} simulation and control`,
   }
 }
 

@@ -17,13 +17,26 @@ const directionSymbols: Record<"up" | "down" | "left" | "right", string> = {
 export const DirectionalButton: React.FC<
   DirectionalButtonProps & { isActive: boolean }
 > = ({ direction, onMouseDown, onMouseUp, isActive }) => {
+  const handleTouchStart = (event: React.TouchEvent) => {
+    event.preventDefault(); // Prevent text selection on long press
+    onMouseDown();
+  };
+
+  const handleTouchEnd = (event: React.TouchEvent) => {
+    event.preventDefault(); // Prevent text selection on long press
+    onMouseUp();
+  };
+
   return (
     <button
-      className={`bg-gray-700 hover:bg-gray-500 text-gray-200 px-2 py-1 rounded font-bold ${
+      className={`bg-gray-700 hover:bg-gray-500 text-gray-200 px-2 py-1 rounded font-bold select-none ${
         isActive ? "bg-blue-500" : ""
       }`}
       onMouseDown={onMouseDown}
       onMouseUp={onMouseUp}
+      onTouchStart={handleTouchStart} // Updated to use handler
+      onTouchEnd={handleTouchEnd} // Updated to use handler
+      style={{ WebkitUserSelect: "none", userSelect: "none" }} // Added inline styles for WebKit
     >
       {directionSymbols[direction]}
     </button>

@@ -14,7 +14,7 @@ export default function Page() {
   }
 
   return (
-    <div className="relative w-screen h-screen">
+    <div className="relative w-screen h-dvh">
       <RobotLoader robotName={slug} />
     </div>
   );
