@@ -1,5 +1,5 @@
 <a href="https://bambot.org">
-  <img width="1130" alt="Screenshot of bambot.org" src="[https://github.com/user-attachments/assets/6e762efa-2cbb-4fd8-9108-5661e092b6c6](https://github.com/user-attachments/assets/bcf347d7-5d76-4021-8a99-bb4515323fe0)" />
+  <img width="1130" alt="Screenshot of bambot.org" src="https://github.com/user-attachments/assets/bcf347d7-5d76-4021-8a99-bb4515323fe0" />
 </a>
 
 <br/>
