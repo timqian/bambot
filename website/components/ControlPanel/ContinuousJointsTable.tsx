@@ -86,7 +86,7 @@ export function ContinuousJointsTable({
         <table className="table-auto w-full text-left text-sm">
           <thead>
             <tr>
-              <th className="border-b border-gray-600 pb-1 pr-2"><span className="text-gray-600">id </span> Wheel</th>
+              <th className="border-b border-gray-600 pb-1 pr-2">Wheel</th>
               <th className="border-b border-gray-600 pb-1 text-center px-2">
                 Speed
               </th>
@@ -100,7 +100,6 @@ export function ContinuousJointsTable({
             {joints.map((detail) => (
               <tr key={detail.servoId}>
                 <td className="py-1">
-                  <span className="text-gray-600">{detail.servoId}</span>{" "}
                   {detail.name}
                 </td>
                 <td className="py-1 pr-2 text-center">

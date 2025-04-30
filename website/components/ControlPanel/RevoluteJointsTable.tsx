@@ -16,8 +16,8 @@ type RevoluteJointsTableProps = {
 };
 
 // Define constants for interval and step size
-const KEY_UPDATE_INTERVAL_MS = 5;
-const KEY_UPDATE_STEP_DEGREES = 0.5;
+const KEY_UPDATE_INTERVAL_MS = 3;
+const KEY_UPDATE_STEP_DEGREES = 0.15;
 
 const formatVirtualDegrees = (degrees?: number) =>
   degrees !== undefined
@@ -175,7 +175,7 @@ export function RevoluteJointsTable({
         <thead>
           {/* ... existing table head ... */}
           <tr>
-            <th className="border-b border-gray-600 pb-1 pr-2"><span className="text-gray-600">id </span>Joint</th>
+            <th className="border-b border-gray-600 pb-1 pr-2">Joint</th>
             <th className="border-b border-gray-600 pb-1 text-center pl-2">
               Angle
             </th>
@@ -200,7 +200,7 @@ export function RevoluteJointsTable({
             return (
               <tr key={detail.servoId}>
                 <td className="">
-                  <span className="text-gray-600">{detail.servoId}</span>{" "}
+                  {/* <span className="text-gray-600">{detail.servoId}</span>{" "} */}
                   {detail.name}
                 </td>
 
