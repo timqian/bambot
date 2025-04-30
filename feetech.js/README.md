@@ -18,11 +18,9 @@ const position = await scsServoSDK.readPosition(1);
 console.log(position); // 1122
 ```
 
-Example usage:
+## Example usage:
 
-see [test.html](test.html)
+- simple example: [test.html](./test.html)
+- the bambot website: [bambot.org](https://bambot.org)
 
-## TODO
-- write position/speed protection(0-4096)
-- syncWriteSpeed
 
