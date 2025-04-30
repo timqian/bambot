@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feetech Servo Test</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; padding: 20px; }
+        .container { max-width: 800px; margin: auto; }
+        .section { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+        h2 { margin-top: 0; }
+        label { display: inline-block; min-width: 100px; margin-bottom: 5px; }
+        input[type="number"], input[type="text"] { width: 100px; padding: 5px; margin-right: 10px; margin-bottom: 10px; }
+        button { padding: 8px 15px; margin-right: 10px; cursor: pointer; }
+        pre { background-color: #f4f4f4; padding: 10px; border: 1px solid #ddd; border-radius: 3px; white-space: pre-wrap; word-wrap: break-word; }
+        .status { font-weight: bold; }
+        .success { color: green; }
+        .error { color: red; }
+        .log-area { margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Feetech Servo Test Page</h1>
+
+        <details class="section">
+            <summary>Key Concepts</summary>
+            <p>Understanding these parameters is crucial for controlling Feetech servos:</p>
+            <ul>
+                <li>
+                    <strong>Mode:</strong> Determines the servo's primary function.
+                    <ul>
+                        <li><code>Mode 0</code>: Position/Servo Mode. The servo moves to and holds a specific angular position.</li>
+                        <li><code>Mode 1</code>: Wheel/Speed Mode. The servo rotates continuously at a specified speed and direction, like a motor.</li>
+                    </ul>
+                     Changing the mode requires unlocking, writing the mode value (0 or 1), and locking the configuration.
+                </li>
+                <li>
+                    <strong>Position:</strong> In Position Mode (Mode 0), this value represents the target or current angular position of the servo's output shaft.
+                    <ul>
+                        <li>Range: Typically <code>0</code> to <code>4095</code> (representing a 12-bit resolution).</li>
+                        <li>Meaning: Corresponds to the servo's rotational range (e.g., 0-360 degrees or 0-270 degrees, depending on the specific servo model). <code>0</code> is one end of the range, <code>4095</code> is the other.</li>
+                    </ul>
+                </li>
+                <li>
+                    <strong>Speed (Wheel Mode):</strong> In Wheel Mode (Mode 1), this value controls the rotational speed and direction.
+                    <ul>
+                        <li>Range: Typically <code>-2500</code> to <code>+2500</code>. (Note: Some documentation might mention -1023 to +1023, but the SDK example uses a wider range).</li>
+                        <li>Meaning: <code>0</code> stops the wheel. Positive values rotate in one direction (e.g., clockwise), negative values rotate in the opposite direction (e.g., counter-clockwise). The magnitude determines the speed (larger absolute value means faster rotation).</li>
+                        <li>Control Address: <code>ADDR_SCS_GOAL_SPEED</code> (Register 46/47).</li>
+                    </ul>
+                </li>
+                 <li>
+                    <strong>Acceleration:</strong> Controls how quickly the servo changes speed to reach its target position (in Position Mode) or target speed (in Wheel Mode).
+                    <ul>
+                        <li>Range: Typically <code>0</code> to <code>254</code>.</li>
+                        <li>Meaning: Defines the rate of change of speed. The unit is 100 steps/s². <code>0</code> usually means instantaneous acceleration (or minimal delay). Higher values result in slower, smoother acceleration and deceleration. For example, a value of <code>10</code> means the speed changes by 10 * 100 = 1000 steps per second, per second. This helps reduce jerky movements and mechanical stress.</li>
+                        <li>Control Address: <code>ADDR_SCS_GOAL_ACC</code> (Register 41).</li>
+                    </ul>
+                </li>
+                <li>
+                    <strong>Baud Rate:</strong> The speed of communication between the controller and the servo. It must match on both ends. Servos often support multiple baud rates, selectable via an index:
+                    <ul>
+                        <li>Index 0: 1,000,000 bps</li>
+                        <li>Index 1: 500,000 bps</li>
+                        <li>Index 2: 250,000 bps</li>
+                        <li>Index 3: 128,000 bps</li>
+                        <li>Index 4: 115,200 bps</li>
+                        <li>Index 5: 76,800 bps</li>
+                        <li>Index 6: 57,600 bps</li>
+                        <li>Index 7: 38,400 bps</li>
+                    </ul>
+                </li>
+            </ul>
+        </details>
+
+
+        <div class="section">
+            <h2>Connection</h2>
+            <button id="connectBtn">Connect</button>
+            <button id="disconnectBtn">Disconnect</button>
+            <p>Status: <span id="connectionStatus" class="status error">Disconnected</span></p>
+            <label for="baudRate">Baud Rate:</label>
+            <input type="number" id="baudRate" value="1000000">
+            <label for="protocolEnd">Protocol End (0=STS/SMS, 1=SCS):</label>
+            <input type="number" id="protocolEnd" value="0" min="0" max="1">
+        </div>
+        
+        <div class="section">
+            <h2>Scan Servos</h2>
+            <label for="scanStartId">Start ID:</label>
+            <input type="number" id="scanStartId" value="1" min="1" max="252">
+            <label for="scanEndId">End ID:</label>
+            <input type="number" id="scanEndId" value="15" min="1" max="252">
+            <button id="scanServosBtn">Scan</button>
+            <p>Scan Results:</p>
+            <pre id="scanResultsOutput" style="max-height: 200px; overflow-y: auto;"></pre> <!-- Added element for results -->
+        </div>
+
+        <div class="section">
+            <h2>Single Servo Control</h2>
+            <label for="servoId">Servo ID:</label>
+            <input type="number" id="servoId" value="1" min="1" max="252"><br>
+
+
+            <label for="idWrite">Change servo ID:</label>
+            <input type="number" id="idWrite" value="1" min="1" max="252">
+            <button id="writeIdBtn">Write</button><br>
+
+            <label for="baudRead">Read Baud Rate:</label>
+            <button id="readBaudBtn">Read</button>
+            <span id="readBaudResult"></span><br>
+
+            <label for="baudWrite">Write Baud Rate Index:</label>
+            <input type="number" id="baudWrite" value="6" min="0" max="7"> <!-- Assuming index 0-7 -->
+            <button id="writeBaudBtn">Write</button><br>
+
+            <label for="positionRead">Read Position:</label>
+            <button id="readPosBtn">Read</button>
+            <span id="readPosResult"></span><br>
+
+            <label for="positionWrite">Write Position:</label>
+            <input type="number" id="positionWrite" value="1000" min="0" max="4095">
+            <button id="writePosBtn">Write</button><br>
+
+            <label for="torqueEnable">Torque:</label>
+            <button id="torqueEnableBtn">Enable</button>
+            <button id="torqueDisableBtn">Disable</button><br>
+
+            <label for="accelerationWrite">Write Acceleration:</label>
+            <input type="number" id="accelerationWrite" value="50" min="0" max="254">
+            <button id="writeAccBtn">Write</button><br>
+
+             <label for="wheelMode">Wheel Mode:</label>
+            <button id="setWheelModeBtn">Set Wheel Mode</button>
+            <button id="removeWheelModeBtn">Set Position Mode</button><br>
+
+            <label for="wheelSpeedWrite">Write Wheel Speed:</label>
+            <input type="number" id="wheelSpeedWrite" value="0" min="-2500" max="2500">
+            <button id="writeWheelSpeedBtn">Write Speed</button>
+        </div>
+
+         <div class="section">
+            <h2>Sync Operations</h2>
+            <label for="syncReadIds">Sync Read IDs (csv):</label>
+            <input type="text" id="syncReadIds" value="1,2,3" style="width: 150px;">
+            <button id="syncReadBtn">Sync Read Positions</button><br>
+
+            <label for="syncWriteData">Sync Write (id:pos,...):</label>
+            <input type="text" id="syncWriteData" value="1:1500,2:2500" style="width: 200px;">
+            <button id="syncWriteBtn">Sync Write Positions</button><br>
+
+            <label for="syncWriteSpeedData">Sync Write Speed (id:speed,...):</label>
+            <input type="text" id="syncWriteSpeedData" value="1:500,2:-1000" style="width: 200px;">
+            <button id="syncWriteSpeedBtn">Sync Write Speeds</button> <!-- New Button -->
+        </div>
+
+
+        <div class="section">
+            <h2>Log Output</h2>
+            <pre id="logOutput"></pre>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import the scsServoSDK object from index.mjs
+        import { scsServoSDK } from './index.mjs';
+        // No longer need COMM_SUCCESS etc. here as errors are thrown
+
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const baudRateInput = document.getElementById('baudRate');
+        const protocolEndInput = document.getElementById('protocolEnd');
+
+        const servoIdInput = document.getElementById('servoId');
+        const readIdBtn = document.getElementById('readIdBtn'); // New
+        const readIdResult = document.getElementById('readIdResult'); // New
+        const idWriteInput = document.getElementById('idWrite'); // New
+        const writeIdBtn = document.getElementById('writeIdBtn'); // New
+        const readBaudBtn = document.getElementById('readBaudBtn'); // New
+        const readBaudResult = document.getElementById('readBaudResult'); // New
+        const baudWriteInput = document.getElementById('baudWrite'); // New
+        const writeBaudBtn = document.getElementById('writeBaudBtn'); // New
+        const readPosBtn = document.getElementById('readPosBtn');
+        const readPosResult = document.getElementById('readPosResult');
+        const positionWriteInput = document.getElementById('positionWrite');
+        const writePosBtn = document.getElementById('writePosBtn');
+        const torqueEnableBtn = document.getElementById('torqueEnableBtn');
+        const torqueDisableBtn = document.getElementById('torqueDisableBtn');
+        const accelerationWriteInput = document.getElementById('accelerationWrite');
+        const writeAccBtn = document.getElementById('writeAccBtn');
+        const setWheelModeBtn = document.getElementById('setWheelModeBtn');
+        const removeWheelModeBtn = document.getElementById('removeWheelModeBtn'); // Get reference to the new button
+        const wheelSpeedWriteInput = document.getElementById('wheelSpeedWrite');
+        const writeWheelSpeedBtn = document.getElementById('writeWheelSpeedBtn');
+
+        const syncReadIdsInput = document.getElementById('syncReadIds');
+        const syncReadBtn = document.getElementById('syncReadBtn');
+        const syncWriteDataInput = document.getElementById('syncWriteData');
+        const syncWriteBtn = document.getElementById('syncWriteBtn');
+        const syncWriteSpeedDataInput = document.getElementById('syncWriteSpeedData'); // New Input
+        const syncWriteSpeedBtn = document.getElementById('syncWriteSpeedBtn');       // New Button
+        const scanServosBtn = document.getElementById('scanServosBtn'); // Get reference to the scan button
+        const scanStartIdInput = document.getElementById('scanStartId'); // Get reference to start ID input
+        const scanEndIdInput = document.getElementById('scanEndId');   // Get reference to end ID input
+        const scanResultsOutput = document.getElementById('scanResultsOutput'); // Get reference to the new results area
+
+        const logOutput = document.getElementById('logOutput');
+
+        let isConnected = false;
+
+        function log(message) {
+            console.log(message);
+            const timestamp = new Date().toLocaleTimeString();
+            logOutput.textContent = `[${timestamp}] ${message}\n` + logOutput.textContent;
+            // Limit log size
+            const lines = logOutput.textContent.split('\n'); // Use '\n' instead of literal newline
+            if (lines.length > 50) {
+                logOutput.textContent = lines.slice(0, 50).join('\n'); // Use '\n' instead of literal newline
+            }
+        }
+
+        function updateConnectionStatus(connected, message) {
+            isConnected = connected;
+            connectionStatus.textContent = message || (connected ? 'Connected' : 'Disconnected');
+            connectionStatus.className = `status ${connected ? 'success' : 'error'}`;
+            log(`Connection status: ${connectionStatus.textContent}`);
+        }
+
+        connectBtn.onclick = async () => {
+            log('Attempting to connect...');
+            try {
+                const baudRate = parseInt(baudRateInput.value, 10);
+                const protocolEnd = parseInt(protocolEndInput.value, 10);
+                // Use scsServoSDK - throws on error
+                await scsServoSDK.connect({ baudRate, protocolEnd });
+                updateConnectionStatus(true, 'Connected');
+            } catch (err) {
+                updateConnectionStatus(false, `Connection error: ${err.message}`);
+                console.error(err);
+            }
+        };
+
+        disconnectBtn.onclick = async () => {
+            log('Attempting to disconnect...');
+            try {
+                // Use scsServoSDK - throws on error
+                await scsServoSDK.disconnect();
+                updateConnectionStatus(false, 'Disconnected'); // Success means disconnected
+            } catch (err) {
+                // Assuming disconnect might fail if already disconnected or other issues
+                updateConnectionStatus(false, `Disconnection error: ${err.message}`);
+                console.error(err);
+            }
+        };
+
+        writeIdBtn.onclick = async () => { // New handler
+            if (!isConnected) { log('Error: Not connected'); return; }
+            const currentId = parseInt(servoIdInput.value, 10);
+            const newId = parseInt(idWriteInput.value, 10);
+            if (isNaN(newId) || newId < 1 || newId > 252) {
+                log(`Error: Invalid new ID ${newId}. Must be between 1 and 252.`);
+                return;
+            }
+            log(`Writing new ID ${newId} to servo ${currentId}...`);
+            try {
+                // Use scsServoSDK - throws on error
+                await scsServoSDK.setServoId(currentId, newId);
+                log(`Successfully wrote new ID ${newId} to servo (was ${currentId}).`);
+                // IMPORTANT: Update the main ID input to reflect the change
+                servoIdInput.value = newId;
+                log(`Servo ID input field updated to ${newId}.`);
+            } catch (err) {
+                 log(`Error writing ID for servo ${currentId}: ${err.message}`);
+                 console.error(err);
+            }
+        };
+
+        readBaudBtn.onclick = async () => { // New handler
+            if (!isConnected) { log('Error: Not connected'); return; }
+            const id = parseInt(servoIdInput.value, 10);
+            log(`Reading Baud Rate Index for servo ${id}...`);
+            readBaudResult.textContent = 'Reading...';
+            try {
+                // Use scsServoSDK - returns value directly or throws
+                const baudRateIndex = await scsServoSDK.readBaudRate(id);
+                readBaudResult.textContent = `Baud Index: ${baudRateIndex}`;
+                log(`Servo ${id} Baud Rate Index: ${baudRateIndex}`);
+            } catch (err) {
+                 readBaudResult.textContent = `Error: ${err.message}`;
+                 log(`Error reading Baud Rate Index for servo ${id}: ${err.message}`);
+                 console.error(err);
+            }
+        };
+
+        writeBaudBtn.onclick = async () => { // New handler
+            if (!isConnected) { log('Error: Not connected'); return; }
+            const id = parseInt(servoIdInput.value, 10);
+            const newBaudIndex = parseInt(baudWriteInput.value, 10);
+             if (isNaN(newBaudIndex) || newBaudIndex < 0 || newBaudIndex > 7) { // Adjust max index if needed
+                log(`Error: Invalid new Baud Rate Index ${newBaudIndex}. Check valid range.`);
+                return;
+            }
+            log(`Writing new Baud Rate Index ${newBaudIndex} to servo ${id}...`);
+            try {
+                // Use scsServoSDK - throws on error
+                await scsServoSDK.setBaudRate(id, newBaudIndex);
+                log(`Successfully wrote new Baud Rate Index ${newBaudIndex} to servo ${id}.`);
+                log(`IMPORTANT: You may need to disconnect and reconnect with the new baud rate if it differs from the current connection baud rate.`);
+            } catch (err) {
+                 log(`Error writing Baud Rate Index for servo ${id}: ${err.message}`);
+                 console.error(err);
+            }
+        };
+
+
+        readPosBtn.onclick = async () => {
+            if (!isConnected) { log('Error: Not connected'); return; }
+            const id = parseInt(servoIdInput.value, 10);
+            log(`Reading position for servo ${id}...`);
+            readPosResult.textContent = 'Reading...';
+            try {
+                // Use scsServoSDK - returns value directly or throws
+                const position = await scsServoSDK.readPosition(id);
+                readPosResult.textContent = `Position: ${position}`;
+                log(`Servo ${id} position: ${position}`);
+            } catch (err) {
+                 readPosResult.textContent = `Error: ${err.message}`;
+                 log(`Error reading position for servo ${id}: ${err.message}`);
+                 console.error(err);
+            }
+        };
+
+        writePosBtn.onclick = async () => {
+            if (!isConnected) { log('Error: Not connected'); return; }
+            const id = parseInt(servoIdInput.value, 10);
+            const pos = parseInt(positionWriteInput.value, 10);
+            log(`Writing position ${pos} to servo ${id}...`);
+            try {
+                // Use scsServoSDK - throws on error
+                await scsServoSDK.writePosition(id, pos);
+                log(`Successfully wrote position ${pos} to servo ${id}.`);
+            } catch (err) {
+                 log(`Error writing position for servo ${id}: ${err.message}`);
+                 console.error(err);
+            }
+        };
+
+        torqueEnableBtn.onclick = async () => {
+             if (!isConnected) { log('Error: Not connected'); return; }
+            const id = parseInt(servoIdInput.value, 10);
+            log(`Enabling torque for servo ${id}...`);
+            try {
+                // Use scsServoSDK - throws on error
+                await scsServoSDK.writeTorqueEnable(id, true);
+                log(`Successfully enabled torque for servo ${id}.`);
+            } catch (err) {
+                 log(`Error enabling torque for servo ${id}: ${err.message}`);
+                 console.error(err);
+            }
+        };
+
+        torqueDisableBtn.onclick = async () => {
+             if (!isConnected) { log('Error: Not connected'); return; }
+            const id = parseInt(servoIdInput.value, 10);
+            log(`Disabling torque for servo ${id}...`);
+            try {
+                // Use scsServoSDK - throws on error
+                await scsServoSDK.writeTorqueEnable(id, false);
+                log(`Successfully disabled torque for servo ${id}.`);
+            } catch (err) {
+                 log(`Error disabling torque for servo ${id}: ${err.message}`);
+                 console.error(err);
+            }
+        };
+
+         writeAccBtn.onclick = async () => {
+            if (!isConnected) { log('Error: Not connected'); return; }
+            const id = parseInt(servoIdInput.value, 10);
+            const acc = parseInt(accelerationWriteInput.value, 10);
+            log(`Writing acceleration ${acc} to servo ${id}...`);
+            try {
+                // Use scsServoSDK - throws on error
+                await scsServoSDK.writeAcceleration(id, acc);
+                log(`Successfully wrote acceleration ${acc} to servo ${id}.`);
+            } catch (err) {
+                 log(`Error writing acceleration for servo ${id}: ${err.message}`);
+                 console.error(err);
+            }
+        };
+
+        setWheelModeBtn.onclick = async () => {
+            if (!isConnected) { log('Error: Not connected'); return; }
+            const id = parseInt(servoIdInput.value, 10);
+            log(`Setting servo ${id} to wheel mode...`);
+            try {
+                // Use scsServoSDK - throws on error
+                await scsServoSDK.setWheelMode(id);
+                log(`Successfully set servo ${id} to wheel mode.`);
+            } catch (err) {
+                 log(`Error setting wheel mode for servo ${id}: ${err.message}`);
+                 console.error(err);
+            }
+        };
+
+        // Add event listener for the new button
+        removeWheelModeBtn.onclick = async () => {
+            if (!isConnected) { log('Error: Not connected'); return; }
+            const id = parseInt(servoIdInput.value, 10);
+            log(`Setting servo ${id} back to position mode...`);
+            try {
+                // Use scsServoSDK - throws on error
+                await scsServoSDK.setPositionMode(id);
+                log(`Successfully set servo ${id} back to position mode.`);
+            } catch (err) {
+                 log(`Error setting position mode for servo ${id}: ${err.message}`);
+                 console.error(err);
+            }
+        };
+
+        writeWheelSpeedBtn.onclick = async () => {
+            if (!isConnected) { log('Error: Not connected'); return; }
+            const id = parseInt(servoIdInput.value, 10);
+            const speed = parseInt(wheelSpeedWriteInput.value, 10);
+            log(`Writing wheel speed ${speed} to servo ${id}...`);
+            try {
+                // Use scsServoSDK - throws on error
+                await scsServoSDK.writeWheelSpeed(id, speed);
+                log(`Successfully wrote wheel speed ${speed} to servo ${id}.`);
+            } catch (err) {
+                 log(`Error writing wheel speed for servo ${id}: ${err.message}`);
+                 console.error(err);
+            }
+        };
+
+        syncReadBtn.onclick = async () => {
+            if (!isConnected) { log('Error: Not connected'); return; }
+            const idsString = syncReadIdsInput.value;
+            const ids = idsString.split(',').map(s => parseInt(s.trim(), 10)).filter(id => !isNaN(id) && id > 0 && id < 253);
+            if (ids.length === 0) {
+                log('Sync Read: No valid servo IDs provided.');
+                return;
+            }
+            log(`Sync reading positions for servos: ${ids.join(', ')}...`);
+            try {
+                // Use scsServoSDK - returns Map or throws
+                const positions = await scsServoSDK.syncReadPositions(ids);
+                let logMsg = 'Sync Read Successful:\n';
+                positions.forEach((pos, id) => {
+                    logMsg += `  Servo ${id}: Position=${pos}\n`;
+                });
+                log(logMsg.trim());
+
+            } catch (err) {
+                 log(`Sync Read Failed: ${err.message}`);
+                 console.error(err);
+            }
+        };
+
+        syncWriteBtn.onclick = async () => {
+            if (!isConnected) { log('Error: Not connected'); return; }
+            const dataString = syncWriteDataInput.value;
+            const positionMap = new Map();
+            const pairs = dataString.split(',');
+            let validData = false;
+
+            pairs.forEach(pair => {
+                const parts = pair.split(':');
+                if (parts.length === 2) {
+                    const id = parseInt(parts[0].trim(), 10);
+                    const pos = parseInt(parts[1].trim(), 10);
+                    // Position validation (0-4095)
+                    if (!isNaN(id) && id > 0 && id < 253 && !isNaN(pos) && pos >= 0 && pos <= 4095) {
+                        positionMap.set(id, pos);
+                        validData = true;
+                    } else {
+                         log(`Sync Write Position: Invalid data pair "${pair}". ID (1-252), Pos (0-4095). Skipping.`);
+                    }
+                } else {
+                    log(`Sync Write Position: Invalid format "${pair}". Skipping.`);
+                }
+            });
+
+            if (!validData) {
+                log('Sync Write Position: No valid servo position data provided.');
+                return;
+            }
+
+            log(`Sync writing positions: ${Array.from(positionMap.entries()).map(([id, pos]) => `${id}:${pos}`).join(', ')}...`);
+            try {
+                // Use scsServoSDK - throws on error
+                await scsServoSDK.syncWritePositions(positionMap);
+                log(`Sync write position command sent successfully.`);
+            } catch (err) {
+                 log(`Sync Write Position Failed: ${err.message}`);
+                 console.error(err);
+            }
+        };
+
+        // New handler for Sync Write Speed
+        syncWriteSpeedBtn.onclick = async () => {
+            if (!isConnected) { log('Error: Not connected'); return; }
+            const dataString = syncWriteSpeedDataInput.value;
+            const speedMap = new Map();
+            const pairs = dataString.split(',');
+            let validData = false;
+
+            pairs.forEach(pair => {
+                const parts = pair.split(':');
+                if (parts.length === 2) {
+                    const id = parseInt(parts[0].trim(), 10);
+                    const speed = parseInt(parts[1].trim(), 10);
+                    // Speed validation (-10000 to 10000)
+                    if (!isNaN(id) && id > 0 && id < 253 && !isNaN(speed) && speed >= -10000 && speed <= 10000) {
+                        speedMap.set(id, speed);
+                        validData = true;
+                    } else {
+                         log(`Sync Write Speed: Invalid data pair "${pair}". ID (1-252), Speed (-10000 to 10000). Skipping.`);
+                    }
+                } else {
+                    log(`Sync Write Speed: Invalid format "${pair}". Skipping.`);
+                }
+            });
+
+            if (!validData) {
+                log('Sync Write Speed: No valid servo speed data provided.');
+                return;
+            }
+
+            log(`Sync writing speeds: ${Array.from(speedMap.entries()).map(([id, speed]) => `${id}:${speed}`).join(', ')}...`);
+            try {
+                // Use scsServoSDK - throws on error
+                await scsServoSDK.syncWriteWheelSpeed(speedMap);
+                log(`Sync write speed command sent successfully.`);
+            } catch (err) {
+                 log(`Sync Write Speed Failed: ${err.message}`);
+                 console.error(err);
+            }
+        };
+
+
+        scanServosBtn.onclick = async () => {
+            if (!isConnected) { log('Error: Not connected'); return; }
+
+            const startId = parseInt(scanStartIdInput.value, 10);
+            const endId = parseInt(scanEndIdInput.value, 10);
+
+            if (isNaN(startId) || isNaN(endId) || startId < 1 || endId > 252 || startId > endId) {
+                const errorMsg = 'Error: Invalid scan ID range. Please enter values between 1 and 252, with Start ID <= End ID.';
+                log(errorMsg);
+                scanResultsOutput.textContent = errorMsg; // Show error in results area too
+                return;
+            }
+
+            const startMsg = `Starting servo scan (IDs ${startId}-${endId})...`;
+            log(startMsg);
+            scanResultsOutput.textContent = startMsg + '\n'; // Clear and start results area
+            scanServosBtn.disabled = true; // Disable button during scan
+
+            let foundCount = 0;
+
+            for (let id = startId; id <= endId; id++) {
+                let resultMsg = `Scanning ID ${id}... `;
+                try {
+                    // Attempt to read position. If it succeeds, the servo exists.
+                    // If it throws, the servo likely doesn't exist or there's another issue.
+                    const position = await scsServoSDK.readPosition(id);
+                    foundCount++;
+
+                    // Servo found, now try to read mode and baud rate
+                    let mode = 'ReadError';
+                    let baudRateIndex = 'ReadError';
+                    try {
+                        mode = await scsServoSDK.readMode(id);
+                    } catch (modeErr) {
+                        log(`  Servo ${id}: Error reading mode: ${modeErr.message}`);
+                    }
+                    try {
+                        baudRateIndex = await scsServoSDK.readBaudRate(id);
+                    } catch (baudErr) {
+                        log(`  Servo ${id}: Error reading baud rate: ${baudErr.message}`);
+                    }
+
+                    resultMsg += `FOUND: Pos=${position}, Mode=${mode}, BaudIdx=${baudRateIndex}`;
+                    log(`  Servo ${id} FOUND: Position=${position}, Mode=${mode}, BaudIndex=${baudRateIndex}`);
+
+                } catch (err) {
+                    // Check if the error message indicates a timeout or non-response, which is expected for non-existent IDs
+                    // This check might need refinement based on the exact error messages thrown by readPosition
+                    if (err.message.includes('timeout') || err.message.includes('No response') || err.message.includes('failed: RX')) {
+                         resultMsg += `No response`;
+                         // log(`  Servo ${id}: No response`); // Optional: reduce log noise
+                    } else {
+                        // Log other unexpected errors
+                        resultMsg += `Error: ${err.message}`;
+                        log(`  Servo ${id}: Error during scan: ${err.message}`);
+                        console.error(`Error scanning servo ${id}:`, err);
+                    }
+                }
+                scanResultsOutput.textContent += resultMsg + '\n'; // Append result to the results area
+                scanResultsOutput.scrollTop = scanResultsOutput.scrollHeight; // Auto-scroll
+                 // Optional small delay between scans if needed
+                 // await new Promise(resolve => setTimeout(resolve, 10));
+            }
+
+            const finishMsg = `Servo scan finished. Found ${foundCount} servo(s).`;
+            log(finishMsg);
+            scanResultsOutput.textContent += finishMsg + '\n'; // Add finish message to results area
+            scanResultsOutput.scrollTop = scanResultsOutput.scrollHeight; // Auto-scroll
+            scanServosBtn.disabled = false; // Re-enable button
+        };
+
+        // Initial log
+        log('Test page loaded. Please connect to a servo controller.');
+
+    </script>
+</body>
+</html>

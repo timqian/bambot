@@ -1,10 +1,11 @@
+"use client";
 import Script from "next/script";
 import Link from "next/link";
 
 export default function Header() {
   return (
     <>
-      <header className="text-white container mx-auto p-4 flex justify-between items-center fixed top-0 left-0 right-0 z-10">
+      <header className="text-white w-full p-5 sm:px-10 flex justify-between items-center fixed top-0 left-0 right-0 z-50">
         <Link href="/">
           <div className="text-2xl font-bold e">BamBot</div>
         </Link>

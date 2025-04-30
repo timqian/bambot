@@ -1,7 +1,7 @@
 "use client";
 
 import { StarField } from "@/components/star-field";
-import Header from "@/components/Header";
+
 import Link from "next/link";
 
 export default function Home() {
@@ -10,15 +10,30 @@ export default function Home() {
       id: 1,
       name: "so-arm100",
       image: "/so-arm100.jpg",
-      playLink: "https://so-arm100.bambot.org/",
-      assembleLink: "https://github.com/huggingface/lerobot/blob/main/examples/10_use_so100.md",
+      playLink: "/play/so-arm100",
+      assembleLink:
+        "https://github.com/huggingface/lerobot/blob/main/examples/10_use_so100.md",
     },
     {
       id: 2,
       name: "bambot v0",
       image: "/bambot_v0.jpg",
-      playLink: "https://play.bambot.org/",
+      playLink: "/play/bambot-v0",
       assembleLink: "https://github.com/timqian/bambot/tree/main/hardware",
+    },
+    {
+      id: 3,
+      name: "bambot base v0",
+      image: "/bambot_v0_base.png",
+      playLink: "/play/bambot-v0-base",
+      assembleLink: "https://github.com/timqian/bambot/tree/main/hardware",
+    },
+    {
+      id: 0,
+      name: "sts3215 servo",
+      image: "/sts3215.png",
+      playLink: "/play/sts3215",
+      assembleLink: "",
     },
     // {
     //   id: 3,
@@ -39,10 +54,6 @@ export default function Home() {
 
   return (
     <main className="relative">
-      <div className="relative z-20">
-        <Header />
-      </div>
-
       <div className="mt-32 mb-4 container mx-auto p-4 flex justify-center items-center relative z-10">
         <div className="text-center w-full">
           {" "}
