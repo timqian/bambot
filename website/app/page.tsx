@@ -28,13 +28,13 @@ export default function Home() {
       playLink: "/play/bambot-v0-base",
       assembleLink: "https://github.com/timqian/bambot/tree/main/hardware",
     },
-    {
-      id: 0,
-      name: "sts3215 servo",
-      image: "/sts3215.png",
-      playLink: "/play/sts3215",
-      assembleLink: "",
-    },
+    // {
+    //   id: 0,
+    //   name: "sts3215 servo",
+    //   image: "/sts3215.png",
+    //   playLink: "/play/sts3215",
+    //   assembleLink: "",
+    // },
     // {
     //   id: 3,
     //   name: "bambot base v0",
