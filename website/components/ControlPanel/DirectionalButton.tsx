@@ -17,6 +17,7 @@ const directionSymbols: Record<"up" | "down" | "left" | "right", string> = {
 export const DirectionalButton: React.FC<
   DirectionalButtonProps & { isActive: boolean }
 > = ({ direction, onMouseDown, onMouseUp, isActive }) => {
+  console.log(isActive);
   const handleTouchStart = (event: React.TouchEvent) => {
     event.preventDefault(); // Prevent text selection on long press
     onMouseDown();
@@ -29,8 +30,8 @@ export const DirectionalButton: React.FC<
 
   return (
     <button
-      className={`bg-gray-700 hover:bg-gray-500 text-gray-200 px-2 py-1 rounded font-bold select-none ${
-        isActive ? "bg-blue-500" : ""
+      className={`text-gray-200 px-2 py-1 rounded font-bold select-none ${
+        isActive ? "bg-blue-500" : "bg-gray-700 hover:bg-gray-500"
       }`}
       onMouseDown={onMouseDown}
       onMouseUp={onMouseUp}
