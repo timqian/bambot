@@ -7,7 +7,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import URDFLoader, { URDFRobot, URDFJoint } from "urdf-loader";
 import { OrbitControls, Html, useProgress } from "@react-three/drei";
 import { GroundPlane } from "./GroundPlane";
-import { ControlPanel } from "./ControlPanel/index";
+import { ControlPanel } from "./controlPanel/index";
 import {
   JointState,
   useRobotControl,
@@ -15,6 +15,7 @@ import {
 } from "@/hooks/useRobotControl";
 import { Canvas } from "@react-three/fiber";
 import { degreesToRadians } from "@/lib/utils";
+import { ChatControl } from "./ChatControl"; // Import ChatControl component
 
 export type JointDetails = {
   name: string;
@@ -171,7 +172,15 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
     throw new Error(`Robot configuration for "${robotName}" not found.`);
   }
 
-  const { urdfUrl, orbitTarget, camera, keyboardControlMap } = config; // Extract keyboardControlMap
+  const {
+    urdfUrl,
+    orbitTarget,
+    camera,
+    keyboardControlMap,
+    jointNameIdMap,
+    compoundMovements,
+    systemPrompt, // <-- Add this line
+  } = config; // Extract compoundMovements and systemPrompt
 
   const {
     isConnected,
@@ -188,6 +197,11 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
   useEffect(() => {
     updateJointDetails(jointDetails);
   }, [jointDetails, updateJointDetails]);
+
+  // Expose compoundMovements globally for ControlPanel to access
+  if (typeof window !== "undefined") {
+    (window as any).bambotCompoundMovements = config.compoundMovements;
+  }
 
   return (
     <>
@@ -213,7 +227,7 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
         </Suspense>
       </Canvas>
       <ControlPanel
-        updateJointsSpeed={updateJointsSpeed} // Pass updateJointsSpeed
+        updateJointsSpeed={updateJointsSpeed}
         jointStates={jointStates}
         updateJointDegrees={updateJointDegrees}
         updateJointsDegrees={updateJointsDegrees}
@@ -222,6 +236,13 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
         connectRobot={connectRobot}
         disconnectRobot={disconnectRobot}
         keyboardControlMap={keyboardControlMap}
+        compoundMovements={compoundMovements}
+      />
+      <ChatControl
+        keyboardControlMap={keyboardControlMap}
+        jointNameIdMap={jointNameIdMap}
+        robotName={robotName}
+        systemPrompt={systemPrompt} // <-- Pass systemPrompt
       />
     </>
   );

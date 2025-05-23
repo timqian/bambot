@@ -4,6 +4,23 @@ type CameraSettings = {
   fov: number;
 };
 
+// Define a type for compound/linked joint movements
+type CompoundMovement = {
+  name: string;
+  keys: string[]; // keys that trigger this movement
+  primaryJoint: number; // the joint controlled by the key
+  // Optional formula for calculating deltaPrimary, can use primary, dependent, etc.
+  primaryFormula?: string;
+  dependents: {
+    joint: number;
+    // The formula is used to calculate the delta for the dependent joint (deltaDependent)
+    // It can use variables: primary, dependent, deltaPrimary
+    // deltaPrimary itself can depend on primary and dependent angles
+    // Example: "deltaPrimary * 0.8 + primary * 0.1 - dependent * 0.05"
+    formula: string;
+  }[];
+};
+
 // Define combined robot configuration type
 export type RobotConfig = {
   urdfUrl: string;
@@ -15,13 +32,16 @@ export type RobotConfig = {
   jointNameIdMap?: {
     [key: string]: number;
   };
+  compoundMovements?: CompoundMovement[];
+  controlPrompt?: string;
+  systemPrompt?: string; // <-- Add this line
 };
 
 // Define configuration map per slug
 export const robotConfigMap: { [key: string]: RobotConfig } = {
-  'so-arm100': {
+  "so-arm100": {
     urdfUrl: "/URDF/so_arm100.urdf",
-    camera: { position: [-20, 10, -15], fov: 16 },
+    camera: { position: [-20, 10, -15], fov: 20 },
     orbitTarget: [0, 1, 0],
     keyboardControlMap: {
       1: ["1", "q"],
@@ -39,8 +59,49 @@ export const robotConfigMap: { [key: string]: RobotConfig } = {
       Wrist_Roll: 5,
       Jaw: 6,
     },
+    compoundMovements: [
+      // Jaw compound movements
+      {
+        name: "Jaw down & up",
+        keys: ["8", "i"],
+        primaryJoint: 2,
+        primaryFormula: "primary < 100 ? 1 : -1", // Example: sign depends on primary and dependent
+        dependents: [
+          {
+            joint: 3,
+            formula: "primary < 100 ? -1.9 * deltaPrimary : 0.4 * deltaPrimary",
+            // formula: "- deltaPrimary * (0.13 * Math.sin(primary * (Math.PI / 180)) + 0.13 * Math.sin((primary-dependent) * (Math.PI / 180)))/(0.13 * Math.sin((primary - dependent) * (Math.PI / 180)))",
+          },
+          {
+            joint: 4,
+            formula:
+              "primary < 100 ? (primary < 10 ? 0 : 0.51 * deltaPrimary) : -0.4 * deltaPrimary",
+          },
+        ],
+      },
+      {
+        name: "Jaw backward & forward",
+        keys: ["o", "u"],
+        primaryJoint: 2,
+        primaryFormula: "1",
+        dependents: [
+          {
+            joint: 3,
+            formula: "-0.9* deltaPrimary",
+          },
+        ],
+      },
+    ],
+    systemPrompt: `You can help control the so-arm100 robot by pressing keyboard keys. Use the keyPress tool to simulate key presses. Each key will be held down for 1 second by default. If the user describes roughly wanting to make it longer or shorter, adjust the duration accordingly.
+    The robot can be controlled with the following keys:
+    - "q" and "1" for rotate the bot to left and right
+    - "i" and "8" for moving the bot/jaw down("i") and up("8")
+    - "u" and "o" for moving the bot/jaw backward("u") and forward("o")
+    - "6" to open the jaw and "y" to close the jaw
+    - "t" and "5" for rotating jaw
+    `,
   },
-  'bambot-v0': {
+  "bambot-v0": {
     urdfUrl: "/URDF/bambot_v0.urdf",
     camera: { position: [-30, 25, 28], fov: 25 },
     orbitTarget: [0, 2, 0],
@@ -75,8 +136,10 @@ export const robotConfigMap: { [key: string]: RobotConfig } = {
       back_wheel: 14,
       right_wheel: 15,
     },
+    systemPrompt: `You can help control the bambot-v0 robot by pressing keyboard keys. Use the keyPress tool to simulate key presses. Each key will be held down for 1 second by default. If the user describes roughly wanting to make it longer or shorter, adjust the duration accordingly.
+    `,
   },
-  'bambot-v0-base': {
+  "bambot-v0-base": {
     urdfUrl: "/URDF/bambot_v0_base.urdf",
     camera: { position: [-30, 25, 28], fov: 25 },
     orbitTarget: [0, 2, 0],
@@ -85,8 +148,9 @@ export const robotConfigMap: { [key: string]: RobotConfig } = {
       back_wheel: 14,
       right_wheel: 15,
     },
+    systemPrompt: `You can help control the bambot-v0-base robot by pressing keyboard keys. Use the keyPress tool to simulate key presses. Each key will be held down for 1 second by default. The robot can be controlled with the following keys: "left_wheel", "back_wheel", "right_wheel" for base movement.`,
   },
-  'sts3215': {
+  sts3215: {
     urdfUrl: "/URDF/sts3215.urdf",
     camera: { position: [10, 10, 10], fov: 12 },
     orbitTarget: [0.5, 1, 0],
@@ -96,5 +160,6 @@ export const robotConfigMap: { [key: string]: RobotConfig } = {
     jointNameIdMap: {
       Rotation: 1,
     },
+    systemPrompt: `You can help control the sts3215 robot by pressing keyboard keys. Use the keyPress tool to simulate key presses. Each key will be held down for 1 second by default. The robot can be controlled with the following keys: "1" and "q" for rotation.`,
   },
 };

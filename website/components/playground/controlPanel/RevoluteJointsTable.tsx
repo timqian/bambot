@@ -4,8 +4,8 @@ import {
   JointState,
   UpdateJointDegrees,
   UpdateJointsDegrees,
-} from "../../hooks/useRobotControl";
-import { radiansToDegrees } from "../../lib/utils";
+} from "../../../hooks/useRobotControl";
+import { radiansToDegrees } from "../../../lib/utils";
 import { RobotConfig } from "@/config/robotConfig";
 
 type RevoluteJointsTableProps = {
@@ -13,6 +13,7 @@ type RevoluteJointsTableProps = {
   updateJointDegrees: UpdateJointDegrees;
   updateJointsDegrees: UpdateJointsDegrees;
   keyboardControlMap: RobotConfig["keyboardControlMap"];
+  compoundMovements?: RobotConfig["compoundMovements"]; // Use type from robotConfig
 };
 
 // Define constants for interval and step size
@@ -30,11 +31,15 @@ const formatRealDegrees = (degrees?: number | "N/A" | "error") => {
   return degrees === "N/A" ? "/" : `${degrees?.toFixed(1)}°`;
 };
 
+// compoundMovements 约定：keys[0] 是正向运动，keys[1] 是反向运动
+// 例如 keys: ["8", "i"]，"8" 控制正向，"i" 控制反向
+
 export function RevoluteJointsTable({
   joints,
   updateJointDegrees,
   updateJointsDegrees,
   keyboardControlMap,
+  compoundMovements,
 }: RevoluteJointsTableProps) {
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set());
   // Refs to hold the latest values needed inside the interval callback
@@ -91,15 +96,14 @@ export function RevoluteJointsTable({
   useEffect(() => {
     let intervalId: NodeJS.Timeout | null = null;
 
-    // Define the function to be called by the interval
     const updateJointsBasedOnKeys = () => {
-      // Access latest values via refs inside the interval
       const currentJoints = jointsRef.current;
       const currentControlMap = keyboardControlMapRef.current || {};
-      // Read the current pressed keys directly from the state captured by the effect's closure
       const currentPressedKeys = pressedKeys;
+      const currentCompoundMovements = compoundMovements || [];
 
-      const updates = currentJoints
+      // 普通单关节控制
+      let updates = currentJoints
         .map((joint) => {
           const decreaseKey = currentControlMap[joint.servoId!]?.[1];
           const increaseKey = currentControlMap[joint.servoId!]?.[0];
@@ -107,13 +111,12 @@ export function RevoluteJointsTable({
           let newValue = currentDegrees;
 
           if (decreaseKey && currentPressedKeys.has(decreaseKey)) {
-            newValue -= KEY_UPDATE_STEP_DEGREES; // Use constant
+            newValue -= KEY_UPDATE_STEP_DEGREES;
           }
           if (increaseKey && currentPressedKeys.has(increaseKey)) {
-            newValue += KEY_UPDATE_STEP_DEGREES; // Use constant
+            newValue += KEY_UPDATE_STEP_DEGREES;
           }
 
-          // Clamp value within joint limits
           const lowerLimit = Math.round(
             radiansToDegrees(joint.limit?.lower ?? -Infinity)
           );
@@ -132,18 +135,123 @@ export function RevoluteJointsTable({
         value: number;
       }[];
 
+      // 处理 compoundMovements，覆盖普通单关节控制
+      currentCompoundMovements.forEach((cm) => {
+        // 判断是否有 key 被按下
+        // keys[0] 为正向，keys[1] 为反向
+        const pressedIdx = cm.keys.findIndex((k) => currentPressedKeys.has(k));
+        if (pressedIdx === -1) return;
+
+        // primaryJoint 当前角度
+        const primaryJoint = currentJoints.find(
+          (j) => j.servoId === cm.primaryJoint
+        );
+        if (!primaryJoint) return;
+        const primary = primaryJoint.virtualDegrees || 0;
+
+        // 取第一个 dependent joint 作为 dependent
+        const dependentJointId = cm.dependents[0]?.joint;
+        const dependentJoint = currentJoints.find(
+          (j) => j.servoId === dependentJointId
+        );
+        const dependent = dependentJoint?.virtualDegrees || 0;
+
+        // 步进大小总是 KEY_UPDATE_STEP_DEGREES
+        // sign 决定方向，正向为 +1，反向为 -1
+        let sign = 1;
+        if (cm.primaryFormula) {
+          try {
+            // eslint-disable-next-line no-new-func
+            sign =
+              Math.sign(
+                Function(
+                  "primary",
+                  "dependent",
+                  "delta",
+                  `return ${cm.primaryFormula}`
+                )(primary, dependent, KEY_UPDATE_STEP_DEGREES)
+              ) || 1;
+          } catch (e) {
+            sign = 1;
+          }
+        } else {
+          sign = pressedIdx === 0 ? 1 : -1;
+        }
+        // 按键顺序决定 deltaPrimary 正负
+        const deltaPrimary =
+          KEY_UPDATE_STEP_DEGREES * sign * (pressedIdx === 0 ? 1 : -1);
+
+        // primaryJoint 新值
+        let newPrimaryValue = primary + deltaPrimary;
+        const lowerLimit = Math.round(
+          radiansToDegrees(primaryJoint.limit?.lower ?? -Infinity)
+        );
+        const upperLimit = Math.round(
+          radiansToDegrees(primaryJoint.limit?.upper ?? Infinity)
+        );
+        newPrimaryValue = Math.max(
+          lowerLimit,
+          Math.min(upperLimit, newPrimaryValue)
+        );
+
+        // 用 Map 方便覆盖
+        const updatesMap = new Map<number, number>();
+        updates.forEach((u) => updatesMap.set(u.servoId, u.value));
+        updatesMap.set(primaryJoint.servoId!, newPrimaryValue);
+
+        // dependents
+        cm.dependents.forEach((dep) => {
+          const dependentJoint = currentJoints.find(
+            (j) => j.servoId === dep.joint
+          );
+          if (!dependentJoint) return;
+          const dependent = dependentJoint.virtualDegrees || 0;
+          let deltaDependent = 0;
+          try {
+            // eslint-disable-next-line no-new-func
+            deltaDependent = Function(
+              "primary",
+              "dependent",
+              "deltaPrimary",
+              `return ${dep.formula}`
+            )(primary, dependent, deltaPrimary);
+          } catch (e) {
+            deltaDependent = 0;
+          }
+          // If deltaDependent is not a valid number, set it to 0
+          if (!Number.isFinite(deltaDependent)) {
+            deltaDependent = 0;
+          }
+          let newDependentValue = dependent + deltaDependent;
+          const depLowerLimit = Math.round(
+            radiansToDegrees(dependentJoint.limit?.lower ?? -Infinity)
+          );
+          const depUpperLimit = Math.round(
+            radiansToDegrees(dependentJoint.limit?.upper ?? Infinity)
+          );
+          newDependentValue = Math.max(
+            depLowerLimit,
+            Math.min(depUpperLimit, newDependentValue)
+          );
+          updatesMap.set(dependentJoint.servoId!, newDependentValue);
+        });
+
+        // compoundMovements 的 joint 更新覆盖普通单关节控制
+        updates = Array.from(updatesMap.entries()).map(([servoId, value]) => ({
+          servoId,
+          value,
+        }));
+      });
+
       if (updates.length > 0) {
-        // Call update function using ref
         updateJointsDegreesRef.current(updates);
       }
     };
 
     if (pressedKeys.size > 0) {
-      // Start interval only if keys are pressed
-      intervalId = setInterval(updateJointsBasedOnKeys, KEY_UPDATE_INTERVAL_MS); // Use constant
+      intervalId = setInterval(updateJointsBasedOnKeys, KEY_UPDATE_INTERVAL_MS);
     }
 
-    // Cleanup function: clears interval when effect re-runs (pressedKeys changes) or component unmounts
     return () => {
       if (intervalId) {
         clearInterval(intervalId);
@@ -245,7 +353,7 @@ export function RevoluteJointsTable({
                       const valueInDegrees = parseFloat(e.target.value);
                       updateJointDegrees(detail.servoId!, valueInDegrees);
                     }}
-                    className="h-2 bg-gray-700 appearance-none cursor-pointer w-14"
+                    className="h-2 bg-gray-700 appearance-none cursor-pointer w-14 custom-range-thumb"
                   />
                   <button
                     onMouseDown={() => handleMouseDown(increaseKey)}
@@ -271,6 +379,116 @@ export function RevoluteJointsTable({
           })}
         </tbody>
       </table>
+      {/* Display compoundMovements if present */}
+      {compoundMovements && compoundMovements.length > 0 && (
+        <div className="mt-4">
+          <div className="font-bold mb-2">Compound Movements</div>
+          <table className="table-auto w-full text-left text-sm">
+            <tbody>
+              {compoundMovements.map((cm, idx) => {
+                const decreaseKey = cm.keys[1];
+                const increaseKey = cm.keys[0];
+                const isDecreaseActive =
+                  decreaseKey && pressedKeys.has(decreaseKey);
+                const isIncreaseActive =
+                  increaseKey && pressedKeys.has(increaseKey);
+                return (
+                  <tr key={idx}>
+                    <td className="font-semibold pr-2 align-top">{cm.name}</td>
+                    <td>
+                      {cm.keys && cm.keys.length > 0 && (
+                        <span className="space-x-1 flex flex-row">
+                          {/* Decrease key */}
+                          <button
+                            onMouseDown={() => handleMouseDown(decreaseKey)}
+                            onMouseUp={() => handleMouseUp(decreaseKey)}
+                            onMouseLeave={() => handleMouseUp(decreaseKey)}
+                            onTouchStart={() => handleMouseDown(decreaseKey)}
+                            onTouchEnd={() => handleMouseUp(decreaseKey)}
+                            className={`${
+                              isDecreaseActive
+                                ? "bg-blue-600"
+                                : "bg-gray-700 hover:bg-gray-600"
+                            } text-white text-xs font-bold w-5 h-5 text-right pr-1 uppercase select-none`}
+                            style={{
+                              clipPath:
+                                "polygon(0 50%, 30% 0, 100% 0, 100% 100%, 30% 100%)",
+                              minWidth: "1.8em",
+                              minHeight: "1.8em",
+                              fontWeight: 600,
+                              boxShadow: "0 1px 2px 0 rgba(0,0,0,0.04)",
+                            }}
+                            tabIndex={-1}
+                          >
+                            {decreaseKey || "-"}
+                          </button>
+                          {/* Increase key */}
+                          <button
+                            onMouseDown={() => handleMouseDown(increaseKey)}
+                            onMouseUp={() => handleMouseUp(increaseKey)}
+                            onMouseLeave={() => handleMouseUp(increaseKey)}
+                            onTouchStart={() => handleMouseDown(increaseKey)}
+                            onTouchEnd={() => handleMouseUp(increaseKey)}
+                            className={`${
+                              isIncreaseActive
+                                ? "bg-blue-600"
+                                : "bg-gray-700 hover:bg-gray-600"
+                            } text-white text-xs font-semibold w-5 h-5 text-left pl-1 uppercase select-none`}
+                            style={{
+                              clipPath:
+                                "polygon(100% 50%, 70% 0, 0 0, 0 100%, 70% 100%)",
+                              minWidth: "1.8em",
+                              minHeight: "1.8em",
+                              fontWeight: 600,
+                              boxShadow: "0 1px 2px 0 rgba(0,0,0,0.04)",
+                            }}
+                            tabIndex={-1}
+                          >
+                            {increaseKey || "+"}
+                          </button>
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <style jsx global>{`
+        .custom-range-thumb::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #fff;
+          cursor: pointer;
+        }
+        .custom-range-thumb::-moz-range-thumb {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #fff;
+          cursor: pointer;
+        }
+        .custom-range-thumb::-ms-thumb {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #fff;
+          cursor: pointer;
+        }
+        .custom-range-thumb {
+          /* Remove default styles for Firefox */
+          overflow: hidden;
+        }
+        input[type="range"].custom-range-thumb {
+          /* Remove default focus outline for Chrome */
+          outline: none;
+        }
+      `}</style>
     </div>
   );
 }

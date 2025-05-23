@@ -7,7 +7,7 @@ import {
   UpdateJointsDegrees,
   UpdateJointSpeed,
   UpdateJointsSpeed, // Add UpdateJointsSpeed type
-} from "../../hooks/useRobotControl"; // Adjusted import path
+} from "../../../hooks/useRobotControl"; // Adjusted import path
 import { RevoluteJointsTable } from "./RevoluteJointsTable"; // Updated import path
 import { ContinuousJointsTable } from "./ContinuousJointsTable"; // Updated import path
 import { RobotConfig } from "@/config/robotConfig";
@@ -27,6 +27,7 @@ type ControlPanelProps = {
   connectRobot: () => void;
   disconnectRobot: () => void;
   keyboardControlMap: RobotConfig["keyboardControlMap"]; // New prop for keyboard control
+  compoundMovements?: RobotConfig["compoundMovements"]; // Use type from robotConfig
 };
 
 export function ControlPanel({
@@ -39,6 +40,7 @@ export function ControlPanel({
   connectRobot,
   disconnectRobot,
   keyboardControlMap, // Destructure new prop
+  compoundMovements, // Destructure new prop
 }: ControlPanelProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<
@@ -85,12 +87,12 @@ export function ControlPanel({
   }
 
   return (
-    <div className="absolute bottom-5 left-5 bg-black bg-opacity-60 text-white p-4 rounded-lg max-h-[90vh] overflow-y-auto z-50 text-sm">
-      <h3 className="mt-0 mb-4 border-b border-gray-600 pb-1 font-bold text-base flex justify-between items-center">
+    <div className="absolute bottom-5 left-5 bg-zinc-900 bg-opacity-80 text-white p-4 rounded-lg max-h-[90vh] overflow-y-auto z-50 text-sm">
+      <h3 className="mt-0 mb-4 border-b border-zinc-600 pb-1 font-bold text-base flex justify-between items-center">
         <span>Joint Controls</span>
         <button
           onClick={() => setIsCollapsed(true)}
-          className="ml-2 text-xl hover:bg-gray-800 px-2 rounded-full"
+          className="ml-2 text-xl hover:bg-zinc-800 px-2 rounded-full"
           title="Collapse"
         >
           ×
@@ -104,6 +106,7 @@ export function ControlPanel({
           updateJointDegrees={updateJointDegrees}
           updateJointsDegrees={updateJointsDegrees}
           keyboardControlMap={keyboardControlMap}
+          compoundMovements={compoundMovements}
         />
       )}
 

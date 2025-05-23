@@ -3,7 +3,7 @@ import {
   JointState,
   UpdateJointSpeed,
   UpdateJointsSpeed,
-} from "../../hooks/useRobotControl";
+} from "../../../hooks/useRobotControl";
 import { DirectionalButton } from "./DirectionalButton";
 
 type ContinuousJointsTableProps = {
@@ -99,9 +99,7 @@ export function ContinuousJointsTable({
           <tbody>
             {joints.map((detail) => (
               <tr key={detail.servoId}>
-                <td className="py-1">
-                  {detail.name}
-                </td>
+                <td className="py-1">{detail.name}</td>
                 <td className="py-1 pr-2 text-center">
                   {formatVirtualSpeed(detail.virtualSpeed)}
                 </td>
