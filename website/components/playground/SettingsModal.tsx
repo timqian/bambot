@@ -39,7 +39,7 @@ export function SettingsModal({
     if (show) {
       const base = getBaseURL();
       setApiKeyState(getApiKey());
-      if (base === "https://api.openai.com/v1/" || base == null) {
+      if (base === "https://api.openai.com/v1/" || base === "" || base == null) {
         setModelType("OpenAI");
         setBaseURLState("https://api.openai.com/v1/");
         setModelState(getModel() || "gpt-4.1-nano");
