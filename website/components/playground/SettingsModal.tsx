@@ -1,13 +1,13 @@
 import React, { useRef, useEffect, useState } from "react";
 import {
-  getApiKey,
-  setApiKey,
-  getBaseURL,
-  setBaseURL,
-  getSystemPrompt,
-  setSystemPrompt,
-  getModel,
-  setModel,
+  getApiKeyFromLocalStorage,
+  setApiKeyToLocalStorage,
+  getBaseURLFromLocalStorage,
+  setBaseURLToLocalStorage,
+  getSystemPromptFromLocalStorage,
+  setSystemPromptToLocalStorage,
+  getModelFromLocalStorage,
+  setModelToLocalStorage,
 } from "../../lib/settings";
 
 interface SettingsModalProps {
@@ -37,25 +37,29 @@ export function SettingsModal({
   // Auto-detect type and set recommended defaults
   useEffect(() => {
     if (show) {
-      const base = getBaseURL();
-      setApiKeyState(getApiKey());
-      if (base === "https://api.openai.com/v1/" || base === "" || base == null) {
+      const base = getBaseURLFromLocalStorage();
+      setApiKeyState(getApiKeyFromLocalStorage());
+      if (
+        base === "https://api.openai.com/v1/" ||
+        base === "" ||
+        base == null
+      ) {
         setModelType("OpenAI");
         setBaseURLState("https://api.openai.com/v1/");
-        setModelState(getModel() || "gpt-4.1-nano");
+        setModelState(getModelFromLocalStorage() || "gpt-4.1-nano");
       } else if (base === "http://localhost:11434/v1") {
         setModelType("Ollama");
         setBaseURLState("http://localhost:11434/v1");
-        setModelState(getModel() || "mistral-small3.1");
+        setModelState(getModelFromLocalStorage() || "mistral-small3.1");
       } else {
         setModelType("Custom");
         setBaseURLState(base);
-        setModelState(getModel());
+        setModelState(getModelFromLocalStorage());
       }
       setSystemPromptState(
-        getSystemPrompt(robotName) || configSystemPrompt || ""
+        getSystemPromptFromLocalStorage(robotName) || configSystemPrompt || ""
       );
-      const localPrompt = getSystemPrompt(robotName) || "";
+      const localPrompt = getSystemPromptFromLocalStorage(robotName) || "";
       const configPrompt = configSystemPrompt || "";
       // Only show button if localPrompt is not empty and differs from configPrompt
       setShowUseDefaultPrompt(
@@ -72,7 +76,7 @@ export function SettingsModal({
     } else if (type === "Ollama") {
       setBaseURLState("http://localhost:11434/v1");
     } else {
-      setBaseURLState(getBaseURL() || "");
+      setBaseURLState(getBaseURLFromLocalStorage() || "");
     }
   };
 
@@ -93,14 +97,14 @@ export function SettingsModal({
   if (!show) return null;
 
   const handleSave = () => {
-    setApiKey(apiKey);
-    setBaseURL(baseURL);
-    // Only save system prompt if there is already a prompt in local storage (for this robotName)
-    const localPrompt = getSystemPrompt(robotName) || "";
-    if (localPrompt !== "") {
-      setSystemPrompt(systemPrompt, robotName);
+    setApiKeyToLocalStorage(apiKey);
+    setBaseURLToLocalStorage(baseURL);
+    // Only save system prompt if the current prompt is not the default one
+    const defaultPrompt = configSystemPrompt || "";
+    if (systemPrompt !== defaultPrompt) {
+      setSystemPromptToLocalStorage(systemPrompt, robotName);
     }
-    setModel(model);
+    setModelToLocalStorage(model);
     onClose();
   };
 
@@ -222,7 +226,10 @@ export function SettingsModal({
                     )
                   ) {
                     setSystemPromptState(configSystemPrompt || "");
-                    setSystemPrompt(configSystemPrompt || "", robotName);
+                    setSystemPromptToLocalStorage(
+                      configSystemPrompt || "",
+                      robotName
+                    );
                     setShowUseDefaultPrompt(false);
                   }
                 }}

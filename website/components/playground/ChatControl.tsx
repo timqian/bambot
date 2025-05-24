@@ -5,10 +5,10 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { SettingsModal } from "./SettingsModal";
 import { z } from "zod";
 import {
-  getApiKey,
-  getBaseURL,
-  getSystemPrompt,
-  getModel,
+  getApiKeyFromLocalStorage,
+  getBaseURLFromLocalStorage,
+  getSystemPromptFromLocalStorage,
+  getModelFromLocalStorage,
 } from "../../lib/settings";
 
 type ChatControlProps = {
@@ -30,12 +30,11 @@ export function ChatControl({
   );
   const [showSettings, setShowSettings] = useState(false);
 
-  // 一开始就全部获取
-  const apiKey = getApiKey();
-  const baseURL = getBaseURL() || "https://api.openai.com/v1/";
-  const model = getModel() || "gpt-4.1-nano";
+  const apiKey = getApiKeyFromLocalStorage();
+  const baseURL = getBaseURLFromLocalStorage() || "https://api.openai.com/v1/";
+  const model = getModelFromLocalStorage() || "gpt-4.1-nano";
   const systemPrompt =
-    getSystemPrompt(robotName) ||
+    getSystemPromptFromLocalStorage(robotName) ||
     configSystemPrompt || // <-- Use configSystemPrompt if present
     `You can help control a robot by pressing keyboard keys. Use the keyPress tool to simulate key presses. Each key will be held down for 1 second by default. If the user describes roughly wanting to make it longer or shorter, adjust the duration accordingly.`;
 
