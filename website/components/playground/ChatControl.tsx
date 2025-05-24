@@ -12,17 +12,13 @@ import {
 } from "../../lib/settings";
 
 type ChatControlProps = {
-  keyboardControlMap?: Record<string, any>;
-  jointNameIdMap?: Record<string, number>;
   robotName?: string;
-  systemPrompt?: string; // <-- Add this line
+  systemPrompt?: string;
 };
 
 export function ChatControl({
-  keyboardControlMap,
-  jointNameIdMap,
   robotName,
-  systemPrompt: configSystemPrompt, // <-- Add this line
+  systemPrompt: configSystemPrompt,
 }: ChatControlProps) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<{ sender: string; text: string }[]>(

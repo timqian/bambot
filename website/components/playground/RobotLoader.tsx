@@ -238,12 +238,7 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
         keyboardControlMap={keyboardControlMap}
         compoundMovements={compoundMovements}
       />
-      <ChatControl
-        keyboardControlMap={keyboardControlMap}
-        jointNameIdMap={jointNameIdMap}
-        robotName={robotName}
-        systemPrompt={systemPrompt} // <-- Pass systemPrompt
-      />
+      <ChatControl robotName={robotName} systemPrompt={systemPrompt} />
     </>
   );
 }
