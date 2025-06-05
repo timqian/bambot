@@ -10,6 +10,7 @@
   <a href="https://discord.gg/Fq2gvSMyRJ"><img src="https://flat.badgen.net/static/chat/on%20discord" alt="Discord"></a>
   <a href="https://i.v2ex.co/1U6OSqswl.jpeg"><img src="https://flat.badgen.net/static/chat/on%20wechat?color=green" alt="WeChat"></a>
   <a href="https://x.com/tim_qian"><img src="https://flat.badgen.net/static/follow/on%20X?color=black" alt="X"></a>
+  <a href="https://deepwiki.com/timqian/bambot"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 </p>
 
 # [Bambot](https://bambot.org)
