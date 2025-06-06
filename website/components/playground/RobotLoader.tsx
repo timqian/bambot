@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import URDFLoader, { URDFRobot, URDFJoint } from "urdf-loader";
 import { OrbitControls, Html, useProgress } from "@react-three/drei";
+import { Physics, useBox } from "@react-three/cannon";
 import { GroundPlane } from "./GroundPlane";
 import { ControlPanel } from "./controlPanel/index";
 import {
@@ -16,6 +17,11 @@ import {
 import { Canvas } from "@react-three/fiber";
 import { degreesToRadians } from "@/lib/utils";
 import { ChatControl } from "./ChatControl"; // Import ChatControl component
+import { ScenarioObjects } from "./ScenarioObjects"; // Import ScenarioObjects component
+import { Scenario, ScenarioObject } from "@/lib/scenarios"; // Import scenario types
+import { RobotCollisionDetector, RobotCollisionState } from "@/lib/robotCollision"; // Import collision detection
+import { CollisionFeedback } from "./CollisionFeedback"; // Import collision feedback component
+import { RobotPhysics } from "./RobotPhysics"; // Import robot physics component
 
 export type JointDetails = {
   name: string;
@@ -38,6 +44,8 @@ function RobotScene({
   jointDetails,
   setJointDetails,
   jointStates,
+  scenarioObjects,
+  onCollisionUpdate,
 }: {
   robotName: string;
   urdfUrl: string;
@@ -45,9 +53,12 @@ function RobotScene({
   jointDetails: JointDetails[];
   setJointDetails: (details: JointDetails[]) => void;
   jointStates: JointState[]; // Updated type
+  scenarioObjects: ScenarioObject[]; // Add scenario objects prop
+  onCollisionUpdate: (collisionState: RobotCollisionState) => void; // Add collision callback
 }) {
   const { scene } = useThree();
   const robotRef = useRef<URDFRobot | null>(null);
+  const collisionDetector = useRef(new RobotCollisionDetector());
 
   useEffect(() => {
     const manager = new THREE.LoadingManager();
@@ -72,7 +83,7 @@ function RobotScene({
               )
               .map((joint) => ({
                 name: joint.name,
-                servoId: robotConfigMap[robotName].jointNameIdMap[joint.name], // Fetch servoId using jointNameIdMap
+                servoId: robotConfigMap[robotName].jointNameIdMap?.[joint.name] || 0, // Fetch servoId using jointNameIdMap with safety check
                 limit: {
                   // Ensure conversion to primitive number
                   lower:
@@ -128,15 +139,29 @@ function RobotScene({
           }
         }
       });
+      
+      // Check for collisions if we have scenario objects
+      if (scenarioObjects.length > 0) {
+        const gripperPosition = collisionDetector.current.calculateGripperPosition(jointStates);
+        const collisionState = collisionDetector.current.checkCollisions(gripperPosition, scenarioObjects);
+        onCollisionUpdate(collisionState);
+      }
+      
       // Depending on how urdf-loader handles updates, you might need this:
-      // robotRef.current.updateMatrixWorld(true);
+      robotRef.current.updateMatrixWorld(true);
     }
   });
 
   return (
     <>
       <OrbitControls target={orbitTarget || [0, 0.1, 0.1]} />
-      <GroundPlane />
+      <Physics>
+        <GroundPlane />
+        <ScenarioObjects objects={scenarioObjects} />
+        {robotRef.current && (
+          <RobotPhysics robot={robotRef.current} jointStates={jointStates} />
+        )}
+      </Physics>
       <directionalLight
         castShadow
         intensity={1}
@@ -166,6 +191,11 @@ function Loader() {
 
 export default function RobotLoader({ robotName }: RobotLoaderProps) {
   const [jointDetails, setJointDetails] = useState<JointDetails[]>([]);
+  const [scenarioObjects, setScenarioObjects] = useState<ScenarioObject[]>([]);
+  const [collisionState, setCollisionState] = useState<RobotCollisionState>({
+    nearbyObjects: [],
+    canGrab: false,
+  });
   const config = robotConfigMap[robotName];
 
   if (!config) {
@@ -203,6 +233,20 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
     (window as any).bambotCompoundMovements = config.compoundMovements;
   }
 
+  const handleLoadScenario = (scenario: Scenario) => {
+    setScenarioObjects(scenario.objects);
+    console.log(`Loaded scenario: ${scenario.title}`, scenario.objects);
+  };
+
+  const handleCollisionUpdate = (newCollisionState: RobotCollisionState) => {
+    setCollisionState(newCollisionState);
+    
+    // Log collision events for debugging
+    if (newCollisionState.canGrab && newCollisionState.nearbyObjects.length > 0) {
+      console.log('Robot can grab:', newCollisionState.nearbyObjects.map(obj => obj.name));
+    }
+  };
+
   return (
     <>
       <Canvas
@@ -223,6 +267,8 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
             jointDetails={jointDetails}
             setJointDetails={setJointDetails}
             jointStates={jointStates}
+            scenarioObjects={scenarioObjects}
+            onCollisionUpdate={handleCollisionUpdate}
           />
         </Suspense>
       </Canvas>
@@ -237,8 +283,10 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
         disconnectRobot={disconnectRobot}
         keyboardControlMap={keyboardControlMap}
         compoundMovements={compoundMovements}
+        onLoadScenario={handleLoadScenario}
       />
       <ChatControl robotName={robotName} systemPrompt={systemPrompt} />
+      <CollisionFeedback collisionState={collisionState} />
     </>
   );
 }

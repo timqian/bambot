@@ -1,5 +1,6 @@
 "use client";
 import React, { useMemo } from "react";
+import { usePlane } from "@react-three/cannon";
 import * as THREE from "three";
 
 function createGridTexture() {
@@ -29,8 +30,15 @@ function createGridTexture() {
 
 export function GroundPlane() {
   const gridTexture = useMemo(createGridTexture, []);
+  
+  // Create physics plane
+  const [ref] = usePlane(() => ({
+    rotation: [-Math.PI / 2, 0, 0],
+    position: [0, 0, 0],
+  }));
+  
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+    <mesh ref={ref as any} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
       <planeGeometry args={[30, 30]} />
       <meshPhysicalMaterial
         color={0x808080}
