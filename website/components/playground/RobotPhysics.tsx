@@ -11,32 +11,44 @@ interface RobotPhysicsProps {
 
 // Dynamic physics body that follows robot parts with offset positioning
 function DetailedJawCollisionBox({ 
-  size, 
-  name,
-  robot,
-  linkName,
-  offset
+  box,
+  robot
 }: { 
-  size: [number, number, number], 
-  name: string,
-  robot: any,
-  linkName: string,
-  offset: [number, number, number]
+  box: {
+    name: string;
+    linkName: string;
+    size: [number, number, number];
+    offset: [number, number, number];
+    rotation: [number, number, number];
+  };
+  robot: any;
 }) {
   const [ref, api] = useBox(() => ({
     position: [0, 0, 0],
-    args: size,
+    args: box.size,
     type: 'Kinematic', // Kinematic bodies move but don't respond to forces
     material: {
-      friction: 0.9,
-      restitution: 0,
-    }
+      friction: 1.5, // Very high friction for gripping
+      restitution: 0, // No bounce at all
+      frictionEquation: {
+        relaxation: 3, // Stable friction contacts
+        stiffness: 1e8, // High stiffness
+      },
+      contactEquation: {
+        relaxation: 3, // Stable contacts
+        stiffness: 1e8, // Prevent interpenetration
+      }
+    },
+    // Add collision response settings for better gripping
+    collisionFilterGroup: 1, // Jaw collision group
+    collisionFilterMask: -1, // Collide with everything
+    isTrigger: false, // Full physics collision, not just detection
   }));
 
   // Update position based on actual robot link positions with offset
   useFrame(() => {
-    if (robot && robot.links && robot.links[linkName]) {
-      const link = robot.links[linkName];
+    if (robot && robot.links && robot.links[box.linkName]) {
+      const link = robot.links[box.linkName];
       
       // Get the world matrix of the link
       link.updateMatrixWorld(true);
@@ -47,7 +59,7 @@ function DetailedJawCollisionBox({
       link.matrixWorld.decompose(worldPosition, worldQuaternion, worldScale);
       
       // Apply offset in local coordinate system
-      const offsetVector = new THREE.Vector3(...offset);
+      const offsetVector = new THREE.Vector3(...box.offset);
       offsetVector.applyQuaternion(worldQuaternion);
       worldPosition.add(offsetVector);
       
@@ -56,13 +68,13 @@ function DetailedJawCollisionBox({
       
       // Convert quaternion to euler for cannon
       const euler = new THREE.Euler().setFromQuaternion(worldQuaternion);
-      api.rotation.set(euler.x, euler.y, euler.z);
+      api.rotation.set(euler.x + box.rotation[0], euler.y + box.rotation[1], euler.z + box.rotation[2]);
     }
   });
 
   return (
     <mesh ref={ref as any} visible={true}>
-      <boxGeometry args={size} />
+      <boxGeometry args={box.size} />
       <meshBasicMaterial transparent opacity={0.4} color="orange" wireframe />
     </mesh>
   );
@@ -85,9 +97,19 @@ function DynamicRobotCollisionBox({
     args: size,
     type: 'Kinematic', // Kinematic bodies move but don't respond to forces
     material: {
-      friction: 0.6,
-      restitution: 0.1,
-    }
+      friction: 0.8, // Good friction for interaction
+      restitution: 0.05, // Very low bounce
+      frictionEquation: {
+        relaxation: 3, // Stable contacts
+        stiffness: 1e8,
+      },
+      contactEquation: {
+        relaxation: 3,
+        stiffness: 1e8,
+      }
+    },
+    collisionFilterGroup: 1, // Same group as jaws
+    collisionFilterMask: -1, // Collide with everything
   }));
 
   // Update position based on actual robot link positions
@@ -177,7 +199,8 @@ export function RobotPhysics({ robot, jointStates }: RobotPhysicsProps) {
       name: 'fixed_jaw_main', 
       linkName: 'Fixed_Jaw', 
       size: [0.3, 1.2, 0.3] as [number, number, number], // X=width, Y=thin, Z=long (forward)
-      offset: [0.3, -1, 0] as [number, number, number] // Down and forward
+      offset: [0.33, -1, 0] as [number, number, number], // Down and forward
+      rotation: [0, 0, -0.1] as [number, number, number]
     },
     
     // Moving Jaw (top) - trying Z forward, Y separation approach
@@ -185,7 +208,8 @@ export function RobotPhysics({ robot, jointStates }: RobotPhysicsProps) {
       name: 'moving_jaw_main', 
       linkName: 'Moving_Jaw', 
       size: [0.3, 1.8, 0.3] as [number, number, number], // X=width, Y=thin, Z=long (forward)
-      offset: [0, -0.3, 0] as [number, number, number] // Up and forward
+      offset: [0.05, -0.3, 0] as [number, number, number], // Up and forward
+      rotation: [0, 0, -0.1] as [number, number, number]
     },
   ];
 
@@ -193,9 +217,6 @@ export function RobotPhysics({ robot, jointStates }: RobotPhysicsProps) {
   const validCollisionBoxes = collisionBoxes.filter(box => 
     availableLinks.includes(box.linkName)
   );
-
-  // Filter jaw collision boxes
-  const validJawBoxes = jawCollisionBoxes
 
   if (validCollisionBoxes.length === 0 && availableLinks.length > 0) {
     // If no exact matches, use the first few available links
@@ -234,14 +255,11 @@ export function RobotPhysics({ robot, jointStates }: RobotPhysicsProps) {
       ))}
       
       {/* Detailed jaw collision boxes */}
-      {validJawBoxes.map((box, index) => (
+      {jawCollisionBoxes.map((box, index) => (
         <DetailedJawCollisionBox
           key={`${box.name}-${index}`}
-          size={box.size}
-          name={box.name}
+          box={box}
           robot={robot}
-          linkName={box.linkName}
-          offset={box.offset}
         />
       ))}
     </>
