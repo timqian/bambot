@@ -27,18 +27,7 @@ function DetailedJawCollisionBox({
     position: [0, 0, 0],
     args: box.size,
     type: 'Kinematic', // Kinematic bodies move but don't respond to forces
-    material: {
-      friction: 1.5, // Very high friction for gripping
-      restitution: 0, // No bounce at all
-      frictionEquation: {
-        relaxation: 3, // Stable friction contacts
-        stiffness: 1e8, // High stiffness
-      },
-      contactEquation: {
-        relaxation: 3, // Stable contacts
-        stiffness: 1e8, // Prevent interpenetration
-      }
-    },
+    material: 'jaw', // Use contact material name instead of individual properties
     // Add collision response settings for better gripping
     collisionFilterGroup: 1, // Jaw collision group
     collisionFilterMask: -1, // Collide with everything
@@ -96,20 +85,9 @@ function DynamicRobotCollisionBox({
     position: [0, 0, 0],
     args: size,
     type: 'Kinematic', // Kinematic bodies move but don't respond to forces
-    material: {
-      friction: 0.8, // Good friction for interaction
-      restitution: 0.05, // Very low bounce
-      frictionEquation: {
-        relaxation: 3, // Stable contacts
-        stiffness: 1e8,
-      },
-      contactEquation: {
-        relaxation: 3,
-        stiffness: 1e8,
-      }
-    },
-    collisionFilterGroup: 1, // Same group as jaws
-    collisionFilterMask: -1, // Collide with everything
+    material: 'robot', // Use contact material name instead of individual properties
+    collisionFilterGroup: 0, // Same group as jaws
+    collisionFilterMask: 0xFFFFFFFF, // Collide with nothing
   }));
 
   // Update position based on actual robot link positions

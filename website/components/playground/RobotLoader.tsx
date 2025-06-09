@@ -5,8 +5,8 @@ import { robotConfigMap } from "@/config/robotConfig";
 import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import URDFLoader, { URDFRobot, URDFJoint } from "urdf-loader";
-import { OrbitControls, Html, useProgress } from "@react-three/drei";
-import { Physics, useBox } from "@react-three/cannon";
+import { OrbitControls, Html, useProgress, Stats } from "@react-three/drei";
+import { Physics, useBox, useContactMaterial } from "@react-three/cannon";
 import { GroundPlane } from "./GroundPlane";
 import { ControlPanel } from "./controlPanel/index";
 import {
@@ -19,8 +19,6 @@ import { degreesToRadians } from "@/lib/utils";
 import { ChatControl } from "./ChatControl"; // Import ChatControl component
 import { ScenarioObjects } from "./ScenarioObjects"; // Import ScenarioObjects component
 import { Scenario, ScenarioObject } from "@/lib/scenarios"; // Import scenario types
-import { RobotCollisionDetector, RobotCollisionState } from "@/lib/robotCollision"; // Import collision detection
-import { CollisionFeedback } from "./CollisionFeedback"; // Import collision feedback component
 import { RobotPhysics } from "./RobotPhysics"; // Import robot physics component
 
 export type JointDetails = {
@@ -45,7 +43,7 @@ function RobotScene({
   setJointDetails,
   jointStates,
   scenarioObjects,
-  onCollisionUpdate,
+
 }: {
   robotName: string;
   urdfUrl: string;
@@ -54,11 +52,9 @@ function RobotScene({
   setJointDetails: (details: JointDetails[]) => void;
   jointStates: JointState[]; // Updated type
   scenarioObjects: ScenarioObject[]; // Add scenario objects prop
-  onCollisionUpdate: (collisionState: RobotCollisionState) => void; // Add collision callback
 }) {
   const { scene } = useThree();
   const robotRef = useRef<URDFRobot | null>(null);
-  const collisionDetector = useRef(new RobotCollisionDetector());
 
   useEffect(() => {
     const manager = new THREE.LoadingManager();
@@ -140,13 +136,6 @@ function RobotScene({
         }
       });
       
-      // Check for collisions if we have scenario objects
-      if (scenarioObjects.length > 0) {
-        const gripperPosition = collisionDetector.current.calculateGripperPosition(jointStates);
-        const collisionState = collisionDetector.current.checkCollisions(gripperPosition, scenarioObjects);
-        onCollisionUpdate(collisionState);
-      }
-      
       // Depending on how urdf-loader handles updates, you might need this:
       robotRef.current.updateMatrixWorld(true);
     }
@@ -155,15 +144,26 @@ function RobotScene({
   return (
     <>
       <OrbitControls target={orbitTarget || [0, 0.1, 0.1]} />
-      <Physics>
+      <Physics gravity={[0, -9.82, 0]}
+        iterations={10} // Reduced from default 20 - lower is faster
+        tolerance={0.01} // Increased tolerance for faster solving
+        stepSize={1/20} // Fixed timestep
+        broadphase="Naive" // Naive is faster for smaller scenes, SAP for larger
+        // allowSleep={true} // Allow objects to sleep when not moving
+        axisIndex={0} // For SAPBroadphase if you switch to it later
+        // Enable quantized physics for better performance
+        quatNormalizeFast={true}
+        isPaused={true}
+        quatNormalizeSkip={2}>
+        {/* <ContactMaterials /> */}
         <GroundPlane />
-        <ScenarioObjects objects={scenarioObjects} />
-        {robotRef.current && (
+        {/* <ScenarioObjects objects={scenarioObjects} /> */}
+        {/* {robotRef.current && (
           <RobotPhysics robot={robotRef.current} jointStates={jointStates} />
-        )}
+        )} */}
       </Physics>
       <directionalLight
-        castShadow
+        // castShadow
         intensity={1}
         position={[2, 20, 5]}
         shadow-mapSize-width={1024}
@@ -189,13 +189,56 @@ function Loader() {
   );
 }
 
+// Contact Materials Component
+function ContactMaterials() {
+  // Jaw-to-Object interaction - Very high friction for gripping
+  useContactMaterial('jaw', 'object', {
+    friction: 2.0,
+    restitution: 0,
+    frictionEquationStiffness: 1e8,
+    frictionEquationRelaxation: 3,
+    contactEquationStiffness: 1e8,
+    contactEquationRelaxation: 3,
+  });
+
+  // Robot part to Object - Medium friction for interaction
+  // useContactMaterial('robot', 'object', {
+  //   friction: 0.8,
+  //   restitution: 0.05,
+  //   frictionEquationStiffness: 1e8,
+  //   frictionEquationRelaxation: 3,
+  //   contactEquationStiffness: 1e8,
+  //   contactEquationRelaxation: 3,
+  // });
+
+  // Object to Ground - Normal interaction
+  // useContactMaterial('object', 'ground', {
+  //   friction: 0.6,
+  //   restitution: 0.1,
+  //   frictionEquationStiffness: 1e8,
+  //   frictionEquationRelaxation: 3,
+  //   contactEquationStiffness: 1e8,
+  //   contactEquationRelaxation: 3,
+  // });
+
+  // Robot to Ground - Low friction to allow movement
+  // useContactMaterial('robot', 'ground', {
+  //   friction: 0.3,
+  //   restitution: 0,
+  // });
+
+  // useContactMaterial('jaw', 'ground', {
+  //   friction: 0.3,
+  //   restitution: 0,
+  // });
+
+  return null;
+}
+
 export default function RobotLoader({ robotName }: RobotLoaderProps) {
   const [jointDetails, setJointDetails] = useState<JointDetails[]>([]);
   const [scenarioObjects, setScenarioObjects] = useState<ScenarioObject[]>([]);
-  const [collisionState, setCollisionState] = useState<RobotCollisionState>({
-    nearbyObjects: [],
-    canGrab: false,
-  });
+
   const config = robotConfigMap[robotName];
 
   if (!config) {
@@ -238,15 +281,6 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
     console.log(`Loaded scenario: ${scenario.title}`, scenario.objects);
   };
 
-  const handleCollisionUpdate = (newCollisionState: RobotCollisionState) => {
-    setCollisionState(newCollisionState);
-    
-    // Log collision events for debugging
-    if (newCollisionState.canGrab && newCollisionState.nearbyObjects.length > 0) {
-      console.log('Robot can grab:', newCollisionState.nearbyObjects.map(obj => obj.name));
-    }
-  };
-
   return (
     <>
       <Canvas
@@ -268,9 +302,9 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
             setJointDetails={setJointDetails}
             jointStates={jointStates}
             scenarioObjects={scenarioObjects}
-            onCollisionUpdate={handleCollisionUpdate}
           />
         </Suspense>
+        <Stats showPanel={1} />
       </Canvas>
       <ControlPanel
         updateJointsSpeed={updateJointsSpeed}
@@ -286,7 +320,6 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
         onLoadScenario={handleLoadScenario}
       />
       <ChatControl robotName={robotName} systemPrompt={systemPrompt} />
-      <CollisionFeedback collisionState={collisionState} />
     </>
   );
 }

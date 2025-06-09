@@ -19,18 +19,7 @@ function ScenarioObjectComponent({ object }: { object: ScenarioObject }) {
     position: position as [number, number, number],
     rotation: rotation as [number, number, number],
     args: scale as [number, number, number], // Box dimensions
-    material: {
-      friction: 1.2, // Increased friction significantly for better grip
-      restitution: 0.05, // Very low bounce to prevent objects from bouncing away
-      frictionEquation: {
-        relaxation: 3, // Higher relaxation for more stable contact
-        stiffness: 1e8, // High stiffness for solid feel
-      },
-      contactEquation: {
-        relaxation: 3, // More stable contacts
-        stiffness: 1e8, // Prevent sinking/bouncing
-      }
-    },
+    material: 'object', // Use contact material name instead of individual properties
     linearDamping: 0.6, // Increased damping to reduce jittery movement
     angularDamping: 0.6, // Increased to reduce rotation jitter when gripped
     sleepSpeedLimit: 0.1, // Objects go to sleep when moving slowly, making them easier to grip
@@ -40,26 +29,26 @@ function ScenarioObjectComponent({ object }: { object: ScenarioObject }) {
     // Add collision groups for better interaction with robot parts
     collisionFilterGroup: 2, // Object collision group
     collisionFilterMask: -1, // Collide with everything
-    onCollide: (e: any) => {
-      // Simple gripping logic - if colliding with robot jaw, reduce movement
-      if (e.body && !isGripped) {
-        // Make object "stickier" when touched by robot
-        api.linearDamping.set(0.9);
-        api.angularDamping.set(0.9);
+    // onCollide: (e: any) => {
+    //   // Simple gripping logic - if colliding with robot jaw, reduce movement
+    //   if (e.body && !isGripped) {
+    //     // Make object "stickier" when touched by robot
+    //     api.linearDamping.set(0.9);
+    //     api.angularDamping.set(0.9);
         
-        // Reduce sleep limits to make it easier to pick up
-        api.sleepSpeedLimit.set(0.05);
+    //     // Reduce sleep limits to make it easier to pick up
+    //     api.sleepSpeedLimit.set(0.05);
         
-        setTimeout(() => {
-          if (!isGripped) {
-            // Reset if not gripped after brief contact
-            api.linearDamping.set(0.6);
-            api.angularDamping.set(0.6);
-            api.sleepSpeedLimit.set(0.1);
-          }
-        }, 500);
-      }
-    }
+    //     setTimeout(() => {
+    //       if (!isGripped) {
+    //         // Reset if not gripped after brief contact
+    //         api.linearDamping.set(0.6);
+    //         api.angularDamping.set(0.6);
+    //         api.sleepSpeedLimit.set(0.1);
+    //       }
+    //     }, 500);
+    //   }
+    // }
   }));
 
   const material = (
