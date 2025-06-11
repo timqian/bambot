@@ -14,7 +14,7 @@ export default function FeetechPage() {
   // Single servo control states
   const [servoId, setServoId] = useState(1);
   const [newId, setNewId] = useState(1);
-  const [baudWrite, setBaudWrite] = useState(6);
+  const [baudWrite, setBaudWrite] = useState(0);
   const [positionWrite, setPositionWrite] = useState(1000);
   const [accelerationWrite, setAccelerationWrite] = useState(50);
   const [wheelSpeedWrite, setWheelSpeedWrite] = useState(0);
@@ -471,464 +471,614 @@ export default function FeetechPage() {
     log("Test page loaded. Please connect to a servo controller.");
   }, []);
 
-  return (
-    <div className="container mx-auto max-w-4xl p-6 space-y-6 mt-20 bg-zinc-800 text-white rounded-xl">
-      <h1 className="text-3xl font-bold mb-6">Feetech Servo Test Page</h1>
+  // Available baud rates mapping
+  const baudRateOptions = [
+    { index: 0, rate: 1000000, label: "1,000,000 bps (Index 0)" },
+    { index: 1, rate: 500000, label: "500,000 bps (Index 1)" },
+    { index: 2, rate: 250000, label: "250,000 bps (Index 2)" },
+    { index: 3, rate: 128000, label: "128,000 bps (Index 3)" },
+    { index: 4, rate: 115200, label: "115,200 bps (Index 4)" },
+    { index: 5, rate: 76800, label: "76,800 bps (Index 5)" },
+    { index: 6, rate: 57600, label: "57,600 bps (Index 6)" },
+    { index: 7, rate: 38400, label: "38,400 bps (Index 7)" }
+  ];
 
-      
-      <div className="border border-gray-300 rounded-lg p-4 bg-zinc-700">
-        <h2 className="text-lg font-semibold mb-3">Documentation & Source</h2>
-        <div className="space-y-2">
-          <p className="text-sm">
-            This page demonstrates the capabilities of <strong>feetech.js</strong>, a JavaScript library for controlling Feetech servo motors. (Currently tested on STS3215 servos)
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-zinc-900 to-zinc-800 py-8 pt-20">
+      <div className="container mx-auto max-w-4xl px-4 space-y-8">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-white mb-4">
+            Feetech Servo Control Panel
+          </h1>
+          <p className="text-zinc-400 text-lg">
+            Config and debug your Feetech servos with ease
           </p>
-          <div className="flex flex-wrap gap-4 text-sm">
-            <a 
-              href="https://github.com/timqian/bambot/tree/main/feetech.js" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-blue-400 hover:text-blue-300 underline"
-            >
-              🛠️ Source Code
-            </a>
-            <a 
-              href="https://deepwiki.com/timqian/bambot/4.1-feetech.js-sdk"
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-blue-400 hover:text-blue-300 underline"
-            >
-              📚 Documentation
-            </a>
-            <a
-              href="https://www.npmjs.com/package/feetech.js"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-400 hover:text-blue-300 underline"
-            >
-              📦 npm package
-            </a>
+        </div>
+
+        {/* Documentation Section */}
+        <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-6 shadow-lg">
+          <h2 className="text-xl font-semibold mb-4 text-white flex items-center gap-2">
+            📚 Documentation & Source
+          </h2>
+          <div className="space-y-4">
+            <p className="text-zinc-300">
+              This page demonstrates the capabilities of{" "}
+                <a
+                href="https://github.com/timqian/bambot/tree/main/feetech.js"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 hover:underline font-bold"
+                >
+                feetech.js
+                </a>, a JavaScript
+              library for controlling Feetech servo motors. (Currently tested on
+              STS3215 servos)
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <a
+                href="https://github.com/timqian/bambot/tree/main/feetech.js"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 p-3 bg-zinc-700 hover:bg-zinc-600 rounded-lg transition-colors border border-zinc-600"
+              >
+                <span>🛠️</span>
+                <span className="text-blue-400 hover:text-blue-300">
+                  Source Code
+                </span>
+              </a>
+              <a
+                href="https://deepwiki.com/timqian/bambot/4.1-feetech.js-sdk"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 p-3 bg-zinc-700 hover:bg-zinc-600 rounded-lg transition-colors border border-zinc-600"
+              >
+                <span>📚</span>
+                <span className="text-blue-400 hover:text-blue-300">
+                  Documentation
+                </span>
+              </a>
+              <a
+                href="https://www.npmjs.com/package/feetech.js"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 p-3 bg-zinc-700 hover:bg-zinc-600 rounded-lg transition-colors border border-zinc-600"
+              >
+                <span>📦</span>
+                <span className="text-blue-400 hover:text-blue-300">
+                  npm package
+                </span>
+              </a>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Key Concepts Section */}
-      <details className="border border-gray-300 rounded-lg p-4">
-        <summary className="font-semibold cursor-pointer mb-2">
-          Key Concepts
-        </summary>
-        <div className="space-y-2">
-          <p>
-        Understanding these parameters is crucial for controlling Feetech servos:
-          </p>
-          <ul className="list-disc list-inside space-y-2 ml-4">
-        <li>
-          <strong>Mode:</strong> Determines the servo's primary function.
-          <ul className="list-disc list-inside ml-4 mt-1">
-            <li>
-          <code className="bg-gray-600 px-1 rounded">Mode 0</code>: Position/Servo Mode. The servo moves to and holds a specific angular position.
-            </li>
-            <li>
-          <code className="bg-gray-600 px-1 rounded">Mode 1</code>: Wheel/Speed Mode. The servo rotates continuously at a specified speed and direction, like a motor.
-            </li>
-          </ul>
-          <p className="text-xs mt-1">
-            Changing the mode requires unlocking, writing the mode value (0 or 1), and locking the configuration.
-          </p>
-        </li>
-        <li>
-          <strong>Position:</strong> In Position Mode (Mode 0), this value represents the target or current angular position of the servo's output shaft.
-          <ul className="list-disc list-inside ml-4 mt-1">
-            <li>
-          Range: Typically <code className="bg-gray-600 px-1 rounded">0</code> to <code className="bg-gray-600 px-1 rounded">4095</code> (representing a 12-bit resolution).
-            </li>
-            <li>
-          Meaning: Corresponds to the servo's rotational range (e.g., 0-360 degrees or 0-270 degrees, depending on the specific servo model). <code className="bg-gray-600 px-1 rounded">0</code> is one end of the range, <code className="bg-gray-600 px-1 rounded">4095</code> is the other.
-            </li>
-          </ul>
-        </li>
-        <li>
-          <strong>Speed (Wheel Mode):</strong> In Wheel Mode (Mode 1), this value controls the rotational speed and direction.
-          <ul className="list-disc list-inside ml-4 mt-1">
-            <li>
-          Range: Typically <code className="bg-gray-600 px-1 rounded">-2500</code> to <code className="bg-gray-600 px-1 rounded">+2500</code>. (Note: Some documentation might mention -1023 to +1023, but the SDK example uses a wider range).
-            </li>
-            <li>
-          Meaning: <code className="bg-gray-600 px-1 rounded">0</code> stops the wheel. Positive values rotate in one direction (e.g., clockwise), negative values rotate in the opposite direction (e.g., counter-clockwise). The magnitude determines the speed (larger absolute value means faster rotation).
-            </li>
-            <li>
-          Control Address: <code className="bg-gray-600 px-1 rounded">ADDR_SCS_GOAL_SPEED</code> (Register 46/47).
-            </li>
-          </ul>
-        </li>
-        <li>
-          <strong>Acceleration:</strong> Controls how quickly the servo changes speed to reach its target position (in Position Mode) or target speed (in Wheel Mode).
-          <ul className="list-disc list-inside ml-4 mt-1">
-            <li>
-          Range: Typically <code className="bg-gray-600 px-1 rounded">0</code> to <code className="bg-gray-600 px-1 rounded">254</code>.
-            </li>
-            <li>
-          Meaning: Defines the rate of change of speed. The unit is 100 steps/s². <code className="bg-gray-600 px-1 rounded">0</code> usually means instantaneous acceleration (or minimal delay). Higher values result in slower, smoother acceleration and deceleration. For example, a value of <code className="bg-gray-600 px-1 rounded">10</code> means the speed changes by 10 * 100 = 1000 steps per second, per second. This helps reduce jerky movements and mechanical stress.
-            </li>
-            <li>
-          Control Address: <code className="bg-gray-600 px-1 rounded">ADDR_SCS_GOAL_ACC</code> (Register 41).
-            </li>
-          </ul>
-        </li>
-        <li>
-          <strong>Baud Rate:</strong> The speed of communication between the controller and the servo. It must match on both ends. Servos often support multiple baud rates, selectable via an index:
-          <ul className="list-disc list-inside ml-4 mt-1">
-            <li>Index 0: 1,000,000 bps</li>
-            <li>Index 1: 500,000 bps</li>
-            <li>Index 2: 250,000 bps</li>
-            <li>Index 3: 128,000 bps</li>
-            <li>Index 4: 115,200 bps</li>
-            <li>Index 5: 76,800 bps</li>
-            <li>Index 6: 57,600 bps</li>
-            <li>Index 7: 38,400 bps</li>
-          </ul>
-        </li>
-          </ul>
-        </div>
-      </details>
+        {/* Key Concepts Section */}
+        <details className="bg-zinc-800 border border-zinc-700 rounded-xl shadow-lg">
+          <summary className="p-6 font-semibold cursor-pointer text-white hover:bg-zinc-750 rounded-xl transition-colors">
+            💡 Key Concepts - Click to expand
+          </summary>
+          <div className="px-6 pb-6 space-y-4 text-zinc-300">
+            <p>
+              Understanding these parameters is crucial for controlling Feetech
+              servos:
+            </p>
+            <ul className="list-disc list-inside space-y-2 ml-4">
+              <li>
+                <strong>Mode:</strong> Determines the servo's primary function.
+                <ul className="list-disc list-inside ml-4 mt-1">
+                  <li>
+                    <code className="bg-gray-600 px-1 rounded">Mode 0</code>:
+                    Position/Servo Mode. The servo moves to and holds a specific
+                    angular position.
+                  </li>
+                  <li>
+                    <code className="bg-gray-600 px-1 rounded">Mode 1</code>:
+                    Wheel/Speed Mode. The servo rotates continuously at a
+                    specified speed and direction, like a motor.
+                  </li>
+                </ul>
+                <p className="text-xs mt-1">
+                  Changing the mode requires unlocking, writing the mode value (0
+                  or 1), and locking the configuration.
+                </p>
+              </li>
+              <li>
+                <strong>Position:</strong> In Position Mode (Mode 0), this value
+                represents the target or current angular position of the servo's
+                output shaft.
+                <ul className="list-disc list-inside ml-4 mt-1">
+                  <li>
+                    Range: Typically{" "}
+                    <code className="bg-gray-600 px-1 rounded">0</code> to{" "}
+                    <code className="bg-gray-600 px-1 rounded">4095</code>
+                    (representing a 12-bit resolution).
+                  </li>
+                  <li>
+                    Meaning: Corresponds to the servo's rotational range (e.g.,
+                    0-360 degrees or 0-270 degrees, depending on the specific
+                    servo model). <code className="bg-gray-600 px-1 rounded">
+                    0
+                  </code>{" "}
+                    is one end of the range,{" "}
+                    <code className="bg-gray-600 px-1 rounded">4095</code> is the
+                    other.
+                  </li>
+                </ul>
+              </li>
+              <li>
+                <strong>Speed (Wheel Mode):</strong> In Wheel Mode (Mode 1), this
+                value controls the rotational speed and direction.
+                <ul className="list-disc list-inside ml-4 mt-1">
+                  <li>
+                    Range: Typically{" "}
+                    <code className="bg-gray-600 px-1 rounded">-2500</code> to{" "}
+                    <code className="bg-gray-600 px-1 rounded">+2500</code>. (Note:
+                    Some documentation might mention -1023 to +1023, but the SDK
+                    example uses a wider range).
+                  </li>
+                  <li>
+                    Meaning:{" "}
+                    <code className="bg-gray-600 px-1 rounded">0</code> stops the
+                    wheel. Positive values rotate in one direction (e.g.,
+                    clockwise), negative values rotate in the opposite direction
+                    (e.g., counter-clockwise). The magnitude determines the speed
+                    (larger absolute value means faster rotation).
+                  </li>
+                  <li>
+                    Control Address:{" "}
+                    <code className="bg-gray-600 px-1 rounded">
+                      ADDR_SCS_GOAL_SPEED
+                    </code>{" "}
+                    (Register 46/47).
+                  </li>
+                </ul>
+              </li>
+              <li>
+                <strong>Acceleration:</strong> Controls how quickly the servo
+                changes speed to reach its target position (in Position Mode) or
+                target speed (in Wheel Mode).
+                <ul className="list-disc list-inside ml-4 mt-1">
+                  <li>
+                    Range: Typically{" "}
+                    <code className="bg-gray-600 px-1 rounded">0</code> to{" "}
+                    <code className="bg-gray-600 px-1 rounded">254</code>.
+                  </li>
+                  <li>
+                    Meaning: Defines the rate of change of speed. The unit is 100
+                    steps/s².{" "}
+                    <code className="bg-gray-600 px-1 rounded">0</code> usually
+                    means instantaneous acceleration (or minimal delay). Higher
+                    values result in slower, smoother acceleration and
+                    deceleration. For example, a value of{" "}
+                    <code className="bg-gray-600 px-1 rounded">10</code> means
+                    the speed changes by 10 * 100 = 1000 steps per second, per
+                    second. This helps reduce jerky movements and mechanical
+                    stress.
+                  </li>
+                  <li>
+                    Control Address:{" "}
+                    <code className="bg-gray-600 px-1 rounded">ADDR_SCS_GOAL_ACC</code>{" "}
+                    (Register 41).
+                  </li>
+                </ul>
+              </li>
+              <li>
+                <strong>Baud Rate:</strong> The speed of communication between the
+                controller and the servo. It must match on both ends. Servos often
+                support multiple baud rates, selectable via an index:
+                <ul className="list-disc list-inside ml-4 mt-1">
+                  <li>Index 0: 1,000,000 bps</li>
+                  <li>Index 1: 500,000 bps</li>
+                  <li>Index 2: 250,000 bps</li>
+                  <li>Index 3: 128,000 bps</li>
+                  <li>Index 4: 115,200 bps</li>
+                  <li>Index 5: 76,800 bps</li>
+                  <li>Index 6: 57,600 bps</li>
+                  <li>Index 7: 38,400 bps</li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+        </details>
 
-      {/* Connection Section */}
-      <div className="border border-gray-300 rounded-lg p-4">
-        <h2 className="text-xl font-semibold mb-4">Connection</h2>
-        <div className="flex gap-2 mb-4">
-          <Button onClick={handleConnect} disabled={isConnected}>
-            Connect
-          </Button>
+        {/* Connection Section */}
+        <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-6 shadow-lg">
+          <h2 className="text-xl font-semibold mb-6 text-white flex items-center gap-2">
+            🔌 Connection
+          </h2>
+
+          {/* Connection Settings */}
+          <div className="space-y-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-zinc-300">
+                  Baud Rate
+                </label>
+                <select
+                  value={baudRate}
+                  onChange={(e) => setBaudRate(parseInt(e.target.value, 10))}
+                  className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {baudRateOptions.map((option) => (
+                    <option key={option.index} value={option.rate}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-zinc-300">
+                  Protocol End             <span className="text-xs text-zinc-400">
+              (0=STS/SMS, 1=SCS)
+            </span>
+                </label>
+                <Input
+                  type="number"
+                  value={protocolEnd}
+                  onChange={(e) =>
+                    setProtocolEnd(parseInt(e.target.value, 10))
+                  }
+                  min="0"
+                  max="1"
+                  className="bg-zinc-700 border-zinc-600 text-white"
+                />
+              </div>
+            </div>
+
+          </div>
+
+
+
+          {/* Connection Toggle Button */}
           <Button
-            onClick={handleDisconnect}
-            variant="outline"
-            disabled={!isConnected}
-          >
-            Disconnect
-          </Button>
-        </div>
-        <p className="mb-4">
-          Status:{" "}
-          <span
-            className={`font-bold ${
-              isConnected ? "text-green-600" : "text-red-600"
+            onClick={isConnected ? handleDisconnect : handleConnect}
+            className={`w-full mb-6 text-white ${
+              isConnected
+                ? "bg-red-600 hover:bg-red-700"
+                : "bg-green-600 hover:bg-green-700"
             }`}
           >
-            {connectionStatus}
-          </span>
-        </p>
-        <div className="flex flex-wrap gap-4 items-center">
-          <div className="flex items-center gap-2">
-            <label
-              htmlFor="baudRate"
-              className="text-sm font-medium min-w-[100px]"
-            >
-              Baud Rate:
-            </label>
-            <Input
-              id="baudRate"
-              type="number"
-              value={baudRate}
-              onChange={(e) => setBaudRate(parseInt(e.target.value, 10))}
-              className="w-32 bg-zinc-700"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <label
-              htmlFor="protocolEnd"
-              className="text-sm font-medium min-w-[180px]"
-            >
-              Protocol End (0=STS/SMS, 1=SCS):
-            </label>
-            <Input
-              id="protocolEnd"
-              type="number"
-              value={protocolEnd}
-              onChange={(e) => setProtocolEnd(parseInt(e.target.value, 10))}
-              min="0"
-              max="1"
-              className="w-20 bg-zinc-700"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Scan Servos Section */}
-      <div className="border border-gray-300 rounded-lg p-4">
-        <h2 className="text-xl font-semibold mb-4">Scan Servos</h2>
-        <div className="flex flex-wrap gap-4 items-center mb-4">
-          <div className="flex items-center gap-2">
-            <label
-              htmlFor="scanStartId"
-              className="text-sm font-medium min-w-[70px]"
-            >
-              Start ID:
-            </label>
-            <Input
-              id="scanStartId"
-              type="number"
-              value={scanStartId}
-              onChange={(e) => setScanStartId(parseInt(e.target.value, 10))}
-              min="1"
-              max="252"
-              className="w-20 bg-zinc-700"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <label
-              htmlFor="scanEndId"
-              className="text-sm font-medium min-w-[60px]"
-            >
-              End ID:
-            </label>
-            <Input
-              id="scanEndId"
-              type="number"
-              value={scanEndId}
-              onChange={(e) => setScanEndId(parseInt(e.target.value, 10))}
-              min="1"
-              max="252"
-              className="w-20 bg-zinc-700"
-            />
-          </div>
-          <Button
-            onClick={handleScanServos}
-            disabled={!isConnected || isScanning}
-          >
-            {isScanning ? "Scanning..." : "Scan"}
+            {isConnected ? "Disconnect" : "Connect"}
           </Button>
-        </div>
-        <p className="text-sm font-medium mb-2">Scan Results:</p>
-        <pre className="bg-gray-600 p-3 rounded border text-xs max-h-48 overflow-y-auto whitespace-pre-wrap">
-          {scanResults}
-        </pre>
-      </div>
 
-      {/* Single Servo Control Section */}
-      <div className="border border-gray-300 rounded-lg p-4">
-        <h2 className="text-xl font-semibold mb-4">Single Servo Control</h2>
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <label
-              htmlFor="servoId"
-              className="text-sm font-medium min-w-[80px]"
-            >
-              Servo ID:
-            </label>
-            <Input
-              id="servoId"
-              type="number"
-              value={servoId}
-              onChange={(e) => setServoId(parseInt(e.target.value, 10))}
-              min="1"
-              max="252"
-              className="w-20 bg-zinc-700"
-            />
-          </div>
-
-          <div className="flex flex-wrap gap-2 items-center">
-            <label
-              htmlFor="idWrite"
-              className="text-sm font-medium min-w-[130px]"
-            >
-              Change servo ID:
-            </label>
-            <Input
-              id="idWrite"
-              type="number"
-              value={newId}
-              onChange={(e) => setNewId(parseInt(e.target.value, 10))}
-              min="1"
-              max="252"
-              className="w-20 bg-zinc-700"
-            />
-            <Button onClick={handleWriteId} size="sm">
-              Write
-            </Button>
-          </div>
-
-          <div className="flex flex-wrap gap-2 items-center">
-            <label className="text-sm font-medium min-w-[130px]">
-              Read Baud Rate:
-            </label>
-            <Button onClick={handleReadBaud} size="sm">
-              Read
-            </Button>
-            <span className="text-sm">{readBaudResult}</span>
-          </div>
-
-          <div className="flex flex-wrap gap-2 items-center">
-            <label
-              htmlFor="baudWrite"
-              className="text-sm font-medium min-w-[160px]"
-            >
-              Write Baud Rate Index:
-            </label>
-            <Input
-              id="baudWrite"
-              type="number"
-              value={baudWrite}
-              onChange={(e) => setBaudWrite(parseInt(e.target.value, 10))}
-              min="0"
-              max="7"
-              className="w-20 bg-zinc-700"
-            />
-            <Button onClick={handleWriteBaud} size="sm">
-              Write
-            </Button>
-          </div>
-
-          <div className="flex flex-wrap gap-2 items-center">
-            <label className="text-sm font-medium min-w-[130px]">
-              Read Position:
-            </label>
-            <Button onClick={handleReadPosition} size="sm">
-              Read
-            </Button>
-            <span className="text-sm">{readPosResult}</span>
-          </div>
-
-          <div className="flex flex-wrap gap-2 items-center">
-            <label
-              htmlFor="positionWrite"
-              className="text-sm font-medium min-w-[130px]"
-            >
-              Write Position:
-            </label>
-            <Input
-              id="positionWrite"
-              type="number"
-              value={positionWrite}
-              onChange={(e) => setPositionWrite(parseInt(e.target.value, 10))}
-              min="0"
-              max="4095"
-              className="w-20 bg-zinc-700"
-            />
-            <Button onClick={handleWritePosition} size="sm">
-              Write
-            </Button>
-          </div>
-
-          <div className="flex flex-wrap gap-2 items-center">
-            <label className="text-sm font-medium min-w-[80px]">Torque:</label>
-            <Button onClick={handleTorqueEnable} size="sm">
-              Enable
-            </Button>
-            <Button onClick={handleTorqueDisable} size="sm">
-              Disable
-            </Button>
-          </div>
-
-          <div className="flex flex-wrap gap-2 items-center">
-            <label
-              htmlFor="accelerationWrite"
-              className="text-sm font-medium min-w-[150px]"
-            >
-              Write Acceleration:
-            </label>
-            <Input
-              id="accelerationWrite"
-              type="number"
-              value={accelerationWrite}
-              onChange={(e) =>
-                setAccelerationWrite(parseInt(e.target.value, 10))
-              }
-              min="0"
-              max="254"
-              className="w-20 bg-zinc-700"
-            />
-            <Button onClick={handleWriteAcceleration} size="sm">
-              Write
-            </Button>
-          </div>
-
-          <div className="flex flex-wrap gap-2 items-center">
-            <label className="text-sm font-medium min-w-[100px]">
-              Wheel Mode:
-            </label>
-            <Button onClick={handleSetWheelMode} size="sm">
-              Set Wheel Mode
-            </Button>
-            <Button onClick={handleSetPositionMode} size="sm">
-              Set Position Mode
-            </Button>
-          </div>
-
-          <div className="flex flex-wrap gap-2 items-center">
-            <label
-              htmlFor="wheelSpeedWrite"
-              className="text-sm font-medium min-w-[150px]"
-            >
-              Write Wheel Speed:
-            </label>
-            <Input
-              id="wheelSpeedWrite"
-              type="number"
-              value={wheelSpeedWrite}
-              onChange={(e) => setWheelSpeedWrite(parseInt(e.target.value, 10))}
-              min="-2500"
-              max="2500"
-              className="w-24 bg-zinc-700"
-            />
-            <Button onClick={handleWriteWheelSpeed} size="sm">
-              Write Speed
-            </Button>
+                    {/* Connection Status */}
+          <div className="p-4 bg-zinc-900 rounded-lg border border-zinc-600">
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-3 h-3 rounded-full ${
+                  isConnected ? "bg-green-500" : "bg-red-500"
+                }`}
+              ></div>
+              <span className="text-white font-medium">Status:</span>
+              <span
+                className={`font-bold ${
+                  isConnected ? "text-green-400" : "text-red-400"
+                }`}
+              >
+                {connectionStatus}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Sync Operations Section */}
-      <div className="border border-gray-300 rounded-lg p-4">
-        <h2 className="text-xl font-semibold mb-4">Sync Operations</h2>
-        <div className="space-y-4">
-          <div className="flex flex-wrap gap-2 items-center">
-            <label
-              htmlFor="syncWriteData"
-              className="text-sm font-medium min-w-[160px]"
-            >
-              Sync Write (id:pos,...):
-            </label>
-            <Input
-              id="syncWriteData"
-              type="text"
-              value={syncWriteData}
-              onChange={(e) => setSyncWriteData(e.target.value)}
-              className="w-48 bg-zinc-700"
-            />
-            <Button onClick={handleSyncWrite} size="sm">
-              Sync Write Positions
-            </Button>
-          </div>
+        {/* Scan Servos Section */}
+        <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-6 shadow-lg">
+          <h2 className="text-xl font-semibold mb-6 text-white flex items-center gap-2">
+            🔍 Scan Servos
+          </h2>
 
-          <div className="flex flex-wrap gap-2 items-center">
-            <label
-              htmlFor="syncWriteSpeedData"
-              className="text-sm font-medium min-w-[180px]"
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-zinc-300">
+                  Start ID
+                </label>
+                <Input
+                  type="number"
+                  value={scanStartId}
+                  onChange={(e) =>
+                    setScanStartId(parseInt(e.target.value, 10))
+                  }
+                  min="1"
+                  max="252"
+                  className="bg-zinc-700 border-zinc-600 text-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-zinc-300">
+                  End ID
+                </label>
+                <Input
+                  type="number"
+                  value={scanEndId}
+                  onChange={(e) =>
+                    setScanEndId(parseInt(e.target.value, 10))
+                  }
+                  min="1"
+                  max="252"
+                  className="bg-zinc-700 border-zinc-600 text-white"
+                />
+              </div>
+            </div>
+
+            <Button
+              onClick={handleScanServos}
+              disabled={!isConnected || isScanning}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white disabled:bg-zinc-600"
             >
-              Sync Write Speed (id:speed,...):
-            </label>
-            <Input
-              id="syncWriteSpeedData"
-              type="text"
-              value={syncWriteSpeedData}
-              onChange={(e) => setSyncWriteSpeedData(e.target.value)}
-              className="w-48 bg-zinc-700"
-            />
-            <Button onClick={handleSyncWriteSpeed} size="sm">
-              Sync Write Speeds
+              {isScanning ? "Scanning..." : "Start Scan"}
             </Button>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-zinc-300">
+                Scan Results
+              </label>
+              <pre className="bg-zinc-900 p-4 rounded-lg border border-zinc-600 text-xs text-zinc-300 max-h-48 overflow-y-auto whitespace-pre-wrap">
+                {scanResults || "No scan results yet..."}
+              </pre>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Log Output Section */}
-      <div className="border border-gray-300 rounded-lg p-4">
-        <h2 className="text-xl font-semibold mb-4">Log Output</h2>
-        <pre
-          ref={logOutputRef}
-          className="bg-gray-600 p-3 rounded border text-xs max-h-64 overflow-y-auto whitespace-pre-wrap"
-        >
-          {logs.join("\n")}
-        </pre>
+        {/* Single Servo Control Section */}
+        <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-6 shadow-lg">
+          <h2 className="text-xl font-semibold mb-6 text-white flex items-center gap-2">
+            🎛️ Single Servo Control
+          </h2>
+
+          <div className="space-y-6">
+            {/* Servo ID Selection */}
+            <div className="p-4 bg-zinc-900 rounded-lg border border-zinc-600">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-zinc-300">
+                  Current Servo ID
+                </label>
+                <Input
+                  type="number"
+                  value={servoId}
+                  onChange={(e) => setServoId(parseInt(e.target.value, 10))}
+                  min="1"
+                  max="252"
+                  className="bg-zinc-700 border-zinc-600 text-white"
+                />
+              </div>
+            </div>
+
+            {/* Control Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* ID Management */}
+              <div className="space-y-4">
+                <h3 className="font-medium text-zinc-300">ID Management</h3>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    value={newId}
+                    onChange={(e) => setNewId(parseInt(e.target.value, 10))}
+                    min="1"
+                    max="252"
+                    placeholder="New ID"
+                    className="bg-zinc-700 border-zinc-600 text-white flex-1"
+                  />
+                  <Button
+                    onClick={handleWriteId}
+                    className="bg-green-700 hover:bg-green-600 text-white"
+                  >
+                    Change ID
+                  </Button>
+                </div>
+              </div>
+
+              {/* Baud Rate Management */}
+              <div className="space-y-4">
+                <h3 className="font-medium text-zinc-300">Baud Rate</h3>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleReadBaud}
+                    variant="outline"
+                    className="bg-green-700 text-white hover:bg-green-600 flex-1"
+                  >
+                    Read Baud
+                  </Button>
+                  <Input
+                    type="number"
+                    value={baudWrite}
+                    onChange={(e) => setBaudWrite(parseInt(e.target.value, 10))}
+                    min="0"
+                    max="7"
+                    className="bg-zinc-700 border-zinc-600 text-white w-16"
+                  />
+                  <Button
+                    onClick={handleWriteBaud}
+                    className="bg-blue-700 hover:bg-blue-600 text-white"
+                  >
+                    Set
+                  </Button>
+                </div>
+                {readBaudResult && (
+                  <p className="text-sm text-zinc-400 bg-zinc-900 p-2 rounded border border-zinc-600">
+                    {readBaudResult}
+                  </p>
+                )}
+              </div>
+
+              {/* Position Control */}
+              <div className="space-y-4">
+                <h3 className="font-medium text-zinc-300">Position Control</h3>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleReadPosition}
+                    variant="outline"
+                    className="bg-green-700 text-white hover:bg-green-600 flex-1"
+                  >
+                    Read Position
+                  </Button>
+                  <Input
+                    type="number"
+                    value={positionWrite}
+                    onChange={(e) => setPositionWrite(parseInt(e.target.value, 10))}
+                    min="0"
+                    max="4095"
+                    className="bg-zinc-700 border-zinc-600 text-white w-20"
+                  />
+                  <Button
+                    onClick={handleWritePosition}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    Set
+                  </Button>
+                </div>
+                {readPosResult && (
+                  <p className="text-sm text-zinc-400 bg-zinc-900 p-2 rounded border border-zinc-600">
+                    {readPosResult}
+                  </p>
+                )}
+              </div>
+
+              {/* Torque Control */}
+              <div className="space-y-4">
+                <h3 className="font-medium text-zinc-300">Torque Control</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    onClick={handleTorqueEnable}
+                    className="bg-green-700 hover:bg-green-600 text-white"
+                  >
+                    Enable Torque
+                  </Button>
+                  <Button
+                    onClick={handleTorqueDisable}
+                    className="bg-green-700 hover:bg-green-600 text-white"
+                  >
+                    Disable Torque
+                  </Button>
+                </div>
+              </div>
+
+              {/* Acceleration Control */}
+              <div className="space-y-4">
+                <h3 className="font-medium text-zinc-300">Acceleration</h3>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    value={accelerationWrite}
+                    onChange={(e) =>
+                      setAccelerationWrite(parseInt(e.target.value, 10))
+                    }
+                    min="0"
+                    max="254"
+                    className="bg-zinc-700 border-zinc-600 text-white flex-1"
+                  />
+                  <Button
+                    onClick={handleWriteAcceleration}
+                    className="bg-green-700 hover:bg-green-600 text-white"
+                  >
+                    Set Acceleration
+                  </Button>
+                </div>
+              </div>
+
+              {/* Mode Control */}
+              <div className="space-y-4">
+                <h3 className="font-medium text-zinc-300">Mode Control</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    onClick={handleSetWheelMode}
+                    className="bg-green-700 hover:bg-green-600 text-white"
+                  >
+                    Wheel Mode
+                  </Button>
+                  <Button
+                    onClick={handleSetPositionMode}
+                    className="bg-green-700 hover:bg-green-600 text-white"
+                  >
+                    Position Mode
+                  </Button>
+                </div>
+              </div>
+
+              {/* Wheel Speed Control */}
+              <div className="space-y-4">
+                <h3 className="font-medium text-zinc-300">Wheel Speed</h3>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    value={wheelSpeedWrite}
+                    onChange={(e) => setWheelSpeedWrite(parseInt(e.target.value, 10))}
+                    min="-2500"
+                    max="2500"
+                    className="bg-zinc-700 border-zinc-600 text-white flex-1"
+                  />
+                  <Button
+                    onClick={handleWriteWheelSpeed}
+                    className="bg-green-700 hover:bg-green-600 text-white"
+                  >
+                    Set Speed
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Sync Operations Section */}
+        <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-6 shadow-lg">
+          <h2 className="text-xl font-semibold mb-6 text-white flex items-center gap-2">
+            🔄 Sync Operations
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <h3 className="font-medium text-zinc-300">Sync Write Positions</h3>
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  value={syncWriteData}
+                  onChange={(e) => setSyncWriteData(e.target.value)}
+                  placeholder="1:1500,2:2500"
+                  className="bg-zinc-700 border-zinc-600 text-white"
+                />
+                <Button
+                  onClick={handleSyncWrite}
+                  className="w-full bg-green-700 hover:bg-green-600 text-white"
+                >
+                  Sync Write Positions
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="font-medium text-zinc-300">Sync Write Speeds</h3>
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  value={syncWriteSpeedData}
+                  onChange={(e) => setSyncWriteSpeedData(e.target.value)}
+                  placeholder="1:500,2:-1000"
+                  className="bg-zinc-700 border-zinc-600 text-white"
+                />
+                <Button
+                  onClick={handleSyncWriteSpeed}
+                  className="w-full bg-green-700 hover:bg-green-600 text-white"
+                >
+                  Sync Write Speeds
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Log Output Section */}
+        <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-6 shadow-lg">
+          <h2 className="text-xl font-semibold mb-4 text-white flex items-center gap-2">
+            📋 Log Output
+          </h2>
+          <pre
+            ref={logOutputRef}
+            className="bg-zinc-900 p-4 rounded-lg border border-zinc-600 text-xs text-zinc-300 max-h-64 overflow-y-auto whitespace-pre-wrap font-mono"
+          >
+            {logs.length > 0 ? logs.join("\n") : "Logs will appear here..."}
+          </pre>
+        </div>
       </div>
     </div>
   );
