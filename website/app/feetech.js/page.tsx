@@ -1,11 +1,137 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { scsServoSDK } from "feetech.js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+// Translation object
+const translations = {
+  en: {
+    title: "Feetech Servo Control Panel",
+    subtitle: "Config and debug your Feetech servos with ease",
+    documentation: "📚 Documentation & Source",
+    docDescription:
+      "This page demonstrates the capabilities of feetech.js, a JavaScript library for controlling Feetech servo motors. (Currently tested on STS3215 servos)",
+    sourceCode: "🛠️ Source Code",
+    npmPackage: "📦 npm package",
+    keyConcepts: "💡 Key Concepts - Click to expand",
+    connection: "🔌 Connection",
+    baudRate: "Baud Rate",
+    protocolEnd: "Protocol End",
+    protocolEndNote: "(0=STS/SMS, 1=SCS)",
+    connect: "Connect",
+    disconnect: "Disconnect",
+    status: "Status:",
+    connected: "Connected",
+    disconnected: "Disconnected",
+    scanServos: "🔍 Scan Servos",
+    startId: "Start ID",
+    endId: "End ID",
+    startScan: "Start Scan",
+    scanning: "Scanning...",
+    scanResults: "Scan Results",
+    noScanResults: "No scan results yet...",
+    singleServoControl: "🎛️ Single Servo Control",
+    currentServoId: "Current Servo ID",
+    idManagement: "ID Management",
+    changeId: "Change ID",
+    readBaud: "Read Baud",
+    positionControl: "Position Control",
+    readPosition: "Read Position",
+    torqueControl: "Torque Control",
+    enableTorque: "Enable Torque",
+    disableTorque: "Disable Torque",
+    acceleration: "Acceleration",
+    setAcceleration: "Set Acceleration",
+    modeControl: "Mode Control",
+    wheelMode: "Wheel Mode",
+    positionMode: "Position Mode",
+    wheelSpeed: "Wheel Speed",
+    setSpeed: "Set Speed",
+    syncOperations: "🔄 Sync Operations (batch operations)",
+    syncWritePositions: "Sync Write Positions",
+    syncWriteSpeeds: "Sync Write Speeds",
+    logOutput: "📋 Log Output",
+    logsWillAppear: "Logs will appear here...",
+    language: "Language",
+  },
+  zh: {
+    title: "飞特舵机控制面板",
+    subtitle: "轻松配置和调试您的飞特舵机",
+    documentation: "📚 文档和源码",
+    docDescription:
+      "此页面展示了 feetech.js 的功能，这是一个用于控制飞特舵机的 JavaScript 库。（目前在 STS3215 舵机上测试）",
+    sourceCode: "🛠️ 源代码",
+    npmPackage: "📦 npm 包",
+    keyConcepts: "💡 核心概念 - 点击展开",
+    connection: "🔌 连接",
+    baudRate: "波特率",
+    protocolEnd: "协议端",
+    protocolEndNote: "(0=STS/SMS, 1=SCS)",
+    connect: "连接",
+    disconnect: "断开连接",
+    status: "状态：",
+    connected: "已连接",
+    disconnected: "已断开",
+    scanServos: "🔍 扫描舵机",
+    startId: "起始 ID",
+    endId: "结束 ID",
+    startScan: "开始扫描",
+    scanning: "扫描中...",
+    scanResults: "扫描结果",
+    noScanResults: "暂无扫描结果...",
+    singleServoControl: "🎛️ 单个舵机控制",
+    currentServoId: "当前舵机 ID",
+    idManagement: "ID 管理",
+    changeId: "更改 ID",
+    readBaud: "读取波特率",
+    positionControl: "位置控制",
+    readPosition: "读取位置",
+    torqueControl: "扭矩控制",
+    enableTorque: "启用扭矩",
+    disableTorque: "禁用扭矩",
+    acceleration: "加速度",
+    setAcceleration: "设置加速度",
+    modeControl: "模式控制",
+    wheelMode: "轮子模式",
+    positionMode: "位置模式",
+    wheelSpeed: "轮子速度",
+    setSpeed: "设置速度",
+    syncOperations: "🔄 同步操作（批量操作）",
+    syncWritePositions: "同步写入位置",
+    syncWriteSpeeds: "同步写入速度",
+    logOutput: "📋 日志输出",
+    logsWillAppear: "日志将在此处显示...",
+    language: "语言",
+  },
+};
+
 export default function FeetechPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  
+  // Language state with URL control
+  const [language, setLanguage] = useState<"en" | "zh">("en");
+  const t = translations[language];
+
+  // Initialize language from URL
+  useEffect(() => {
+    const urlLang = searchParams.get('lang');
+    if (urlLang === 'zh' || urlLang === 'en') {
+      setLanguage(urlLang);
+    }
+  }, [searchParams]);
+
+  // Handle language change with URL update
+  const handleLanguageChange = (newLang: "en" | "zh") => {
+    setLanguage(newLang);
+    const params = new URLSearchParams(searchParams);
+    params.set('lang', newLang);
+    router.push(`?${params.toString()}`);
+  };
+
   const [isConnected, setIsConnected] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState("Disconnected");
   const [baudRate, setBaudRate] = useState(1000000);
@@ -24,7 +150,6 @@ export default function FeetechPage() {
   const [readBaudResult, setReadBaudResult] = useState("");
 
   // Sync operation states
-  const [syncReadIds, setSyncReadIds] = useState("1,2,3");
   const [syncWriteData, setSyncWriteData] = useState("1:1500,2:2500");
   const [syncWriteSpeedData, setSyncWriteSpeedData] = useState("1:500,2:-1000");
 
@@ -266,33 +391,6 @@ export default function FeetechPage() {
     }
   };
 
-  const handleSyncRead = async () => {
-    if (!isConnected) {
-      log("Error: Not connected");
-      return;
-    }
-    const ids = syncReadIds
-      .split(",")
-      .map((s) => parseInt(s.trim(), 10))
-      .filter((id) => !isNaN(id) && id > 0 && id < 253);
-    if (ids.length === 0) {
-      log("Sync Read: No valid servo IDs provided.");
-      return;
-    }
-    log(`Sync reading positions for servos: ${ids.join(", ")}...`);
-    try {
-      const positions = await scsServoSDK.syncReadPositions(ids);
-      let logMsg = "Sync Read Successful:\n";
-      positions.forEach((pos, id) => {
-        logMsg += `  Servo ${id}: Position=${pos}\n`;
-      });
-      log(logMsg.trim());
-    } catch (err: any) {
-      log(`Sync Read Failed: ${err.message}`);
-      console.error(err);
-    }
-  };
-
   const handleSyncWrite = async () => {
     if (!isConnected) {
       log("Error: Not connected");
@@ -480,40 +578,40 @@ export default function FeetechPage() {
     { index: 4, rate: 115200, label: "115,200 bps (Index 4)" },
     { index: 5, rate: 76800, label: "76,800 bps (Index 5)" },
     { index: 6, rate: 57600, label: "57,600 bps (Index 6)" },
-    { index: 7, rate: 38400, label: "38,400 bps (Index 7)" }
+    { index: 7, rate: 38400, label: "38,400 bps (Index 7)" },
   ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-900 to-zinc-800 py-8 pt-20">
       <div className="container mx-auto max-w-4xl px-4 space-y-8">
-        {/* Header */}
+        {/* Header with Language Selector */}
         <div className="text-center mb-12">
+          <div className="flex justify-end mb-4">
+            <select
+              value={language}
+              onChange={(e) => handleLanguageChange(e.target.value as "en" | "zh")}
+              className="px-3 py-1 bg-zinc-800 border border-zinc-600 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="en">English</option>
+              <option value="zh">中文</option>
+            </select>
+          </div>
           <h1 className="text-4xl font-bold text-white mb-4">
-            Feetech Servo Control Panel
+            {t.title}
           </h1>
           <p className="text-zinc-400 text-lg">
-            Config and debug your Feetech servos with ease
+            {t.subtitle}
           </p>
         </div>
 
         {/* Documentation Section */}
         <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-6 shadow-lg">
           <h2 className="text-xl font-semibold mb-4 text-white flex items-center gap-2">
-            📚 Documentation & Source
+            {t.documentation}
           </h2>
           <div className="space-y-4">
             <p className="text-zinc-300">
-              This page demonstrates the capabilities of{" "}
-                <a
-                href="https://github.com/timqian/bambot/tree/main/feetech.js"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-400 hover:underline font-bold"
-                >
-                feetech.js
-                </a>, a JavaScript
-              library for controlling Feetech servo motors. (Currently tested on
-              STS3215 servos)
+              {t.docDescription}
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <a
@@ -522,9 +620,8 @@ export default function FeetechPage() {
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 p-3 bg-zinc-700 hover:bg-zinc-600 rounded-lg transition-colors border border-zinc-600"
               >
-                <span>🛠️</span>
                 <span className="text-blue-400 hover:text-blue-300">
-                  Source Code
+                  {t.sourceCode}
                 </span>
               </a>
               <a
@@ -544,9 +641,8 @@ export default function FeetechPage() {
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 p-3 bg-zinc-700 hover:bg-zinc-600 rounded-lg transition-colors border border-zinc-600"
               >
-                <span>📦</span>
                 <span className="text-blue-400 hover:text-blue-300">
-                  npm package
+                  {t.npmPackage}
                 </span>
               </a>
             </div>
@@ -556,126 +652,158 @@ export default function FeetechPage() {
         {/* Key Concepts Section */}
         <details className="bg-zinc-800 border border-zinc-700 rounded-xl shadow-lg">
           <summary className="p-6 font-semibold cursor-pointer text-white hover:bg-zinc-750 rounded-xl transition-colors">
-            💡 Key Concepts - Click to expand
+            {t.keyConcepts}
           </summary>
           <div className="px-6 pb-6 space-y-4 text-zinc-300">
             <p>
-              Understanding these parameters is crucial for controlling Feetech
-              servos:
+              {language === 'zh' 
+                ? '理解这些参数对于控制飞特舵机至关重要：'
+                : 'Understanding these parameters is crucial for controlling Feetech servos:'
+              }
             </p>
             <ul className="list-disc list-inside space-y-2 ml-4">
               <li>
-                <strong>Mode:</strong> Determines the servo's primary function.
+                <strong>{language === 'zh' ? '模式：' : 'Mode:'}</strong> 
+                {language === 'zh' ? '决定舵机的主要功能。' : "Determines the servo's primary function."}
                 <ul className="list-disc list-inside ml-4 mt-1">
                   <li>
                     <code className="bg-gray-600 px-1 rounded">Mode 0</code>:
-                    Position/Servo Mode. The servo moves to and holds a specific
-                    angular position.
+                    {language === 'zh' 
+                      ? '位置/舵机模式。舵机移动到特定角度位置并保持。'
+                      : 'Position/Servo Mode. The servo moves to and holds a specific angular position.'
+                    }
                   </li>
                   <li>
                     <code className="bg-gray-600 px-1 rounded">Mode 1</code>:
-                    Wheel/Speed Mode. The servo rotates continuously at a
-                    specified speed and direction, like a motor.
+                    {language === 'zh'
+                      ? '轮子/速度模式。舵机以指定的速度和方向连续旋转，类似电机。'
+                      : 'Wheel/Speed Mode. The servo rotates continuously at a specified speed and direction, like a motor.'
+                    }
                   </li>
                 </ul>
                 <p className="text-xs mt-1">
-                  Changing the mode requires unlocking, writing the mode value (0
-                  or 1), and locking the configuration.
+                  {language === 'zh'
+                    ? '更改模式需要解锁、写入模式值（0或1）并锁定配置。'
+                    : 'Changing the mode requires unlocking, writing the mode value (0 or 1), and locking the configuration.'
+                  }
                 </p>
               </li>
               <li>
-                <strong>Position:</strong> In Position Mode (Mode 0), this value
-                represents the target or current angular position of the servo's
-                output shaft.
+                <strong>{language === 'zh' ? '位置：' : 'Position:'}</strong> 
+                {language === 'zh'
+                  ? '在位置模式（模式0）下，此值表示舵机输出轴的目标或当前角度位置。'
+                  : "In Position Mode (Mode 0), this value represents the target or current angular position of the servo's output shaft."
+                }
                 <ul className="list-disc list-inside ml-4 mt-1">
                   <li>
-                    Range: Typically{" "}
-                    <code className="bg-gray-600 px-1 rounded">0</code> to{" "}
+                    {language === 'zh' ? '范围：' : 'Range:'} 
+                    {language === 'zh' ? '通常为 ' : 'Typically '}
+                    <code className="bg-gray-600 px-1 rounded">0</code> 
+                    {language === 'zh' ? ' 到 ' : ' to '}
                     <code className="bg-gray-600 px-1 rounded">4095</code>
-                    (representing a 12-bit resolution).
+                    {language === 'zh' ? '（表示12位分辨率）。' : ' (representing a 12-bit resolution).'}
                   </li>
                   <li>
-                    Meaning: Corresponds to the servo's rotational range (e.g.,
-                    0-360 degrees or 0-270 degrees, depending on the specific
-                    servo model). <code className="bg-gray-600 px-1 rounded">
-                    0
-                  </code>{" "}
-                    is one end of the range,{" "}
-                    <code className="bg-gray-600 px-1 rounded">4095</code> is the
-                    other.
+                    {language === 'zh' ? '含义：' : 'Meaning:'} 
+                    {language === 'zh'
+                      ? '对应舵机的旋转范围（例如，0-360度或0-270度，取决于具体的舵机型号）。'
+                      : "Corresponds to the servo's rotational range (e.g., 0-360 degrees or 0-270 degrees, depending on the specific servo model). "
+                    }
+                    <code className="bg-gray-600 px-1 rounded">0</code> 
+                    {language === 'zh' ? ' 是范围的一端，' : ' is one end of the range, '}
+                    <code className="bg-gray-600 px-1 rounded">4095</code> 
+                    {language === 'zh' ? ' 是另一端。' : ' is the other.'}
                   </li>
                 </ul>
               </li>
               <li>
-                <strong>Speed (Wheel Mode):</strong> In Wheel Mode (Mode 1), this
-                value controls the rotational speed and direction.
+                <strong>{language === 'zh' ? '速度（轮子模式）：' : 'Speed (Wheel Mode):'}</strong> 
+                {language === 'zh'
+                  ? '在轮子模式（模式1）下，此值控制旋转速度和方向。'
+                  : 'In Wheel Mode (Mode 1), this value controls the rotational speed and direction.'
+                }
                 <ul className="list-disc list-inside ml-4 mt-1">
                   <li>
-                    Range: Typically{" "}
-                    <code className="bg-gray-600 px-1 rounded">-2500</code> to{" "}
-                    <code className="bg-gray-600 px-1 rounded">+2500</code>. (Note:
-                    Some documentation might mention -1023 to +1023, but the SDK
-                    example uses a wider range).
+                    {language === 'zh' ? '范围：' : 'Range:'} 
+                    {language === 'zh' ? '通常为 ' : 'Typically '}
+                    <code className="bg-gray-600 px-1 rounded">-2500</code> 
+                    {language === 'zh' ? ' 到 ' : ' to '}
+                    <code className="bg-gray-600 px-1 rounded">+2500</code>.
+                    {language === 'zh'
+                      ? '（注意：一些文档可能提到-1023到+1023，但SDK示例使用更宽的范围）。'
+                      : ' (Note: Some documentation might mention -1023 to +1023, but the SDK example uses a wider range).'
+                    }
                   </li>
                   <li>
-                    Meaning:{" "}
-                    <code className="bg-gray-600 px-1 rounded">0</code> stops the
-                    wheel. Positive values rotate in one direction (e.g.,
-                    clockwise), negative values rotate in the opposite direction
-                    (e.g., counter-clockwise). The magnitude determines the speed
-                    (larger absolute value means faster rotation).
+                    {language === 'zh' ? '含义：' : 'Meaning:'} 
+                    <code className="bg-gray-600 px-1 rounded">0</code> 
+                    {language === 'zh'
+                      ? ' 停止轮子。正值向一个方向旋转（例如顺时针），负值向相反方向旋转（例如逆时针）。数值大小决定速度（绝对值越大意味着旋转越快）。'
+                      : ' stops the wheel. Positive values rotate in one direction (e.g., clockwise), negative values rotate in the opposite direction (e.g., counter-clockwise). The magnitude determines the speed (larger absolute value means faster rotation).'
+                    }
                   </li>
                   <li>
-                    Control Address:{" "}
+                    {language === 'zh' ? '控制地址：' : 'Control Address:'} 
                     <code className="bg-gray-600 px-1 rounded">
                       ADDR_SCS_GOAL_SPEED
                     </code>{" "}
-                    (Register 46/47).
+                    {language === 'zh' ? '（寄存器 46/47）。' : '(Register 46/47).'}
                   </li>
                 </ul>
               </li>
               <li>
-                <strong>Acceleration:</strong> Controls how quickly the servo
-                changes speed to reach its target position (in Position Mode) or
-                target speed (in Wheel Mode).
+                <strong>{language === 'zh' ? '加速度：' : 'Acceleration:'}</strong> 
+                {language === 'zh'
+                  ? '控制舵机改变速度以达到目标位置（位置模式）或目标速度（轮子模式）的快慢。'
+                  : 'Controls how quickly the servo changes speed to reach its target position (in Position Mode) or target speed (in Wheel Mode).'
+                }
                 <ul className="list-disc list-inside ml-4 mt-1">
                   <li>
-                    Range: Typically{" "}
-                    <code className="bg-gray-600 px-1 rounded">0</code> to{" "}
+                    {language === 'zh' ? '范围：' : 'Range:'} 
+                    {language === 'zh' ? '通常为 ' : 'Typically '}
+                    <code className="bg-gray-600 px-1 rounded">0</code> 
+                    {language === 'zh' ? ' 到 ' : ' to '}
                     <code className="bg-gray-600 px-1 rounded">254</code>.
                   </li>
                   <li>
-                    Meaning: Defines the rate of change of speed. The unit is 100
-                    steps/s².{" "}
-                    <code className="bg-gray-600 px-1 rounded">0</code> usually
-                    means instantaneous acceleration (or minimal delay). Higher
-                    values result in slower, smoother acceleration and
-                    deceleration. For example, a value of{" "}
-                    <code className="bg-gray-600 px-1 rounded">10</code> means
-                    the speed changes by 10 * 100 = 1000 steps per second, per
-                    second. This helps reduce jerky movements and mechanical
-                    stress.
+                    {language === 'zh' ? '含义：' : 'Meaning:'} 
+                    {language === 'zh'
+                      ? '定义速度变化率。单位是100步/秒²。'
+                      : 'Defines the rate of change of speed. The unit is 100 steps/s². '}
+                    <code className="bg-gray-600 px-1 rounded">0</code> 
+                    {language === 'zh'
+                      ? ' 通常意味着瞬时加速（或最小延迟）。更高的值会导致更慢、更平滑的加速和减速。例如，值为 '
+                      : ' usually means instantaneous acceleration (or minimal delay). Higher values result in slower, smoother acceleration and deceleration. For example, a value of '}
+                    <code className="bg-gray-600 px-1 rounded">10</code> 
+                    {language === 'zh'
+                      ? ' 意味着速度每秒变化10 * 100 = 1000步。这有助于减少颠簸运动和机械应力。'
+                      : ' means the speed changes by 10 * 100 = 1000 steps per second, per second. This helps reduce jerky movements and mechanical stress.'
+                    }
                   </li>
                   <li>
-                    Control Address:{" "}
-                    <code className="bg-gray-600 px-1 rounded">ADDR_SCS_GOAL_ACC</code>{" "}
-                    (Register 41).
+                    {language === 'zh' ? '控制地址：' : 'Control Address:'} 
+                    <code className="bg-gray-600 px-1 rounded">
+                      ADDR_SCS_GOAL_ACC
+                    </code>{" "}
+                    {language === 'zh' ? '（寄存器 41）。' : '(Register 41).'}
                   </li>
                 </ul>
               </li>
               <li>
-                <strong>Baud Rate:</strong> The speed of communication between the
-                controller and the servo. It must match on both ends. Servos often
-                support multiple baud rates, selectable via an index:
+                <strong>{language === 'zh' ? '波特率：' : 'Baud Rate:'}</strong> 
+                {language === 'zh'
+                  ? '控制器和舵机之间的通信速度。两端必须匹配。舵机通常支持多种波特率，可通过索引选择：'
+                  : 'The speed of communication between the controller and the servo. It must match on both ends. Servos often support multiple baud rates, selectable via an index:'
+                }
                 <ul className="list-disc list-inside ml-4 mt-1">
-                  <li>Index 0: 1,000,000 bps</li>
-                  <li>Index 1: 500,000 bps</li>
-                  <li>Index 2: 250,000 bps</li>
-                  <li>Index 3: 128,000 bps</li>
-                  <li>Index 4: 115,200 bps</li>
-                  <li>Index 5: 76,800 bps</li>
-                  <li>Index 6: 57,600 bps</li>
-                  <li>Index 7: 38,400 bps</li>
+                  <li>{language === 'zh' ? '索引' : 'Index'} 0: 1,000,000 bps</li>
+                  <li>{language === 'zh' ? '索引' : 'Index'} 1: 500,000 bps</li>
+                  <li>{language === 'zh' ? '索引' : 'Index'} 2: 250,000 bps</li>
+                  <li>{language === 'zh' ? '索引' : 'Index'} 3: 128,000 bps</li>
+                  <li>{language === 'zh' ? '索引' : 'Index'} 4: 115,200 bps</li>
+                  <li>{language === 'zh' ? '索引' : 'Index'} 5: 76,800 bps</li>
+                  <li>{language === 'zh' ? '索引' : 'Index'} 6: 57,600 bps</li>
+                  <li>{language === 'zh' ? '索引' : 'Index'} 7: 38,400 bps</li>
                 </ul>
               </li>
             </ul>
@@ -685,7 +813,7 @@ export default function FeetechPage() {
         {/* Connection Section */}
         <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-6 shadow-lg">
           <h2 className="text-xl font-semibold mb-6 text-white flex items-center gap-2">
-            🔌 Connection
+            {t.connection}
           </h2>
 
           {/* Connection Settings */}
@@ -693,7 +821,7 @@ export default function FeetechPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-zinc-300">
-                  Baud Rate
+                  {t.baudRate}
                 </label>
                 <select
                   value={baudRate}
@@ -709,26 +837,22 @@ export default function FeetechPage() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-zinc-300">
-                  Protocol End             <span className="text-xs text-zinc-400">
-              (0=STS/SMS, 1=SCS)
-            </span>
+                  {t.protocolEnd}{" "}
+                  <span className="text-xs text-zinc-400">
+                    {t.protocolEndNote}
+                  </span>
                 </label>
                 <Input
                   type="number"
                   value={protocolEnd}
-                  onChange={(e) =>
-                    setProtocolEnd(parseInt(e.target.value, 10))
-                  }
+                  onChange={(e) => setProtocolEnd(parseInt(e.target.value, 10))}
                   min="0"
                   max="1"
                   className="bg-zinc-700 border-zinc-600 text-white"
                 />
               </div>
             </div>
-
           </div>
-
-
 
           {/* Connection Toggle Button */}
           <Button
@@ -739,10 +863,10 @@ export default function FeetechPage() {
                 : "bg-green-600 hover:bg-green-700"
             }`}
           >
-            {isConnected ? "Disconnect" : "Connect"}
+            {isConnected ? t.disconnect : t.connect}
           </Button>
 
-                    {/* Connection Status */}
+          {/* Connection Status */}
           <div className="p-4 bg-zinc-900 rounded-lg border border-zinc-600">
             <div className="flex items-center gap-3">
               <div
@@ -750,13 +874,13 @@ export default function FeetechPage() {
                   isConnected ? "bg-green-500" : "bg-red-500"
                 }`}
               ></div>
-              <span className="text-white font-medium">Status:</span>
+              <span className="text-white font-medium">{t.status}</span>
               <span
                 className={`font-bold ${
                   isConnected ? "text-green-400" : "text-red-400"
                 }`}
               >
-                {connectionStatus}
+                {isConnected ? t.connected : t.disconnected}
               </span>
             </div>
           </div>
@@ -765,21 +889,19 @@ export default function FeetechPage() {
         {/* Scan Servos Section */}
         <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-6 shadow-lg">
           <h2 className="text-xl font-semibold mb-6 text-white flex items-center gap-2">
-            🔍 Scan Servos
+            {t.scanServos}
           </h2>
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-zinc-300">
-                  Start ID
+                  {t.startId}
                 </label>
                 <Input
                   type="number"
                   value={scanStartId}
-                  onChange={(e) =>
-                    setScanStartId(parseInt(e.target.value, 10))
-                  }
+                  onChange={(e) => setScanStartId(parseInt(e.target.value, 10))}
                   min="1"
                   max="252"
                   className="bg-zinc-700 border-zinc-600 text-white"
@@ -787,14 +909,12 @@ export default function FeetechPage() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-zinc-300">
-                  End ID
+                  {t.endId}
                 </label>
                 <Input
                   type="number"
                   value={scanEndId}
-                  onChange={(e) =>
-                    setScanEndId(parseInt(e.target.value, 10))
-                  }
+                  onChange={(e) => setScanEndId(parseInt(e.target.value, 10))}
                   min="1"
                   max="252"
                   className="bg-zinc-700 border-zinc-600 text-white"
@@ -807,15 +927,15 @@ export default function FeetechPage() {
               disabled={!isConnected || isScanning}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white disabled:bg-zinc-600"
             >
-              {isScanning ? "Scanning..." : "Start Scan"}
+              {isScanning ? t.scanning : t.startScan}
             </Button>
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-zinc-300">
-                Scan Results
+                {t.scanResults}
               </label>
               <pre className="bg-zinc-900 p-4 rounded-lg border border-zinc-600 text-xs text-zinc-300 max-h-48 overflow-y-auto whitespace-pre-wrap">
-                {scanResults || "No scan results yet..."}
+                {scanResults || t.noScanResults}
               </pre>
             </div>
           </div>
@@ -824,7 +944,7 @@ export default function FeetechPage() {
         {/* Single Servo Control Section */}
         <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-6 shadow-lg">
           <h2 className="text-xl font-semibold mb-6 text-white flex items-center gap-2">
-            🎛️ Single Servo Control
+            {t.singleServoControl}
           </h2>
 
           <div className="space-y-6">
@@ -832,7 +952,7 @@ export default function FeetechPage() {
             <div className="p-4 bg-zinc-900 rounded-lg border border-zinc-600">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-zinc-300">
-                  Current Servo ID
+                  {t.currentServoId}
                 </label>
                 <Input
                   type="number"
@@ -849,7 +969,7 @@ export default function FeetechPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* ID Management */}
               <div className="space-y-4">
-                <h3 className="font-medium text-zinc-300">ID Management</h3>
+                <h3 className="font-medium text-zinc-300">{t.idManagement}</h3>
                 <div className="flex gap-2">
                   <Input
                     type="number"
@@ -862,23 +982,23 @@ export default function FeetechPage() {
                   />
                   <Button
                     onClick={handleWriteId}
-                    className="bg-green-700 hover:bg-green-600 text-white"
+                    className="bg-green-600 hover:bg-green-700 text-white"
                   >
-                    Change ID
+                    {t.changeId}
                   </Button>
                 </div>
               </div>
 
               {/* Baud Rate Management */}
               <div className="space-y-4">
-                <h3 className="font-medium text-zinc-300">Baud Rate</h3>
+                <h3 className="font-medium text-zinc-300">{t.baudRate}</h3>
                 <div className="flex gap-2">
                   <Button
                     onClick={handleReadBaud}
                     variant="outline"
-                    className="bg-green-700 text-white hover:bg-green-600 flex-1"
+                    className="bg-green-600 hover:bg-green-700  text-white  flex-1"
                   >
-                    Read Baud
+                    {t.readBaud}
                   </Button>
                   <Input
                     type="number"
@@ -904,19 +1024,21 @@ export default function FeetechPage() {
 
               {/* Position Control */}
               <div className="space-y-4">
-                <h3 className="font-medium text-zinc-300">Position Control</h3>
+                <h3 className="font-medium text-zinc-300">{t.positionControl}</h3>
                 <div className="flex gap-2">
                   <Button
                     onClick={handleReadPosition}
                     variant="outline"
-                    className="bg-green-700 text-white hover:bg-green-600 flex-1"
+                    className="bg-green-600 hover:bg-green-700  text-white  flex-1"
                   >
-                    Read Position
+                    {t.readPosition}
                   </Button>
                   <Input
                     type="number"
                     value={positionWrite}
-                    onChange={(e) => setPositionWrite(parseInt(e.target.value, 10))}
+                    onChange={(e) =>
+                      setPositionWrite(parseInt(e.target.value, 10))
+                    }
                     min="0"
                     max="4095"
                     className="bg-zinc-700 border-zinc-600 text-white w-20"
@@ -937,26 +1059,26 @@ export default function FeetechPage() {
 
               {/* Torque Control */}
               <div className="space-y-4">
-                <h3 className="font-medium text-zinc-300">Torque Control</h3>
+                <h3 className="font-medium text-zinc-300">{t.torqueControl}</h3>
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     onClick={handleTorqueEnable}
-                    className="bg-green-700 hover:bg-green-600 text-white"
+                    className="bg-green-600 hover:bg-green-700 text-white"
                   >
-                    Enable Torque
+                    {t.enableTorque}
                   </Button>
                   <Button
                     onClick={handleTorqueDisable}
-                    className="bg-green-700 hover:bg-green-600 text-white"
+                    className="bg-green-600 hover:bg-green-700 text-white"
                   >
-                    Disable Torque
+                    {t.disableTorque}
                   </Button>
                 </div>
               </div>
 
               {/* Acceleration Control */}
               <div className="space-y-4">
-                <h3 className="font-medium text-zinc-300">Acceleration</h3>
+                <h3 className="font-medium text-zinc-300">{t.acceleration}</h3>
                 <div className="flex gap-2">
                   <Input
                     type="number"
@@ -970,49 +1092,51 @@ export default function FeetechPage() {
                   />
                   <Button
                     onClick={handleWriteAcceleration}
-                    className="bg-green-700 hover:bg-green-600 text-white"
+                    className="bg-green-600 hover:bg-green-700 text-white"
                   >
-                    Set Acceleration
+                    {t.setAcceleration}
                   </Button>
                 </div>
               </div>
 
               {/* Mode Control */}
               <div className="space-y-4">
-                <h3 className="font-medium text-zinc-300">Mode Control</h3>
+                <h3 className="font-medium text-zinc-300">{t.modeControl}</h3>
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     onClick={handleSetWheelMode}
-                    className="bg-green-700 hover:bg-green-600 text-white"
+                    className="bg-green-600 hover:bg-green-700 text-white"
                   >
-                    Wheel Mode
+                    {t.wheelMode}
                   </Button>
                   <Button
                     onClick={handleSetPositionMode}
-                    className="bg-green-700 hover:bg-green-600 text-white"
+                    className="bg-green-600 hover:bg-green-700 text-white"
                   >
-                    Position Mode
+                    {t.positionMode}
                   </Button>
                 </div>
               </div>
 
               {/* Wheel Speed Control */}
               <div className="space-y-4">
-                <h3 className="font-medium text-zinc-300">Wheel Speed</h3>
+                <h3 className="font-medium text-zinc-300">{t.wheelSpeed}</h3>
                 <div className="flex gap-2">
                   <Input
                     type="number"
                     value={wheelSpeedWrite}
-                    onChange={(e) => setWheelSpeedWrite(parseInt(e.target.value, 10))}
+                    onChange={(e) =>
+                      setWheelSpeedWrite(parseInt(e.target.value, 10))
+                    }
                     min="-2500"
                     max="2500"
                     className="bg-zinc-700 border-zinc-600 text-white flex-1"
                   />
                   <Button
                     onClick={handleWriteWheelSpeed}
-                    className="bg-green-700 hover:bg-green-600 text-white"
+                    className="bg-green-600 hover:bg-green-700 text-white"
                   >
-                    Set Speed
+                    {t.setSpeed}
                   </Button>
                 </div>
               </div>
@@ -1023,12 +1147,14 @@ export default function FeetechPage() {
         {/* Sync Operations Section */}
         <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-6 shadow-lg">
           <h2 className="text-xl font-semibold mb-6 text-white flex items-center gap-2">
-            🔄 Sync Operations
+            {t.syncOperations}
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
-              <h3 className="font-medium text-zinc-300">Sync Write Positions</h3>
+              <h3 className="font-medium text-zinc-300">
+                {t.syncWritePositions}
+              </h3>
               <div className="space-y-2">
                 <Input
                   type="text"
@@ -1039,15 +1165,15 @@ export default function FeetechPage() {
                 />
                 <Button
                   onClick={handleSyncWrite}
-                  className="w-full bg-green-700 hover:bg-green-600 text-white"
+                  className="w-full bg-green-600 hover:bg-green-700 text-white"
                 >
-                  Sync Write Positions
+                  {t.syncWritePositions}
                 </Button>
               </div>
             </div>
 
             <div className="space-y-4">
-              <h3 className="font-medium text-zinc-300">Sync Write Speeds</h3>
+              <h3 className="font-medium text-zinc-300">{t.syncWriteSpeeds}</h3>
               <div className="space-y-2">
                 <Input
                   type="text"
@@ -1058,9 +1184,9 @@ export default function FeetechPage() {
                 />
                 <Button
                   onClick={handleSyncWriteSpeed}
-                  className="w-full bg-green-700 hover:bg-green-600 text-white"
+                  className="w-full bg-green-600 hover:bg-green-700 text-white"
                 >
-                  Sync Write Speeds
+                  {t.syncWriteSpeeds}
                 </Button>
               </div>
             </div>
@@ -1070,13 +1196,13 @@ export default function FeetechPage() {
         {/* Log Output Section */}
         <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-6 shadow-lg">
           <h2 className="text-xl font-semibold mb-4 text-white flex items-center gap-2">
-            📋 Log Output
+            {t.logOutput}
           </h2>
           <pre
             ref={logOutputRef}
             className="bg-zinc-900 p-4 rounded-lg border border-zinc-600 text-xs text-zinc-300 max-h-64 overflow-y-auto whitespace-pre-wrap font-mono"
           >
-            {logs.length > 0 ? logs.join("\n") : "Logs will appear here..."}
+            {logs.length > 0 ? logs.join("\n") : t.logsWillAppear}
           </pre>
         </div>
       </div>
