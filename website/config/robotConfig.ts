@@ -148,7 +148,13 @@ export const robotConfigMap: { [key: string]: RobotConfig } = {
       back_wheel: 14,
       right_wheel: 15,
     },
-    systemPrompt: `You can help control the bambot-v0-base robot by pressing keyboard keys. Use the keyPress tool to simulate key presses. Each key will be held down for 1 second by default. The robot can be controlled with the following keys: "left_wheel", "back_wheel", "right_wheel" for base movement.`,
+    systemPrompt: `You can help control the bambot-v0-base robot by pressing keyboard keys. Use the keyPress tool to simulate key presses. Each key will be held down for 1 second by default.
+    The robot can be controlled with the following keys: 
+    - "ArrowUp" to move forward
+    - "ArrowDown" to move backward
+    - "ArrowLeft" to turn left
+    - "ArrowRight" to turn right
+    If the user describes roughly wanting to make it longer or shorter, adjust the duration accordingly.`,
   },
   sts3215: {
     urdfUrl: "/URDF/sts3215.urdf",

@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import { Analytics } from '@vercel/analytics/next';
+import { ThemeProvider } from "@/components/theme-provider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,9 +20,16 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} bg-black text-white w-screen h-screen`}>
-        <Header />
-        {children}
-        <Analytics />
+        <ThemeProvider
+            attribute="class"
+            defaultTheme="dark"
+            enableSystem={false}
+            disableTransitionOnChange
+        >
+          <Header />
+          {children}
+          <Analytics />
+        </ThemeProvider>
       </body>
     </html>
   );
