@@ -26,8 +26,8 @@ console.log(position); // 1122
 
 ## Example usage:
 
-- bambot.org/feetech.js: [bambot.org/feetech.js](https://bambot.org/feetech.js)
-- simple example: [test.html](./test.html)
-- the bambot website: [bambot.org](https://bambot.org)
+- Test and config servos: [bambot.org/feetech.js](https://bambot.org/feetech.js)
+- Simple html + js example: [test.html](https://github.com/timqian/bambot/blob/main/feetech.js/test.html)
+- Control different bots: [bambot.org](https://bambot.org)
 
 
