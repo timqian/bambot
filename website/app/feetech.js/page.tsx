@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { scsServoSDK } from "feetech.js";
 import { Button } from "@/components/ui/button";
@@ -56,6 +56,8 @@ const translations = {
     logOutput: "📋 Log Output",
     logsWillAppear: "Logs will appear here...",
     language: "Language",
+    editThisPage: "✏️ Edit this page",
+    editDescription: "Found an issue or want to improve this page? Edit it on GitHub!",
   },
   zh: {
     title: "飞特舵机控制面板",
@@ -105,10 +107,12 @@ const translations = {
     logOutput: "📋 日志输出",
     logsWillAppear: "日志将在此处显示...",
     language: "语言",
+    editThisPage: "✏️ 编辑此页面",
+    editDescription: "发现问题或想改进此页面？在 GitHub 上编辑它！",
   },
 };
 
-export default function FeetechPage() {
+function FeetechPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
@@ -1205,7 +1209,40 @@ export default function FeetechPage() {
             {logs.length > 0 ? logs.join("\n") : t.logsWillAppear}
           </pre>
         </div>
+
+        {/* Edit This Page Section */}
+        <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-6 shadow-lg">
+          <h2 className="text-xl font-semibold mb-4 text-white flex items-center gap-2">
+            {t.editThisPage}
+          </h2>
+          <div className="space-y-4">
+            <p className="text-zinc-300">
+              {t.editDescription}
+            </p>
+            <a
+              href="https://github.com/timqian/bambot/blob/main/website/app/feetech.js/page.tsx"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+            >
+              <span>📝</span>
+              <span>{t.editThisPage}</span>
+            </a>
+          </div>
+        </div>
       </div>
     </div>
+  );
+}
+
+export default function FeetechPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-zinc-900 to-zinc-800 py-8 pt-20 flex items-center justify-center">
+        <div className="text-white text-lg">Loading...</div>
+      </div>
+    }>
+      <FeetechPageContent />
+    </Suspense>
   );
 }
