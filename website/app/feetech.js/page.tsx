@@ -152,6 +152,11 @@ function FeetechPageContent() {
   // Read results states
   const [readPosResult, setReadPosResult] = useState("");
   const [readBaudResult, setReadBaudResult] = useState("");
+  const [torqueResult, setTorqueResult] = useState("");
+  const [modeResult, setModeResult] = useState("");
+  const [accelerationResult, setAccelerationResult] = useState("");
+  const [wheelSpeedResult, setWheelSpeedResult] = useState("");
+  const [idChangeResult, setIdChangeResult] = useState("");
 
   // Sync operation states
   const [syncWriteData, setSyncWriteData] = useState("1:1500,2:2500");
@@ -210,16 +215,20 @@ function FeetechPageContent() {
     }
     if (newId < 1 || newId > 252) {
       log(`Error: Invalid new ID ${newId}. Must be between 1 and 252.`);
+      setIdChangeResult(`Error: Invalid ID ${newId}`);
       return;
     }
     log(`Writing new ID ${newId} to servo ${servoId}...`);
+    setIdChangeResult("Changing ID...");
     try {
       await scsServoSDK.setServoId(servoId, newId);
       log(`Successfully wrote new ID ${newId} to servo (was ${servoId}).`);
+      setIdChangeResult(`Success: ID changed to ${newId}`);
       setServoId(newId);
       log(`Servo ID input field updated to ${newId}.`);
     } catch (err: any) {
       log(`Error writing ID for servo ${servoId}: ${err.message}`);
+      setIdChangeResult(`Error: ${err.message}`);
       console.error(err);
     }
   };
@@ -307,11 +316,14 @@ function FeetechPageContent() {
       return;
     }
     log(`Enabling torque for servo ${servoId}...`);
+    setTorqueResult("Enabling torque...");
     try {
       await scsServoSDK.writeTorqueEnable(servoId, true);
       log(`Successfully enabled torque for servo ${servoId}.`);
+      setTorqueResult(`Success: Torque enabled`);
     } catch (err: any) {
       log(`Error enabling torque for servo ${servoId}: ${err.message}`);
+      setTorqueResult(`Error: ${err.message}`);
       console.error(err);
     }
   };
@@ -322,11 +334,14 @@ function FeetechPageContent() {
       return;
     }
     log(`Disabling torque for servo ${servoId}...`);
+    setTorqueResult("Disabling torque...");
     try {
       await scsServoSDK.writeTorqueEnable(servoId, false);
       log(`Successfully disabled torque for servo ${servoId}.`);
+      setTorqueResult(`Success: Torque disabled`);
     } catch (err: any) {
       log(`Error disabling torque for servo ${servoId}: ${err.message}`);
+      setTorqueResult(`Error: ${err.message}`);
       console.error(err);
     }
   };
@@ -337,13 +352,16 @@ function FeetechPageContent() {
       return;
     }
     log(`Writing acceleration ${accelerationWrite} to servo ${servoId}...`);
+    setAccelerationResult("Setting acceleration...");
     try {
       await scsServoSDK.writeAcceleration(servoId, accelerationWrite);
       log(
         `Successfully wrote acceleration ${accelerationWrite} to servo ${servoId}.`
       );
+      setAccelerationResult(`Success: Acceleration set to ${accelerationWrite}`);
     } catch (err: any) {
       log(`Error writing acceleration for servo ${servoId}: ${err.message}`);
+      setAccelerationResult(`Error: ${err.message}`);
       console.error(err);
     }
   };
@@ -354,11 +372,14 @@ function FeetechPageContent() {
       return;
     }
     log(`Setting servo ${servoId} to wheel mode...`);
+    setModeResult("Setting wheel mode...");
     try {
       await scsServoSDK.setWheelMode(servoId);
       log(`Successfully set servo ${servoId} to wheel mode.`);
+      setModeResult(`Success: Wheel mode enabled`);
     } catch (err: any) {
       log(`Error setting wheel mode for servo ${servoId}: ${err.message}`);
+      setModeResult(`Error: ${err.message}`);
       console.error(err);
     }
   };
@@ -369,11 +390,14 @@ function FeetechPageContent() {
       return;
     }
     log(`Setting servo ${servoId} back to position mode...`);
+    setModeResult("Setting position mode...");
     try {
       await scsServoSDK.setPositionMode(servoId);
       log(`Successfully set servo ${servoId} back to position mode.`);
+      setModeResult(`Success: Position mode enabled`);
     } catch (err: any) {
       log(`Error setting position mode for servo ${servoId}: ${err.message}`);
+      setModeResult(`Error: ${err.message}`);
       console.error(err);
     }
   };
@@ -384,13 +408,16 @@ function FeetechPageContent() {
       return;
     }
     log(`Writing wheel speed ${wheelSpeedWrite} to servo ${servoId}...`);
+    setWheelSpeedResult("Setting wheel speed...");
     try {
       await scsServoSDK.writeWheelSpeed(servoId, wheelSpeedWrite);
       log(
         `Successfully wrote wheel speed ${wheelSpeedWrite} to servo ${servoId}.`
       );
+      setWheelSpeedResult(`Success: Speed set to ${wheelSpeedWrite}`);
     } catch (err: any) {
       log(`Error writing wheel speed for servo ${servoId}: ${err.message}`);
+      setWheelSpeedResult(`Error: ${err.message}`);
       console.error(err);
     }
   };
@@ -991,6 +1018,11 @@ function FeetechPageContent() {
                     {t.changeId}
                   </Button>
                 </div>
+                {idChangeResult && (
+                  <p className="text-sm text-zinc-400 bg-zinc-900 p-2 rounded border border-zinc-600">
+                    {idChangeResult}
+                  </p>
+                )}
               </div>
 
               {/* Baud Rate Management */}
@@ -1078,6 +1110,11 @@ function FeetechPageContent() {
                     {t.disableTorque}
                   </Button>
                 </div>
+                {torqueResult && (
+                  <p className="text-sm text-zinc-400 bg-zinc-900 p-2 rounded border border-zinc-600">
+                    {torqueResult}
+                  </p>
+                )}
               </div>
 
               {/* Acceleration Control */}
@@ -1101,6 +1138,11 @@ function FeetechPageContent() {
                     {t.setAcceleration}
                   </Button>
                 </div>
+                {accelerationResult && (
+                  <p className="text-sm text-zinc-400 bg-zinc-900 p-2 rounded border border-zinc-600">
+                    {accelerationResult}
+                  </p>
+                )}
               </div>
 
               {/* Mode Control */}
@@ -1120,6 +1162,11 @@ function FeetechPageContent() {
                     {t.positionMode}
                   </Button>
                 </div>
+                {modeResult && (
+                  <p className="text-sm text-zinc-400 bg-zinc-900 p-2 rounded border border-zinc-600">
+                    {modeResult}
+                  </p>
+                )}
               </div>
 
               {/* Wheel Speed Control */}
@@ -1143,6 +1190,11 @@ function FeetechPageContent() {
                     {t.setSpeed}
                   </Button>
                 </div>
+                {wheelSpeedResult && (
+                  <p className="text-sm text-zinc-400 bg-zinc-900 p-2 rounded border border-zinc-600">
+                    {wheelSpeedResult}
+                  </p>
+                )}
               </div>
             </div>
           </div>
