@@ -18,7 +18,7 @@ export interface ScsServoSDK {
   setWheelMode(servoId: number): Promise<"success">;
   setPositionMode(servoId: number): Promise<"success">;
   writeWheelSpeed(servoId: number, speed: number): Promise<"success">;
-  syncReadPositions(servoIds: number[]): Promise<Map<number, number>>;
+  // syncReadPositions(servoIds: number[]): Promise<Map<number, number>>;
   syncWritePositions(servoPositions: ServoPositions): Promise<"success">;
   syncWriteWheelSpeed(servoSpeeds: ServoSpeeds): Promise<"success">; // Add syncWriteWheelSpeed definition
   setBaudRate(servoId: number, baudRateIndex: number): Promise<"success">;
