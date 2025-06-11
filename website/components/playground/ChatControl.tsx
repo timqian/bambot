@@ -10,11 +10,103 @@ import {
   getSystemPromptFromLocalStorage,
   getModelFromLocalStorage,
 } from "../../lib/settings";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 type ChatControlProps = {
   robotName?: string;
   systemPrompt?: string;
 };
+
+function CameraSelector({
+  cameraDevices,
+  selectedCameraIds,
+  setSelectedCameraIds,
+}: {
+  cameraDevices: MediaDeviceInfo[];
+  selectedCameraIds: string[];
+  setSelectedCameraIds: React.Dispatch<React.SetStateAction<string[]>>;
+}) {
+  return (
+    <div className="mb-1 w-full flex flex-col gap-1">
+      {cameraDevices.map((device) => (
+        <label
+          key={device.deviceId}
+          className="flex items-center gap-2 text-xs text-zinc-400"
+        >
+          <input
+            type="checkbox"
+            checked={selectedCameraIds.includes(device.deviceId)}
+            onChange={(e) => {
+              if (e.target.checked) {
+                setSelectedCameraIds((ids) => [...ids, device.deviceId]);
+              } else {
+                setSelectedCameraIds((ids) =>
+                  ids.filter((id) => id !== device.deviceId)
+                );
+              }
+            }}
+          />
+          {device.label || `Camera ${device.deviceId.slice(-4)}`}
+        </label>
+      ))}
+    </div>
+  );
+}
+
+function CameraPreview({
+  selectedCameraIds,
+  videoRefs,
+}: {
+  selectedCameraIds: string[];
+  videoRefs: React.MutableRefObject<{
+    [deviceId: string]: HTMLVideoElement | null;
+  }>;
+}) {
+  // Expose refs for screenshot API
+  if (typeof window !== "undefined") {
+    (window as any).bambotVideoRefs = videoRefs.current;
+  }
+  return (
+    <div
+      className={`w-full gap-2 ${
+        selectedCameraIds.length > 1
+          ? "flex flex-row flex-wrap justify-center items-start"
+          : "flex flex-col"
+      }`}
+    >
+      {selectedCameraIds.map((deviceId) => (
+        <video
+          key={deviceId}
+          ref={(el) => (videoRefs.current[deviceId] = el)}
+          className={`rounded bg-black ${
+            selectedCameraIds.length > 1
+              ? "w-1/2 max-w-[48%] max-h-32"
+              : "w-full max-h-40"
+          }`}
+          autoPlay
+          muted
+        />
+      ))}
+    </div>
+  );
+}
+
+// Add a screenshot API for external use
+export function captureCameraScreenshot(deviceId: string): string | null {
+  // Returns a base64 PNG data URL of the current frame of the video for the given deviceId
+  const video = (window as any).bambotVideoRefs?.[deviceId] as
+    | HTMLVideoElement
+    | undefined;
+  if (!video) return null;
+  const canvas = document.createElement("canvas");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/png");
+}
 
 export function ChatControl({
   robotName,
@@ -25,6 +117,12 @@ export function ChatControl({
     []
   );
   const [showSettings, setShowSettings] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraDevices, setCameraDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedCameraIds, setSelectedCameraIds] = useState<string[]>([]);
+  const videoRefs = useRef<{ [deviceId: string]: HTMLVideoElement | null }>({});
+  const streamRefs = useRef<{ [deviceId: string]: MediaStream | null }>({});
+  const [agentMode, setAgentMode] = useState<boolean>(false);
 
   const apiKey = getApiKeyFromLocalStorage();
   const baseURL = getBaseURLFromLocalStorage() || "https://api.openai.com/v1/";
@@ -39,6 +137,68 @@ export function ChatControl({
     apiKey,
     baseURL,
   });
+
+  useEffect(() => {
+    if (showCamera) {
+      // Get camera device list
+      navigator.mediaDevices.enumerateDevices().then((devices) => {
+        const videoInputs = devices.filter((d) => d.kind === "videoinput");
+        setCameraDevices(videoInputs);
+        // By default, select only the first camera
+        if (selectedCameraIds.length === 0 && videoInputs.length > 0) {
+          setSelectedCameraIds([videoInputs[0].deviceId]);
+        }
+      });
+    }
+  }, [showCamera]);
+
+  useEffect(() => {
+    if (showCamera) {
+      // 为每个选中的摄像头获取流
+      selectedCameraIds.forEach((deviceId) => {
+        if (!streamRefs.current[deviceId] && videoRefs.current[deviceId]) {
+          navigator.mediaDevices
+            .getUserMedia({ video: { deviceId: { exact: deviceId } } })
+            .then((stream) => {
+              streamRefs.current[deviceId] = stream;
+              if (videoRefs.current[deviceId]) {
+                videoRefs.current[deviceId]!.srcObject = stream;
+                videoRefs.current[deviceId]!.play();
+              }
+            })
+            .catch((err) => {
+              // eslint-disable-next-line no-console
+              console.error("Camera error:", err);
+            });
+        }
+      });
+      // 停止未选中的流
+      Object.keys(streamRefs.current).forEach((deviceId) => {
+        if (
+          !selectedCameraIds.includes(deviceId) &&
+          streamRefs.current[deviceId]
+        ) {
+          streamRefs.current[deviceId]!.getTracks().forEach((track) =>
+            track.stop()
+          );
+          streamRefs.current[deviceId] = null;
+        }
+      });
+    }
+    if (!showCamera) {
+      // 关闭所有流
+      Object.values(streamRefs.current).forEach((stream) => {
+        if (stream) stream.getTracks().forEach((track) => track.stop());
+      });
+      streamRefs.current = {};
+    }
+    return () => {
+      Object.values(streamRefs.current).forEach((stream) => {
+        if (stream) stream.getTracks().forEach((track) => track.stop());
+      });
+      streamRefs.current = {};
+    };
+  }, [showCamera, selectedCameraIds]);
 
   const handleCommand = async (command: string) => {
     setMessages((prev) => [...prev, { sender: "User", text: command }]);
@@ -139,6 +299,35 @@ export function ChatControl({
             Settings
           </button>
         </h4>
+        {/* Camera preview area */}
+        {showCamera && (
+          <div className="mb-2 flex flex-col items-center">
+            {cameraDevices.length > 0 && (
+              <CameraSelector
+                cameraDevices={cameraDevices}
+                selectedCameraIds={selectedCameraIds}
+                setSelectedCameraIds={setSelectedCameraIds}
+              />
+            )}
+            <CameraPreview
+              selectedCameraIds={selectedCameraIds}
+              videoRefs={videoRefs}
+            />
+            <div className="justify-end">
+              <div className="flex items-center space-x-2 text-zinc-400 text-xs my-2">
+                <Switch
+                  id="agent-mode"
+                  checked={agentMode}
+                  onCheckedChange={(checked) => {
+                    setAgentMode(checked);
+                  }}
+                  aria-label="Toggle agent mode"
+                />
+                <Label htmlFor="agent-mode" className=" cursor-pointer">Agent Mode</Label>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="mb-2 max-h-[60vh] overflow-y-auto">
           {messages.map((msg, idx) => (
             <div
@@ -164,7 +353,7 @@ export function ChatControl({
         <div className="flex items-center space-x-2">
           <div className="relative flex items-center w-full">
             <button
-              onClick={() => alert("Camera support coming soon")}
+              onClick={() => setShowCamera((v) => !v)}
               className="absolute left-0 bg-zinc-700 hover:bg-zinc-600 text-zinc-400 p-2 rounded"
             >
               <svg
