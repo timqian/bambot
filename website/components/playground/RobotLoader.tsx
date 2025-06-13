@@ -5,7 +5,8 @@ import { robotConfigMap } from "@/config/robotConfig";
 import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import URDFLoader, { URDFRobot, URDFJoint } from "urdf-loader";
-import { OrbitControls, Html, useProgress } from "@react-three/drei";
+import { OrbitControls, Html, useProgress, Stats } from "@react-three/drei";
+import { Physics, useBox, useContactMaterial } from "@react-three/cannon";
 import { GroundPlane } from "./GroundPlane";
 import { ControlPanel } from "./controlPanel/index";
 import {
@@ -16,6 +17,9 @@ import {
 import { Canvas } from "@react-three/fiber";
 import { degreesToRadians } from "@/lib/utils";
 import { ChatControl } from "./ChatControl"; // Import ChatControl component
+import { ScenarioObjects } from "./ScenarioObjects"; // Import ScenarioObjects component
+import { Scenario, ScenarioObject } from "@/lib/scenarios"; // Import scenario types
+import { RobotPhysics } from "./RobotPhysics"; // Import robot physics component
 
 export type JointDetails = {
   name: string;
@@ -31,6 +35,92 @@ type RobotLoaderProps = {
   robotName: string;
 };
 
+// Camera control hook for switching between views
+function CameraController({ 
+  isPolicyControlActive, 
+  orbitTarget,
+  onImageCapture 
+}: { 
+  isPolicyControlActive: boolean; 
+  orbitTarget?: [number, number, number];
+  onImageCapture?: (imageData: string) => void;
+}) {
+  const { camera, gl, scene } = useThree();
+  const orbitControlsRef = useRef<any>(null);
+  const originalPosition = useRef<THREE.Vector3 | null>(null);
+  const originalTarget = useRef<THREE.Vector3 | null>(null);
+  
+  // Store original camera state
+  useEffect(() => {
+    if (!originalPosition.current) {
+      originalPosition.current = camera.position.clone();
+      originalTarget.current = orbitTarget ? new THREE.Vector3(...orbitTarget) : new THREE.Vector3(0, 0.1, 0.1);
+    }
+  }, [camera, orbitTarget]);
+
+  // Switch camera view based on policy control state
+  useEffect(() => {
+    if (isPolicyControlActive) {
+      // Switch to top-down view for policy
+      camera.position.set(0, 20, 6); // Top-down position
+      camera.lookAt(0, 0, 4); // Look at center
+      if (orbitControlsRef.current) {
+        orbitControlsRef.current.target.set(0, 0, 4);
+
+        orbitControlsRef.current.update();
+      }
+    } else {
+      // Restore original view
+      if (originalPosition.current && originalTarget.current) {
+        camera.position.copy(originalPosition.current);
+        camera.lookAt(originalTarget.current);
+        if (orbitControlsRef.current) {
+          orbitControlsRef.current.target.copy(originalTarget.current);
+          orbitControlsRef.current.update();
+        }
+      }
+    }
+  }, [isPolicyControlActive, camera]);
+
+  // Capture image function
+  const captureImage = () => {
+    if (onImageCapture && isPolicyControlActive) {
+      // Render the scene to capture current frame
+      gl.render(scene, camera);
+      
+      // Convert canvas to base64 image
+      const canvas = gl.domElement;
+      const imageData = canvas.toDataURL('image/jpeg', 0.8);
+      onImageCapture(imageData);
+    }
+  };
+
+  // Store capture function in a ref so it can be called from outside
+  useEffect(() => {
+    if (isPolicyControlActive) {
+      // Store the capture function globally so it can be accessed
+      (window as any).captureRobotImage = captureImage;
+    }
+    
+    return () => {
+      if ((window as any).captureRobotImage) {
+        delete (window as any).captureRobotImage;
+      }
+    };
+  }, [isPolicyControlActive, onImageCapture]);
+
+  return (
+    <OrbitControls 
+      ref={orbitControlsRef}
+      camera={camera}
+      target={isPolicyControlActive ? [0, 0, 4] : (orbitTarget || [0, 0.1, 0.1])}
+      enablePan={true}
+      enableRotate={true}
+      enableZoom={true}
+    />
+  );
+}
+
 function RobotScene({
   robotName,
   urdfUrl,
@@ -38,6 +128,10 @@ function RobotScene({
   jointDetails,
   setJointDetails,
   jointStates,
+  scenarioObjects,
+  isPolicyControlActive,
+  onImageCapture
+
 }: {
   robotName: string;
   urdfUrl: string;
@@ -45,6 +139,9 @@ function RobotScene({
   jointDetails: JointDetails[];
   setJointDetails: (details: JointDetails[]) => void;
   jointStates: JointState[]; // Updated type
+  scenarioObjects: ScenarioObject[]; // Add scenario objects prop
+  isPolicyControlActive: boolean;
+  onImageCapture?: (imageData: string) => void;
 }) {
   const { scene } = useThree();
   const robotRef = useRef<URDFRobot | null>(null);
@@ -72,7 +169,7 @@ function RobotScene({
               )
               .map((joint) => ({
                 name: joint.name,
-                servoId: robotConfigMap[robotName].jointNameIdMap[joint.name], // Fetch servoId using jointNameIdMap
+                servoId: robotConfigMap[robotName].jointNameIdMap?.[joint.name] || 0, // Fetch servoId using jointNameIdMap with safety check
                 limit: {
                   // Ensure conversion to primitive number
                   lower:
@@ -128,17 +225,39 @@ function RobotScene({
           }
         }
       });
+      
       // Depending on how urdf-loader handles updates, you might need this:
-      // robotRef.current.updateMatrixWorld(true);
+      robotRef.current.updateMatrixWorld(true);
     }
   });
 
   return (
     <>
-      <OrbitControls target={orbitTarget || [0, 0.1, 0.1]} />
-      <GroundPlane />
+      <CameraController 
+        isPolicyControlActive={isPolicyControlActive}
+        orbitTarget={orbitTarget}
+        onImageCapture={onImageCapture}
+      />
+      <Physics gravity={[0, -9.82, 0]}
+        iterations={10} // Reduced from default 20 - lower is faster
+        tolerance={0.01} // Increased tolerance for faster solving
+        stepSize={1/20} // Fixed timestep
+        broadphase="Naive" // Naive is faster for smaller scenes, SAP for larger
+        // allowSleep={true} // Allow objects to sleep when not moving
+        axisIndex={0} // For SAPBroadphase if you switch to it later
+        // Enable quantized physics for better performance
+        quatNormalizeFast={true}
+        isPaused={false}
+        quatNormalizeSkip={2}>
+        <ContactMaterials />
+        <GroundPlane />
+        <ScenarioObjects objects={scenarioObjects} />
+        {robotRef.current && (
+          <RobotPhysics robot={robotRef.current} jointStates={jointStates} />
+        )}
+      </Physics>
       <directionalLight
-        castShadow
+        // castShadow
         intensity={1}
         position={[2, 20, 5]}
         shadow-mapSize-width={1024}
@@ -164,8 +283,58 @@ function Loader() {
   );
 }
 
+// Contact Materials Component
+function ContactMaterials() {
+  // Jaw-to-Object interaction - Very high friction for gripping
+  useContactMaterial('jaw', 'object', {
+    friction: 2.0,
+    restitution: 0,
+    frictionEquationStiffness: 1e8,
+    frictionEquationRelaxation: 3,
+    contactEquationStiffness: 1e8,
+    contactEquationRelaxation: 3,
+  });
+
+  // Robot part to Object - Medium friction for interaction
+  // useContactMaterial('robot', 'object', {
+  //   friction: 0.8,
+  //   restitution: 0.05,
+  //   frictionEquationStiffness: 1e8,
+  //   frictionEquationRelaxation: 3,
+  //   contactEquationStiffness: 1e8,
+  //   contactEquationRelaxation: 3,
+  // });
+
+  // Object to Ground - Normal interaction
+  // useContactMaterial('object', 'ground', {
+  //   friction: 0.6,
+  //   restitution: 0.1,
+  //   frictionEquationStiffness: 1e8,
+  //   frictionEquationRelaxation: 3,
+  //   contactEquationStiffness: 1e8,
+  //   contactEquationRelaxation: 3,
+  // });
+
+  // Robot to Ground - Low friction to allow movement
+  // useContactMaterial('robot', 'ground', {
+  //   friction: 0.3,
+  //   restitution: 0,
+  // });
+
+  // useContactMaterial('jaw', 'ground', {
+  //   friction: 0.3,
+  //   restitution: 0,
+  // });
+
+  return null;
+}
+
 export default function RobotLoader({ robotName }: RobotLoaderProps) {
   const [jointDetails, setJointDetails] = useState<JointDetails[]>([]);
+  const [scenarioObjects, setScenarioObjects] = useState<ScenarioObject[]>([]);
+  const [isPolicyControlActive, setIsPolicyControlActive] = useState(false);
+  const [currentImageData, setCurrentImageData] = useState<string>("");
+
   const config = robotConfigMap[robotName];
 
   if (!config) {
@@ -201,7 +370,22 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
   // Expose compoundMovements globally for ControlPanel to access
   if (typeof window !== "undefined") {
     (window as any).bambotCompoundMovements = config.compoundMovements;
+    // Expose image capture function
+    (window as any).getCurrentRobotImage = () => currentImageData;
   }
+
+  const handleLoadScenario = (scenario: Scenario) => {
+    setScenarioObjects(scenario.objects);
+    console.log(`Loaded scenario: ${scenario.title}`, scenario.objects);
+  };
+
+  const handleImageCapture = (imageData: string) => {
+    setCurrentImageData(imageData);
+  };
+
+  const handlePolicyControlToggle = (isActive: boolean) => {
+    setIsPolicyControlActive(isActive);
+  };
 
   return (
     <>
@@ -223,8 +407,12 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
             jointDetails={jointDetails}
             setJointDetails={setJointDetails}
             jointStates={jointStates}
+            scenarioObjects={scenarioObjects}
+            isPolicyControlActive={isPolicyControlActive}
+            onImageCapture={handleImageCapture}
           />
         </Suspense>
+        <Stats showPanel={1} />
       </Canvas>
       <ControlPanel
         updateJointsSpeed={updateJointsSpeed}
@@ -237,6 +425,8 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
         disconnectRobot={disconnectRobot}
         keyboardControlMap={keyboardControlMap}
         compoundMovements={compoundMovements}
+        onLoadScenario={handleLoadScenario}
+        onPolicyControlToggle={handlePolicyControlToggle}
       />
       <ChatControl robotName={robotName} systemPrompt={systemPrompt} />
     </>
