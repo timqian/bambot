@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from "react";
+import ReactDOM from "react-dom";
 import {
   getApiKeyFromLocalStorage,
   setApiKeyToLocalStorage,
@@ -8,7 +9,7 @@ import {
   setSystemPromptToLocalStorage,
   getModelFromLocalStorage,
   setModelToLocalStorage,
-} from "../../lib/settings";
+} from "../../../lib/settings";
 
 interface SettingsModalProps {
   show: boolean;
@@ -108,7 +109,7 @@ export function SettingsModal({
     onClose();
   };
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
       <div
         ref={modalRef}
@@ -264,4 +265,8 @@ export function SettingsModal({
       </div>
     </div>
   );
+
+  return typeof window !== "undefined"
+    ? ReactDOM.createPortal(modalContent, document.body)
+    : null;
 }

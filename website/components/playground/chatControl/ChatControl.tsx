@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
+import { Rnd } from "react-rnd";
 import { generateText, tool } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { SettingsModal } from "./SettingsModal";
@@ -9,22 +10,31 @@ import {
   getBaseURLFromLocalStorage,
   getSystemPromptFromLocalStorage,
   getModelFromLocalStorage,
-} from "../../lib/settings";
+} from "../../../lib/settings";
+import useMeasure from "react-use-measure";
 
 type ChatControlProps = {
   robotName?: string;
   systemPrompt?: string;
+  onHide: () => void;
+  show?: boolean; // 新增 show 属性
 };
 
 export function ChatControl({
   robotName,
   systemPrompt: configSystemPrompt,
+  onHide,
+  show = true,
 }: ChatControlProps) {
+  const [ref, bounds] = useMeasure();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<{ sender: string; text: string }[]>(
     []
   );
   const [showSettings, setShowSettings] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const apiKey = getApiKeyFromLocalStorage();
   const baseURL = getBaseURLFromLocalStorage() || "https://api.openai.com/v1/";
@@ -39,6 +49,27 @@ export function ChatControl({
     apiKey,
     baseURL,
   });
+
+  useEffect(() => {
+    if (
+      bounds.height > 0 &&
+      bounds.width > 0 &&
+      position.x === 0 &&
+      position.y === 0
+    ) {
+      setPosition((pos) => ({
+        ...pos,
+        x: window.innerWidth - bounds.width - 20,
+        y: 60,
+      }));
+    }
+  }, [bounds.height]);
+
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
 
   const handleCommand = async (command: string) => {
     setMessages((prev) => [...prev, { sender: "User", text: command }]);
@@ -128,16 +159,34 @@ export function ChatControl({
   };
 
   return (
-    <>
-      <div className="fixed bottom-5 right-5 bg-zinc-900 bg-opacity-80 text-white p-4 rounded-lg shadow-lg w-80 z-50">
+    <Rnd
+      position={position}
+      onDragStop={(_, d) => setPosition({ x: d.x, y: d.y })}
+      bounds="window"
+      className="z-50"
+      style={{ display: show ? undefined : "none" }}
+    >
+      <div
+        ref={ref}
+        className="bg-zinc-900 bg-opacity-80 text-white p-4 rounded-lg shadow-lg w-80 z-50"
+      >
         <h4 className="border-b border-zinc-600 pb-2 font-bold mb-2 flex items-center justify-between">
           <span>AI Control Robot</span>
-          <button
-            onClick={() => setShowSettings(true)}
-            className="ml-2 bg-zinc-700 hover:bg-zinc-600 text-white py-1 px-2 rounded text-sm"
-          >
-            Settings
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowSettings(true)}
+              className="bg-zinc-700 hover:bg-zinc-600 text-white py-1 px-2 rounded text-sm"
+            >
+              Settings
+            </button>
+            <button
+              onClick={onHide}
+              className="text-xl hover:bg-zinc-800 px-2 rounded-full"
+              title="Collapse"
+            >
+              ×
+            </button>
+          </div>
         </h4>
         <div className="mb-2 max-h-[60vh] overflow-y-auto">
           {messages.map((msg, idx) => (
@@ -150,6 +199,7 @@ export function ChatControl({
               <strong>{msg.sender}:</strong> {msg.text}
             </div>
           ))}
+          <div ref={messagesEndRef} />
         </div>
         {messages.length > 0 && (
           <div className="mb-2 flex justify-end">
@@ -194,8 +244,8 @@ export function ChatControl({
         show={showSettings}
         onClose={() => setShowSettings(false)}
         robotName={robotName}
-        systemPrompt={configSystemPrompt} // <-- Pass systemPrompt to SettingsModal
+        systemPrompt={configSystemPrompt}
       />
-    </>
+    </Rnd>
   );
 }

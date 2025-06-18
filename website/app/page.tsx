@@ -99,7 +99,6 @@ export default function Home() {
           </div>
         </div>
       </div>
-
       <footer className="container mx-auto p-4 text-center relative z-10">
         <div className="flex justify-center space-x-4">
           <p className="text-lg text-green-600 font-medium mb-4">
