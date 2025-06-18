@@ -110,6 +110,7 @@ export function ControlPanel({
           <span>Joint Controls</span>
           <button
             onClick={onHide} // 优先调用 onHide
+            onTouchEnd={onHide}
             className="ml-2 text-xl hover:bg-zinc-800 px-2 rounded-full"
             title="Collapse"
           >

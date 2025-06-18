@@ -175,12 +175,14 @@ export function ChatControl({
           <div className="flex gap-2">
             <button
               onClick={() => setShowSettings(true)}
+              onTouchEnd={() => setShowSettings(true)}
               className="bg-zinc-700 hover:bg-zinc-600 text-white py-1 px-2 rounded text-sm"
             >
               Settings
             </button>
             <button
               onClick={onHide}
+              onTouchEnd={onHide}
               className="text-xl hover:bg-zinc-800 px-2 rounded-full"
               title="Collapse"
             >
