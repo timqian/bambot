@@ -57,7 +57,8 @@ const translations = {
     logsWillAppear: "Logs will appear here...",
     language: "Language",
     editThisPage: "✏️ Edit this page",
-    editDescription: "Found an issue or want to improve this page? Edit it on GitHub!",
+    editDescription:
+      "Found an issue or want to improve this page? Edit it on GitHub!",
   },
   zh: {
     title: "飞特舵机控制面板",
@@ -115,15 +116,15 @@ const translations = {
 function FeetechPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  
+
   // Language state with URL control
   const [language, setLanguage] = useState<"en" | "zh">("en");
   const t = translations[language];
 
   // Initialize language from URL
   useEffect(() => {
-    const urlLang = searchParams.get('lang');
-    if (urlLang === 'zh' || urlLang === 'en') {
+    const urlLang = searchParams.get("lang");
+    if (urlLang === "zh" || urlLang === "en") {
       setLanguage(urlLang);
     }
   }, [searchParams]);
@@ -132,7 +133,7 @@ function FeetechPageContent() {
   const handleLanguageChange = (newLang: "en" | "zh") => {
     setLanguage(newLang);
     const params = new URLSearchParams(searchParams);
-    params.set('lang', newLang);
+    params.set("lang", newLang);
     router.push(`?${params.toString()}`);
   };
 
@@ -161,6 +162,9 @@ function FeetechPageContent() {
   // Sync operation states
   const [syncWriteData, setSyncWriteData] = useState("1:1500,2:2500");
   const [syncWriteSpeedData, setSyncWriteSpeedData] = useState("1:500,2:-1000");
+  // Add sync read positions state
+  const [syncReadIds, setSyncReadIds] = useState("1,2");
+  const [syncReadPositionsResult, setSyncReadPositionsResult] = useState("");
 
   // Scan states
   const [scanStartId, setScanStartId] = useState(1);
@@ -358,7 +362,9 @@ function FeetechPageContent() {
       log(
         `Successfully wrote acceleration ${accelerationWrite} to servo ${servoId}.`
       );
-      setAccelerationResult(`Success: Acceleration set to ${accelerationWrite}`);
+      setAccelerationResult(
+        `Success: Acceleration set to ${accelerationWrite}`
+      );
     } catch (err: any) {
       log(`Error writing acceleration for servo ${servoId}: ${err.message}`);
       setAccelerationResult(`Error: ${err.message}`);
@@ -524,6 +530,39 @@ function FeetechPageContent() {
     }
   };
 
+  const handleSyncReadPositions = async () => {
+    if (!isConnected) {
+      log("Error: Not connected");
+      return;
+    }
+    const ids = syncReadIds
+      .split(",")
+      .map((id) => parseInt(id.trim(), 10))
+      .filter((id) => !isNaN(id) && id > 0 && id < 253);
+    if (ids.length === 0) {
+      log("Sync Read Positions: No valid IDs provided.");
+      setSyncReadPositionsResult("No valid IDs provided.");
+      return;
+    }
+    log(`Sync reading positions for IDs: ${ids.join(", ")}`);
+    setSyncReadPositionsResult("Reading...");
+    try {
+      // Try to use SDK batch read if available, else fallback to sequential
+      const positions = await scsServoSDK.syncReadPositions(ids);
+      let logMsg = "";
+      positions.forEach((pos, id) => {
+        logMsg += `  Servo ${id}: Position=${pos}\n`;
+      });
+
+      setSyncReadPositionsResult(logMsg);
+      log(`Sync Read Positions Result:\n${logMsg}`);
+    } catch (err: any) {
+      setSyncReadPositionsResult(`Error: ${err.message}`);
+      log(`Sync Read Positions Failed: ${err.message}`);
+      console.error(err);
+    }
+  };
+
   const handleScanServos = async () => {
     if (!isConnected) {
       log("Error: Not connected");
@@ -620,19 +659,17 @@ function FeetechPageContent() {
           <div className="flex justify-end mb-4">
             <select
               value={language}
-              onChange={(e) => handleLanguageChange(e.target.value as "en" | "zh")}
+              onChange={(e) =>
+                handleLanguageChange(e.target.value as "en" | "zh")
+              }
               className="px-3 py-1 bg-zinc-800 border border-zinc-600 rounded-md text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="en">English</option>
               <option value="zh">中文</option>
             </select>
           </div>
-          <h1 className="text-4xl font-bold text-white mb-4">
-            {t.title}
-          </h1>
-          <p className="text-zinc-400 text-lg">
-            {t.subtitle}
-          </p>
+          <h1 className="text-4xl font-bold text-white mb-4">{t.title}</h1>
+          <p className="text-zinc-400 text-lg">{t.subtitle}</p>
         </div>
 
         {/* Documentation Section */}
@@ -641,9 +678,7 @@ function FeetechPageContent() {
             {t.documentation}
           </h2>
           <div className="space-y-4">
-            <p className="text-zinc-300">
-              {t.docDescription}
-            </p>
+            <p className="text-zinc-300">{t.docDescription}</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <a
                 href="https://github.com/timqian/bambot/tree/main/feetech.js"
@@ -687,154 +722,158 @@ function FeetechPageContent() {
           </summary>
           <div className="px-6 pb-6 space-y-4 text-zinc-300">
             <p>
-              {language === 'zh' 
-                ? '理解这些参数对于控制飞特舵机至关重要：'
-                : 'Understanding these parameters is crucial for controlling Feetech servos:'
-              }
+              {language === "zh"
+                ? "理解这些参数对于控制飞特舵机至关重要："
+                : "Understanding these parameters is crucial for controlling Feetech servos:"}
             </p>
             <ul className="list-disc list-inside space-y-2 ml-4">
               <li>
-                <strong>{language === 'zh' ? '模式：' : 'Mode:'}</strong> 
-                {language === 'zh' ? '决定舵机的主要功能。' : "Determines the servo's primary function."}
+                <strong>{language === "zh" ? "模式：" : "Mode:"}</strong>
+                {language === "zh"
+                  ? "决定舵机的主要功能。"
+                  : "Determines the servo's primary function."}
                 <ul className="list-disc list-inside ml-4 mt-1">
                   <li>
                     <code className="bg-gray-600 px-1 rounded">Mode 0</code>:
-                    {language === 'zh' 
-                      ? '位置/舵机模式。舵机移动到特定角度位置并保持。'
-                      : 'Position/Servo Mode. The servo moves to and holds a specific angular position.'
-                    }
+                    {language === "zh"
+                      ? "位置/舵机模式。舵机移动到特定角度位置并保持。"
+                      : "Position/Servo Mode. The servo moves to and holds a specific angular position."}
                   </li>
                   <li>
                     <code className="bg-gray-600 px-1 rounded">Mode 1</code>:
-                    {language === 'zh'
-                      ? '轮子/速度模式。舵机以指定的速度和方向连续旋转，类似电机。'
-                      : 'Wheel/Speed Mode. The servo rotates continuously at a specified speed and direction, like a motor.'
-                    }
+                    {language === "zh"
+                      ? "轮子/速度模式。舵机以指定的速度和方向连续旋转，类似电机。"
+                      : "Wheel/Speed Mode. The servo rotates continuously at a specified speed and direction, like a motor."}
                   </li>
                 </ul>
                 <p className="text-xs mt-1">
-                  {language === 'zh'
-                    ? '更改模式需要解锁、写入模式值（0或1）并锁定配置。'
-                    : 'Changing the mode requires unlocking, writing the mode value (0 or 1), and locking the configuration.'
-                  }
+                  {language === "zh"
+                    ? "更改模式需要解锁、写入模式值（0或1）并锁定配置。"
+                    : "Changing the mode requires unlocking, writing the mode value (0 or 1), and locking the configuration."}
                 </p>
               </li>
               <li>
-                <strong>{language === 'zh' ? '位置：' : 'Position:'}</strong> 
-                {language === 'zh'
-                  ? '在位置模式（模式0）下，此值表示舵机输出轴的目标或当前角度位置。'
-                  : "In Position Mode (Mode 0), this value represents the target or current angular position of the servo's output shaft."
-                }
+                <strong>{language === "zh" ? "位置：" : "Position:"}</strong>
+                {language === "zh"
+                  ? "在位置模式（模式0）下，此值表示舵机输出轴的目标或当前角度位置。"
+                  : "In Position Mode (Mode 0), this value represents the target or current angular position of the servo's output shaft."}
                 <ul className="list-disc list-inside ml-4 mt-1">
                   <li>
-                    {language === 'zh' ? '范围：' : 'Range:'} 
-                    {language === 'zh' ? '通常为 ' : 'Typically '}
-                    <code className="bg-gray-600 px-1 rounded">0</code> 
-                    {language === 'zh' ? ' 到 ' : ' to '}
+                    {language === "zh" ? "范围：" : "Range:"}
+                    {language === "zh" ? "通常为 " : "Typically "}
+                    <code className="bg-gray-600 px-1 rounded">0</code>
+                    {language === "zh" ? " 到 " : " to "}
                     <code className="bg-gray-600 px-1 rounded">4095</code>
-                    {language === 'zh' ? '（表示12位分辨率）。' : ' (representing a 12-bit resolution).'}
+                    {language === "zh"
+                      ? "（表示12位分辨率）。"
+                      : " (representing a 12-bit resolution)."}
                   </li>
                   <li>
-                    {language === 'zh' ? '含义：' : 'Meaning:'} 
-                    {language === 'zh'
-                      ? '对应舵机的旋转范围（例如，0-360度或0-270度，取决于具体的舵机型号）。'
-                      : "Corresponds to the servo's rotational range (e.g., 0-360 degrees or 0-270 degrees, depending on the specific servo model). "
-                    }
-                    <code className="bg-gray-600 px-1 rounded">0</code> 
-                    {language === 'zh' ? ' 是范围的一端，' : ' is one end of the range, '}
-                    <code className="bg-gray-600 px-1 rounded">4095</code> 
-                    {language === 'zh' ? ' 是另一端。' : ' is the other.'}
+                    {language === "zh" ? "含义：" : "Meaning:"}
+                    {language === "zh"
+                      ? "对应舵机的旋转范围（例如，0-360度或0-270度，取决于具体的舵机型号）。"
+                      : "Corresponds to the servo's rotational range (e.g., 0-360 degrees or 0-270 degrees, depending on the specific servo model). "}
+                    <code className="bg-gray-600 px-1 rounded">0</code>
+                    {language === "zh"
+                      ? " 是范围的一端，"
+                      : " is one end of the range, "}
+                    <code className="bg-gray-600 px-1 rounded">4095</code>
+                    {language === "zh" ? " 是另一端。" : " is the other."}
                   </li>
                 </ul>
               </li>
               <li>
-                <strong>{language === 'zh' ? '速度（轮子模式）：' : 'Speed (Wheel Mode):'}</strong> 
-                {language === 'zh'
-                  ? '在轮子模式（模式1）下，此值控制旋转速度和方向。'
-                  : 'In Wheel Mode (Mode 1), this value controls the rotational speed and direction.'
-                }
+                <strong>
+                  {language === "zh"
+                    ? "速度（轮子模式）："
+                    : "Speed (Wheel Mode):"}
+                </strong>
+                {language === "zh"
+                  ? "在轮子模式（模式1）下，此值控制旋转速度和方向。"
+                  : "In Wheel Mode (Mode 1), this value controls the rotational speed and direction."}
                 <ul className="list-disc list-inside ml-4 mt-1">
                   <li>
-                    {language === 'zh' ? '范围：' : 'Range:'} 
-                    {language === 'zh' ? '通常为 ' : 'Typically '}
-                    <code className="bg-gray-600 px-1 rounded">-2500</code> 
-                    {language === 'zh' ? ' 到 ' : ' to '}
+                    {language === "zh" ? "范围：" : "Range:"}
+                    {language === "zh" ? "通常为 " : "Typically "}
+                    <code className="bg-gray-600 px-1 rounded">-2500</code>
+                    {language === "zh" ? " 到 " : " to "}
                     <code className="bg-gray-600 px-1 rounded">+2500</code>.
-                    {language === 'zh'
-                      ? '（注意：一些文档可能提到-1023到+1023，但SDK示例使用更宽的范围）。'
-                      : ' (Note: Some documentation might mention -1023 to +1023, but the SDK example uses a wider range).'
-                    }
+                    {language === "zh"
+                      ? "（注意：一些文档可能提到-1023到+1023，但SDK示例使用更宽的范围）。"
+                      : " (Note: Some documentation might mention -1023 to +1023, but the SDK example uses a wider range)."}
                   </li>
                   <li>
-                    {language === 'zh' ? '含义：' : 'Meaning:'} 
-                    <code className="bg-gray-600 px-1 rounded">0</code> 
-                    {language === 'zh'
-                      ? ' 停止轮子。正值向一个方向旋转（例如顺时针），负值向相反方向旋转（例如逆时针）。数值大小决定速度（绝对值越大意味着旋转越快）。'
-                      : ' stops the wheel. Positive values rotate in one direction (e.g., clockwise), negative values rotate in the opposite direction (e.g., counter-clockwise). The magnitude determines the speed (larger absolute value means faster rotation).'
-                    }
+                    {language === "zh" ? "含义：" : "Meaning:"}
+                    <code className="bg-gray-600 px-1 rounded">0</code>
+                    {language === "zh"
+                      ? " 停止轮子。正值向一个方向旋转（例如顺时针），负值向相反方向旋转（例如逆时针）。数值大小决定速度（绝对值越大意味着旋转越快）。"
+                      : " stops the wheel. Positive values rotate in one direction (e.g., clockwise), negative values rotate in the opposite direction (e.g., counter-clockwise). The magnitude determines the speed (larger absolute value means faster rotation)."}
                   </li>
                   <li>
-                    {language === 'zh' ? '控制地址：' : 'Control Address:'} 
+                    {language === "zh" ? "控制地址：" : "Control Address:"}
                     <code className="bg-gray-600 px-1 rounded">
                       ADDR_SCS_GOAL_SPEED
                     </code>{" "}
-                    {language === 'zh' ? '（寄存器 46/47）。' : '(Register 46/47).'}
+                    {language === "zh"
+                      ? "（寄存器 46/47）。"
+                      : "(Register 46/47)."}
                   </li>
                 </ul>
               </li>
               <li>
-                <strong>{language === 'zh' ? '加速度：' : 'Acceleration:'}</strong> 
-                {language === 'zh'
-                  ? '控制舵机改变速度以达到目标位置（位置模式）或目标速度（轮子模式）的快慢。'
-                  : 'Controls how quickly the servo changes speed to reach its target position (in Position Mode) or target speed (in Wheel Mode).'
-                }
+                <strong>
+                  {language === "zh" ? "加速度：" : "Acceleration:"}
+                </strong>
+                {language === "zh"
+                  ? "控制舵机改变速度以达到目标位置（位置模式）或目标速度（轮子模式）的快慢。"
+                  : "Controls how quickly the servo changes speed to reach its target position (in Position Mode) or target speed (in Wheel Mode)."}
                 <ul className="list-disc list-inside ml-4 mt-1">
                   <li>
-                    {language === 'zh' ? '范围：' : 'Range:'} 
-                    {language === 'zh' ? '通常为 ' : 'Typically '}
-                    <code className="bg-gray-600 px-1 rounded">0</code> 
-                    {language === 'zh' ? ' 到 ' : ' to '}
+                    {language === "zh" ? "范围：" : "Range:"}
+                    {language === "zh" ? "通常为 " : "Typically "}
+                    <code className="bg-gray-600 px-1 rounded">0</code>
+                    {language === "zh" ? " 到 " : " to "}
                     <code className="bg-gray-600 px-1 rounded">254</code>.
                   </li>
                   <li>
-                    {language === 'zh' ? '含义：' : 'Meaning:'} 
-                    {language === 'zh'
-                      ? '定义速度变化率。单位是100步/秒²。'
-                      : 'Defines the rate of change of speed. The unit is 100 steps/s². '}
-                    <code className="bg-gray-600 px-1 rounded">0</code> 
-                    {language === 'zh'
-                      ? ' 通常意味着瞬时加速（或最小延迟）。更高的值会导致更慢、更平滑的加速和减速。例如，值为 '
-                      : ' usually means instantaneous acceleration (or minimal delay). Higher values result in slower, smoother acceleration and deceleration. For example, a value of '}
-                    <code className="bg-gray-600 px-1 rounded">10</code> 
-                    {language === 'zh'
-                      ? ' 意味着速度每秒变化10 * 100 = 1000步。这有助于减少颠簸运动和机械应力。'
-                      : ' means the speed changes by 10 * 100 = 1000 steps per second, per second. This helps reduce jerky movements and mechanical stress.'
-                    }
+                    {language === "zh" ? "含义：" : "Meaning:"}
+                    {language === "zh"
+                      ? "定义速度变化率。单位是100步/秒²。"
+                      : "Defines the rate of change of speed. The unit is 100 steps/s². "}
+                    <code className="bg-gray-600 px-1 rounded">0</code>
+                    {language === "zh"
+                      ? " 通常意味着瞬时加速（或最小延迟）。更高的值会导致更慢、更平滑的加速和减速。例如，值为 "
+                      : " usually means instantaneous acceleration (or minimal delay). Higher values result in slower, smoother acceleration and deceleration. For example, a value of "}
+                    <code className="bg-gray-600 px-1 rounded">10</code>
+                    {language === "zh"
+                      ? " 意味着速度每秒变化10 * 100 = 1000步。这有助于减少颠簸运动和机械应力。"
+                      : " means the speed changes by 10 * 100 = 1000 steps per second, per second. This helps reduce jerky movements and mechanical stress."}
                   </li>
                   <li>
-                    {language === 'zh' ? '控制地址：' : 'Control Address:'} 
+                    {language === "zh" ? "控制地址：" : "Control Address:"}
                     <code className="bg-gray-600 px-1 rounded">
                       ADDR_SCS_GOAL_ACC
                     </code>{" "}
-                    {language === 'zh' ? '（寄存器 41）。' : '(Register 41).'}
+                    {language === "zh" ? "（寄存器 41）。" : "(Register 41)."}
                   </li>
                 </ul>
               </li>
               <li>
-                <strong>{language === 'zh' ? '波特率：' : 'Baud Rate:'}</strong> 
-                {language === 'zh'
-                  ? '控制器和舵机之间的通信速度。两端必须匹配。舵机通常支持多种波特率，可通过索引选择：'
-                  : 'The speed of communication between the controller and the servo. It must match on both ends. Servos often support multiple baud rates, selectable via an index:'
-                }
+                <strong>{language === "zh" ? "波特率：" : "Baud Rate:"}</strong>
+                {language === "zh"
+                  ? "控制器和舵机之间的通信速度。两端必须匹配。舵机通常支持多种波特率，可通过索引选择："
+                  : "The speed of communication between the controller and the servo. It must match on both ends. Servos often support multiple baud rates, selectable via an index:"}
                 <ul className="list-disc list-inside ml-4 mt-1">
-                  <li>{language === 'zh' ? '索引' : 'Index'} 0: 1,000,000 bps</li>
-                  <li>{language === 'zh' ? '索引' : 'Index'} 1: 500,000 bps</li>
-                  <li>{language === 'zh' ? '索引' : 'Index'} 2: 250,000 bps</li>
-                  <li>{language === 'zh' ? '索引' : 'Index'} 3: 128,000 bps</li>
-                  <li>{language === 'zh' ? '索引' : 'Index'} 4: 115,200 bps</li>
-                  <li>{language === 'zh' ? '索引' : 'Index'} 5: 76,800 bps</li>
-                  <li>{language === 'zh' ? '索引' : 'Index'} 6: 57,600 bps</li>
-                  <li>{language === 'zh' ? '索引' : 'Index'} 7: 38,400 bps</li>
+                  <li>
+                    {language === "zh" ? "索引" : "Index"} 0: 1,000,000 bps
+                  </li>
+                  <li>{language === "zh" ? "索引" : "Index"} 1: 500,000 bps</li>
+                  <li>{language === "zh" ? "索引" : "Index"} 2: 250,000 bps</li>
+                  <li>{language === "zh" ? "索引" : "Index"} 3: 128,000 bps</li>
+                  <li>{language === "zh" ? "索引" : "Index"} 4: 115,200 bps</li>
+                  <li>{language === "zh" ? "索引" : "Index"} 5: 76,800 bps</li>
+                  <li>{language === "zh" ? "索引" : "Index"} 6: 57,600 bps</li>
+                  <li>{language === "zh" ? "索引" : "Index"} 7: 38,400 bps</li>
                 </ul>
               </li>
             </ul>
@@ -1060,7 +1099,9 @@ function FeetechPageContent() {
 
               {/* Position Control */}
               <div className="space-y-4">
-                <h3 className="font-medium text-zinc-300">{t.positionControl}</h3>
+                <h3 className="font-medium text-zinc-300">
+                  {t.positionControl}
+                </h3>
                 <div className="flex gap-2">
                   <Button
                     onClick={handleReadPosition}
@@ -1206,7 +1247,30 @@ function FeetechPageContent() {
             {t.syncOperations}
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Sync Read Positions */}
+            <div className="space-y-4">
+              <h3 className="font-medium text-zinc-300">Sync Read Positions</h3>
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  value={syncReadIds}
+                  onChange={(e) => setSyncReadIds(e.target.value)}
+                  placeholder="1,2,3"
+                  className="bg-zinc-700 border-zinc-600 text-white"
+                />
+                <Button
+                  onClick={handleSyncReadPositions}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white"
+                >
+                  Sync Read Positions
+                </Button>
+                <pre className="bg-zinc-900 p-2 rounded border border-zinc-600 text-xs text-zinc-300 max-h-24 overflow-y-auto whitespace-pre-wrap">
+                  {syncReadPositionsResult}
+                </pre>
+              </div>
+            </div>
+            {/* Sync Write Positions */}
             <div className="space-y-4">
               <h3 className="font-medium text-zinc-300">
                 {t.syncWritePositions}
@@ -1228,6 +1292,7 @@ function FeetechPageContent() {
               </div>
             </div>
 
+            {/* Sync Write Speeds */}
             <div className="space-y-4">
               <h3 className="font-medium text-zinc-300">{t.syncWriteSpeeds}</h3>
               <div className="space-y-2">
@@ -1268,9 +1333,7 @@ function FeetechPageContent() {
             {t.editThisPage}
           </h2>
           <div className="space-y-4">
-            <p className="text-zinc-300">
-              {t.editDescription}
-            </p>
+            <p className="text-zinc-300">{t.editDescription}</p>
             <a
               href="https://github.com/timqian/bambot/blob/main/website/app/feetech.js/page.tsx"
               target="_blank"
@@ -1289,11 +1352,13 @@ function FeetechPageContent() {
 
 export default function FeetechPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-zinc-900 to-zinc-800 py-8 pt-20 flex items-center justify-center">
-        <div className="text-white text-lg">Loading...</div>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gradient-to-br from-zinc-900 to-zinc-800 py-8 pt-20 flex items-center justify-center">
+          <div className="text-white text-lg">Loading...</div>
+        </div>
+      }
+    >
       <FeetechPageContent />
     </Suspense>
   );

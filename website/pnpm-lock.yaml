@@ -132,8 +132,8 @@ importers:
         specifier: 8.5.1
         version: 8.5.1(react@19.0.0)
       feetech.js:
-        specifier: ^0.0.8
-        version: 0.0.8
+        specifier: ^0.0.13
+        version: 0.0.13
       input-otp:
         specifier: 1.4.1
         version: 1.4.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
@@ -1521,8 +1521,8 @@ packages:
   fastq@1.19.1:
     resolution: {integrity: sha512-GwLTyxkCXjXbxqIhTsMI2Nui8huMPtnxg7krajPJAjnEG/iiOS7i+zCtWGZR9G0NBKbXKh6X9m9UIsYX/N6vvQ==}
 
-  feetech.js@0.0.8:
-    resolution: {integrity: sha512-D8SMINBcW7DqapVs/mST7Q4itDJWYUXSUmuvh4MqvgByT2hhrgzUm3cX5sGDcCG9/jY9xhsb1JJIHVYb2xUXSQ==}
+  feetech.js@0.0.13:
+    resolution: {integrity: sha512-dVgMesU5yMAhW9IYK2HUJQl+Ci9dN3kWWjSXbIPzSVKkOszYKgxaQTxVgu10hzQ9yT1bzhLTAAVTu5I7iqqXRg==}
     engines: {node: '>=12.17.0'}
 
   fflate@0.6.10:
@@ -3569,7 +3569,7 @@ snapshots:
     dependencies:
       reusify: 1.1.0
 
-  feetech.js@0.0.8: {}
+  feetech.js@0.0.13: {}
 
   fflate@0.6.10: {}
 
