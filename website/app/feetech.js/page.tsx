@@ -53,6 +53,10 @@ const translations = {
     syncOperations: "🔄 Sync Operations (batch operations)",
     syncWritePositions: "Sync Write Positions",
     syncWriteSpeeds: "Sync Write Speeds",
+    syncReadPositions: "Sync Read Positions",
+    syncReadPositionsPlaceholder: "1,2,3",
+    syncReadPositionsButton: "Sync Read Positions",
+    syncReadPositionsResult: "Positions",
     logOutput: "📋 Log Output",
     logsWillAppear: "Logs will appear here...",
     language: "Language",
@@ -105,6 +109,10 @@ const translations = {
     syncOperations: "🔄 同步操作（批量操作）",
     syncWritePositions: "同步写入位置",
     syncWriteSpeeds: "同步写入速度",
+    syncReadPositions: "同步读取位置",
+    syncReadPositionsPlaceholder: "1,2,3",
+    syncReadPositionsButton: "同步读取位置",
+    syncReadPositionsResult: "位置",
     logOutput: "📋 日志输出",
     logsWillAppear: "日志将在此处显示...",
     language: "语言",
@@ -1250,21 +1258,26 @@ function FeetechPageContent() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Sync Read Positions */}
             <div className="space-y-4">
-              <h3 className="font-medium text-zinc-300">Sync Read Positions</h3>
+              <h3 className="font-medium text-zinc-300">
+                {t.syncReadPositions}
+              </h3>
               <div className="space-y-2">
                 <Input
                   type="text"
                   value={syncReadIds}
                   onChange={(e) => setSyncReadIds(e.target.value)}
-                  placeholder="1,2,3"
+                  placeholder={t.syncReadPositionsPlaceholder}
                   className="bg-zinc-700 border-zinc-600 text-white"
                 />
                 <Button
                   onClick={handleSyncReadPositions}
                   className="w-full bg-green-600 hover:bg-green-700 text-white"
                 >
-                  Sync Read Positions
+                  {t.syncReadPositionsButton}
                 </Button>
+                <label className="text-xs font-medium text-zinc-400">
+                  {t.syncReadPositionsResult}
+                </label>
                 <pre className="bg-zinc-900 p-2 rounded border border-zinc-600 text-xs text-zinc-300 max-h-24 overflow-y-auto whitespace-pre-wrap">
                   {syncReadPositionsResult}
                 </pre>
