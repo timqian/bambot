@@ -50,4 +50,4 @@ export const ADDR_SCS_TORQUE_ENABLE = 40;
 export const ADDR_SCS_GOAL_ACC = 41;
 export const ADDR_SCS_GOAL_POSITION = 42;
 export const ADDR_SCS_GOAL_SPEED = 46;
-export const ADDR_SCS_PRESENT_POSITION = 56; 
+export const ADDR_SCS_PRESENT_POSITION = 56;

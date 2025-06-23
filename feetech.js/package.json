@@ -1,6 +1,6 @@
 {
   "name": "feetech.js",
-  "version": "0.0.11",
+  "version": "0.0.13",
   "description": "javascript sdk for feetech servos",
   "main": "index.mjs",
   "files": [

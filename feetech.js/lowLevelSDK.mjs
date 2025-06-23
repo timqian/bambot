@@ -966,6 +966,7 @@ export class GroupSyncRead {
     // Set all servos' data as invalid
     for (const id of this.isAvailableServiceID) {
       this.dataDict.set(id, new Array(this.dataLength).fill(0));
+      console.log(`Cleared data for servo ID ${id}`);
     }
 
     const [rxpacket, rxResult] = await this.ph.rxPacket(this.port);
@@ -1032,7 +1033,7 @@ export class GroupSyncRead {
       
       // Receive a single response
       result = await this.rxPacket();
-      
+      console.log(`Sync read RX result###: ${result}`);
       // Release port
       this.port.isUsing = false;
       

@@ -4,6 +4,7 @@ import {
   COMM_SUCCESS,
   COMM_RX_TIMEOUT,
   COMM_RX_CORRUPT,
+  COMM_RX_FAIL,
   COMM_TX_FAIL,
   COMM_NOT_AVAILABLE,
   SCS_LOBYTE,
@@ -558,7 +559,7 @@ export async function syncWriteWheelSpeed(servoSpeeds) {
   // Second pass: Add valid parameters
   for (const [idStr, speed] of entries) {
     const servoId = parseInt(idStr, 10); // Already validated
-    
+
     if (isNaN(servoId) || servoId < 1 || servoId > 252) {
       throw new Error(`Invalid servo ID "${idStr}" in syncWriteWheelSpeed.`);
     }
@@ -614,99 +615,46 @@ export async function syncWriteWheelSpeed(servoSpeeds) {
 /**
  * Reads the current position of multiple servos synchronously.
  * @param {number[]} servoIds - An array of servo IDs (1-252) to read from.
- * @returns {Promise<Map<number, number>>} Resolves with a Map where keys are servo IDs and values are positions (0-4095).
+ * @returns {Promise<Map<number, number>>} Resolves with a Map where keys are servo IDs and values are positions (1-4095).
  * @throws {Error} If not connected, transmission fails, reception fails, or data for any requested servo is unavailable.
  */
 export async function syncReadPositions(servoIds) {
   checkConnection();
   if (!Array.isArray(servoIds) || servoIds.length === 0) {
     console.log("Sync Read: No servo IDs provided.");
-    return new Map(); // Return empty map for empty input
+    return new Map();
   }
 
   const startAddress = ADDR_SCS_PRESENT_POSITION;
   const dataLength = 2;
-  const groupSyncRead = new GroupSyncRead(
-    portHandler,
-    packetHandler,
-    startAddress,
-    dataLength
-  );
   const positions = new Map();
-  const validIds = [];
 
-  // 1. Add parameters for each valid servo ID
-  servoIds.forEach((id) => {
-    if (id >= 1 && id <= 252) {
-      if (groupSyncRead.addParam(id)) {
-        validIds.push(id);
+  for (const id of servoIds) {
+    if (id < 1 || id > 252) {
+      console.warn(`Sync Read: Invalid servo ID ${id} skipped.`);
+      continue;
+    }
+    try {
+      const [pos, result, error] = await packetHandler.read2ByteTxRx(
+        portHandler,
+        id,
+        startAddress
+      );
+      if (result === COMM_SUCCESS) {
+        positions.set(id, pos & 0xffff);
       } else {
         console.warn(
-          `Sync Read: Failed to add param for servo ID ${id} (maybe duplicate or invalid).`
+          `Sync Read: Failed to read position for servo ID ${id}: ${packetHandler.getTxRxResult(
+            result
+          )}, Error: ${error}`
         );
       }
-    } else {
-      console.warn(`Sync Read: Invalid servo ID ${id} skipped.`);
+    } catch (e) {
+      console.warn(`Sync Read: Exception reading servo ID ${id}:`, e);
     }
-  });
-
-  if (validIds.length === 0) {
-    console.log("Sync Read: No valid servo IDs to read.");
-    return new Map(); // Return empty map if no valid IDs
   }
 
-  try {
-    // 2. Send the Sync Read instruction packet
-    let txResult = await groupSyncRead.txPacket();
-    if (txResult !== COMM_SUCCESS) {
-      throw new Error(
-        `Sync Read txPacket failed: ${packetHandler.getTxRxResult(txResult)}`
-      );
-    }
-
-    // 3. Receive the response packets
-    let rxResult = await groupSyncRead.rxPacket();
-    // Even if rxPacket reports an overall issue (like timeout), we still check individual servos.
-    // A specific error will be thrown later if any servo data is missing.
-    if (rxResult !== COMM_SUCCESS) {
-      console.warn(
-        `Sync Read rxPacket overall result: ${packetHandler.getTxRxResult(
-          rxResult
-        )}. Checking individual servos.`
-      );
-    }
-
-    // 4. Check data availability and retrieve data for each servo
-    const failedIds = [];
-    validIds.forEach((id) => {
-      const isAvailable = groupSyncRead.isAvailable(
-        id,
-        startAddress,
-        dataLength
-      );
-      if (isAvailable) {
-        const position = groupSyncRead.getData(id, startAddress, dataLength);
-        positions.set(id, position & 0xffff);
-      } else {
-        failedIds.push(id);
-      }
-    });
-
-    // 5. Check if all requested servos responded
-    if (failedIds.length > 0) {
-      throw new Error(
-        `Sync Read failed: Data not available for servo IDs: ${failedIds.join(
-          ", "
-        )}. Overall RX result: ${packetHandler.getTxRxResult(rxResult)}`
-      );
-    }
-
-    return positions;
-  } catch (err) {
-    console.error("Exception or failure during syncReadPositions:", err);
-    // Re-throw the caught error or a new one wrapping it
-    throw new Error(`Sync Read failed: ${err.message}`);
-  }
+  return positions;
 }
 
 /**

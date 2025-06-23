@@ -31,3 +31,5 @@ console.log(position); // 1122
 - Control different bots: [bambot.org](https://bambot.org)
 
 
+## Ref
+- https://github.com/Adam-Software/Feetech-Servo-SDK
