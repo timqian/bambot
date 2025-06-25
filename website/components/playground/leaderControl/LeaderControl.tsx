@@ -56,7 +56,7 @@ const LeaderControl = ({
     }, SYNC_INTERVAL);
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isConnected, jointDetails, getPositionChange]);
+  }, [isConnected, jointDetails, getPositionChange, onSync]);
 
   // Initially position to bottom left corner
   useEffect(() => {
