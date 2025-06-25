@@ -12,7 +12,7 @@ export default function Home() {
       image: "/so-arm100.jpg",
       playLink: "/play/so-arm100",
       assembleLink:
-        "https://github.com/huggingface/lerobot/blob/main/examples/10_use_so100.md",
+        "https://huggingface.co/docs/lerobot/so101",
     },
     {
       id: 2,
