@@ -6,7 +6,7 @@ export type ConnectionOptions = {
 export type ServoPositions = Map<number, number> | Record<number, number>;
 export type ServoSpeeds = Map<number, number> | Record<number, number>; // New type alias for speeds
 
-export interface ScsServoSDK {
+export declare class ScsServoSDK {
   connect(options?: ConnectionOptions): Promise<true>;
   disconnect(): Promise<true>;
   readPosition(servoId: number): Promise<number>;
@@ -20,9 +20,9 @@ export interface ScsServoSDK {
   writeWheelSpeed(servoId: number, speed: number): Promise<"success">;
   syncReadPositions(servoIds: number[]): Promise<Map<number, number>>;
   syncWritePositions(servoPositions: ServoPositions): Promise<"success">;
-  syncWriteWheelSpeed(servoSpeeds: ServoSpeeds): Promise<"success">; // Add syncWriteWheelSpeed definition
+  syncWriteWheelSpeed(servoSpeeds: ServoSpeeds): Promise<"success">;
   setBaudRate(servoId: number, baudRateIndex: number): Promise<"success">;
   setServoId(currentServoId: number, newServoId: number): Promise<"success">;
 }
 
-export const scsServoSDK: ScsServoSDK;
+export declare const scsServoSDK: ScsServoSDK;

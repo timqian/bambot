@@ -237,7 +237,7 @@ export class PortHandler {
         // Add received bytes to our total
         const newData = Array.from(result.value);
         totalBytes.push(...newData);
-        console.log(`Read ${newData.length} bytes:`, newData.map(b => b.toString(16).padStart(2, '0')).join(' '));
+        // console.log(`Read ${newData.length} bytes:`, newData.map(b => b.toString(16).padStart(2, '0')).join(' '));
         
         // If we've got enough data, we can stop
         if (totalBytes.length >= length) {
@@ -452,7 +452,7 @@ export class PacketHandler {
     if (result !== COMM_SUCCESS) {
       console.log(`rxPacket result: ${result}, packet: ${rxpacket.map(b => '0x' + b.toString(16).padStart(2,'0')).join(' ')}`);
     } else {
-      console.debug(`rxPacket successful: ${rxpacket.map(b => '0x' + b.toString(16).padStart(2,'0')).join(' ')}`);
+      // console.debug(`rxPacket successful: ${rxpacket.map(b => '0x' + b.toString(16).padStart(2,'0')).join(' ')}`);
     }
     return [rxpacket, result];
   }
@@ -470,11 +470,11 @@ export class PacketHandler {
       }
       
       // TX packet
-      console.log("Sending packet:", txpacket.map(b => '0x' + b.toString(16).padStart(2,'0')).join(' '));
+      // console.log("Sending packet:", txpacket.map(b => '0x' + b.toString(16).padStart(2,'0')).join(' '));
       
       // Remove retry logic and just send once
       result = await this.txPacket(port, txpacket);
-      console.log(`TX result: ${result}`);
+      // console.log(`TX result: ${result}`);
       
       if (result !== COMM_SUCCESS) {
         console.log(`TX failed with result: ${result}`);
@@ -493,7 +493,7 @@ export class PacketHandler {
         const length = txpacket[PKT_PARAMETER0 + 1];
         // For READ instructions, we expect response to include the data
         port.setPacketTimeout(length + 10); // Add extra buffer
-        console.log(`Set READ packet timeout for ${length + 10} bytes`);
+        // console.log(`Set READ packet timeout for ${length + 10} bytes`);
       } else {
         // For other instructions, we expect a status packet
         port.setPacketTimeout(10); // HEADER0 HEADER1 ID LENGTH ERROR CHECKSUM + buffer
@@ -501,7 +501,7 @@ export class PacketHandler {
       }
       
       // RX packet - no retries, just attempt once
-      console.log(`Receiving packet`);
+      // console.log(`Receiving packet`);
       
       // Clear port before receiving to ensure clean state
       await port.clearPort();
@@ -601,7 +601,7 @@ export class PacketHandler {
     txpacket[PKT_PARAMETER0] = address;
     txpacket[PKT_PARAMETER0 + 1] = length;
     
-    console.log(`Reading ${length} bytes from address ${address} for servo ID ${scsId}`);
+    // console.log(`Reading ${length} bytes from address ${address} for servo ID ${scsId}`);
     
     // Send packet and get response
     const [rxpacket, result, error] = await this.txRxPacket(port, txpacket);
@@ -619,14 +619,14 @@ export class PacketHandler {
     
     // Extract data from response
     const data = [];
-    console.log(`Response packet length: ${rxpacket.length}, extracting ${length} bytes from offset ${PKT_PARAMETER0}`);
-    console.log(`Response data bytes: ${rxpacket.slice(PKT_PARAMETER0, PKT_PARAMETER0 + length).map(b => '0x' + b.toString(16).padStart(2,'0')).join(' ')}`);
+    // console.log(`Response packet length: ${rxpacket.length}, extracting ${length} bytes from offset ${PKT_PARAMETER0}`);
+    // console.log(`Response data bytes: ${rxpacket.slice(PKT_PARAMETER0, PKT_PARAMETER0 + length).map(b => '0x' + b.toString(16).padStart(2,'0')).join(' ')}`);
     
     for (let i = 0; i < length; i++) {
       data.push(rxpacket[PKT_PARAMETER0 + i]);
     }
     
-    console.log(`Successfully read ${length} bytes: ${data.map(b => '0x' + b.toString(16).padStart(2,'0')).join(' ')}`);
+    // console.log(`Successfully read ${length} bytes: ${data.map(b => '0x' + b.toString(16).padStart(2,'0')).join(' ')}`);
     return [data, result, error];
   }
   
@@ -786,7 +786,7 @@ export class PacketHandler {
     }
     txpacket[totalLen - 1] = (~checksum) & 0xFF;
 
-    console.log(`SyncWriteTxOnly: ${txpacket.map(b => '0x' + b.toString(16).padStart(2,'0')).join(' ')}`);
+    // console.log(`SyncWriteTxOnly: ${txpacket.map(b => '0x' + b.toString(16).padStart(2,'0')).join(' ')}`);
 
     // Send packet - for sync write, we don't need a response
     await port.clearPort();

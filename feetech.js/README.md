@@ -3,6 +3,7 @@
 Control feetech servos through browser
 
 ## Documentations
+
 https://deepwiki.com/timqian/bambot/4.1-feetech.js-sdk
 
 ## Quick start
@@ -13,14 +14,15 @@ npm install feetech.js
 ```
 
 ```javascript
-import { scsServoSDK } from 'feetech.js';
+import { ScsServoSDK } from "feetech.js";
+const scsServoSdk = new ScsServoSDK();
 
 // request permission to access the USB device and connect to it
 // Note: This will prompt the user to select a USB device
-await scsServoSDK.connect();
+await scsServoSdk.connect();
 
 // read servo position
-const position = await scsServoSDK.readPosition(1);
+const position = await scsServoSdk.readPosition(1);
 console.log(position); // 1122
 ```
 
@@ -30,6 +32,6 @@ console.log(position); // 1122
 - Simple html + js example: [test.html](https://github.com/timqian/bambot/blob/main/feetech.js/test.html)
 - Control different bots: [bambot.org](https://bambot.org)
 
-
 ## Ref
+
 - https://github.com/Adam-Software/Feetech-Servo-SDK

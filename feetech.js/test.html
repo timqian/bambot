@@ -164,7 +164,8 @@
 
     <script type="module">
         // Import the scsServoSDK object from index.mjs
-        import { scsServoSDK } from './index.mjs';
+        import { ScsServoSDK } from './index.mjs';
+        const scsServoSDK = new ScsServoSDK();
         // No longer need COMM_SUCCESS etc. here as errors are thrown
 
         const connectBtn = document.getElementById('connectBtn');
