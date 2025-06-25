@@ -2,9 +2,11 @@
 
 import { useState, useRef, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { scsServoSDK } from "feetech.js";
+import { ScsServoSDK } from "feetech.js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+const scsServoSDK = new ScsServoSDK();
 
 // Translation object
 const translations = {

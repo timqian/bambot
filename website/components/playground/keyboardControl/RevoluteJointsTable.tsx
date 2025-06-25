@@ -283,14 +283,14 @@ export function RevoluteJointsTable({
         <thead>
           {/* ... existing table head ... */}
           <tr>
-            <th className="border-b border-gray-600 pb-1 pr-2">Joint</th>
-            <th className="border-b border-gray-600 pb-1 text-center pl-2">
+            <th className="border-b border-zinc-600 pb-1 pr-2">Joint</th>
+            <th className="border-b border-zinc-600 pb-1 text-center pl-2">
               Angle
             </th>
-            <th className="border-b border-gray-600 pb-1 text-center pl-2">
+            <th className="border-b border-zinc-600 pb-1 text-center pl-2">
               Real Angle
             </th>
-            <th className="border-b border-gray-600 pb-1 text-center px-2">
+            <th className="border-b border-zinc-600 pb-1 text-center px-2">
               Control
             </th>
           </tr>
@@ -308,7 +308,7 @@ export function RevoluteJointsTable({
             return (
               <tr key={detail.servoId}>
                 <td className="">
-                  {/* <span className="text-gray-600">{detail.servoId}</span>{" "} */}
+                  {/* <span className="text-zinc-600">{detail.servoId}</span>{" "} */}
                   {detail.name}
                 </td>
 
@@ -328,7 +328,7 @@ export function RevoluteJointsTable({
                     className={`${
                       isDecreaseActive
                         ? "bg-blue-600"
-                        : "bg-gray-700 hover:bg-gray-600"
+                        : "bg-zinc-700 hover:bg-zinc-600"
                     } text-white text-xs font-bold w-5 h-5 text-right pr-1 uppercase select-none`} // Added select-none
                     style={{
                       clipPath:
@@ -353,7 +353,7 @@ export function RevoluteJointsTable({
                       const valueInDegrees = parseFloat(e.target.value);
                       updateJointDegrees(detail.servoId!, valueInDegrees);
                     }}
-                    className="h-2 bg-gray-700 appearance-none cursor-pointer w-14 custom-range-thumb"
+                    className="h-2 bg-zinc-700 appearance-none cursor-pointer w-14 custom-range-thumb"
                   />
                   <button
                     onMouseDown={() => handleMouseDown(increaseKey)}
@@ -364,7 +364,7 @@ export function RevoluteJointsTable({
                     className={`${
                       isIncreaseActive
                         ? "bg-blue-600"
-                        : "bg-gray-700 hover:bg-gray-600"
+                        : "bg-zinc-700 hover:bg-zinc-600"
                     } text-white text-xs font-semibold w-5 h-5 text-left pl-1 uppercase select-none`} // Added select-none
                     style={{
                       clipPath:
@@ -408,7 +408,7 @@ export function RevoluteJointsTable({
                             className={`${
                               isDecreaseActive
                                 ? "bg-blue-600"
-                                : "bg-gray-700 hover:bg-gray-600"
+                                : "bg-zinc-700 hover:bg-zinc-600"
                             } text-white text-xs font-bold w-5 h-5 text-right pr-1 uppercase select-none`}
                             style={{
                               clipPath:
@@ -432,7 +432,7 @@ export function RevoluteJointsTable({
                             className={`${
                               isIncreaseActive
                                 ? "bg-blue-600"
-                                : "bg-gray-700 hover:bg-gray-600"
+                                : "bg-zinc-700 hover:bg-zinc-600"
                             } text-white text-xs font-semibold w-5 h-5 text-left pl-1 uppercase select-none`}
                             style={{
                               clipPath:

@@ -2,8 +2,8 @@
  * Control virtual degree with this hook, the real degree is auto managed
  */
 
-import { useState, useCallback, useEffect } from "react";
-import { scsServoSDK } from "feetech.js";
+import { useState, useCallback, useEffect, useRef} from "react";
+import { ScsServoSDK } from "feetech.js";
 import { servoPositionToAngle, degreesToServoPosition } from "../lib/utils"; // Import utility functions
 // import { JointDetails } from "@/components/RobotLoader"; // <-- IMPORT JointDetails type
 type JointDetails = {
@@ -43,6 +43,8 @@ export type UpdateJointsSpeed = (
 ) => Promise<void>;
 
 export function useRobotControl(initialJointDetails: JointDetails[]) {
+  // 保证 SDK 实例唯一
+  const scsServoSDK = useRef(new ScsServoSDK()).current;
   const [isConnected, setIsConnected] = useState(false);
   const [jointDetails, setJointDetails] = useState(initialJointDetails);
 
@@ -82,9 +84,6 @@ export function useRobotControl(initialJointDetails: JointDetails[]) {
   const connectRobot = useCallback(async () => {
     try {
       await scsServoSDK.connect();
-      setIsConnected(true);
-      console.log("Robot connected successfully.");
-
       const newStates = [...jointStates];
       const initialPos: number[] = [];
       for (let i = 0; i < jointDetails.length; i++) {
@@ -114,7 +113,11 @@ export function useRobotControl(initialJointDetails: JointDetails[]) {
       }
       setInitialPositions(initialPos);
       setJointStates(newStates);
+      setIsConnected(true);
+      console.log("Robot connected successfully.");
     } catch (error) {
+      setIsConnected(false);
+      alert(error)
       console.error("Failed to connect to the robot:", error);
     }
   }, [jointStates, jointDetails]);

@@ -13,6 +13,8 @@ import { RevoluteJointsTable } from "./RevoluteJointsTable"; // Updated import p
 import { ContinuousJointsTable } from "./ContinuousJointsTable"; // Updated import path
 import { RobotConfig } from "@/config/robotConfig";
 import useMeasure from "react-use-measure";
+import { panelStyle } from "@/components/playground/panelStyle";
+import { RobotConnectionHelpDialog } from "./RobotConnectionHelpDialog";
 
 // const baudRate = 1000000; // Define baud rate for serial communication - Keep if needed elsewhere, remove if only for UI
 
@@ -59,7 +61,7 @@ export function ControlPanel({
     if (bounds.height > 0 && !hasDragged) {
       setPosition((pos) => ({
         ...pos,
-        x: 20,
+        x: window.innerWidth - bounds.width - 20,
         y: window.innerHeight - bounds.height - 20,
       }));
     }
@@ -104,9 +106,9 @@ export function ControlPanel({
     >
       <div
         ref={ref}
-        className="bg-zinc-900 bg-opacity-80 text-white p-4 rounded-lg max-h-[90vh] overflow-y-auto text-sm"
+        className={"max-h-[90vh] overflow-y-auto text-sm " + panelStyle}
       >
-        <h3 className="mt-0 mb-4 border-b border-zinc-600 pb-1 font-bold text-base flex justify-between items-center">
+        <h3 className="mt-0 mb-4 border-b border-white/50  pb-1 font-bold text-base flex justify-between items-center">
           <span>Joint Controls</span>
           <button
             onClick={onHide} // 优先调用 onHide
@@ -139,11 +141,11 @@ export function ControlPanel({
         )}
 
         {/* Connection Controls */}
-        <div className="mt-4 flex justify-between items-center">
+        <div className="mt-4 flex justify-between items-center gap-2">
           <button
             onClick={isConnected ? handleDisconnect : handleConnect}
             disabled={connectionStatus !== "idle"}
-            className={`text-white text-sm px-3 py-1.5 rounded w-full ${
+            className={`text-white text-sm px-3 py-1.5 rounded flex-1 ${
               isConnected
                 ? "bg-red-600 hover:bg-red-500"
                 : "bg-blue-600 hover:bg-blue-500"
@@ -157,8 +159,9 @@ export function ControlPanel({
               ? "Disconnecting..."
               : isConnected
               ? "Disconnect Robot"
-              : "Connect Real Robot"}
+              : "Connect Follower Robot"}
           </button>
+          <RobotConnectionHelpDialog />
         </div>
       </div>
     </Rnd>

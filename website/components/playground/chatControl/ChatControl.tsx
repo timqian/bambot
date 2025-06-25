@@ -12,6 +12,7 @@ import {
   getModelFromLocalStorage,
 } from "../../../lib/settings";
 import useMeasure from "react-use-measure";
+import { panelStyle } from "@/components/playground/panelStyle";
 
 type ChatControlProps = {
   robotName?: string;
@@ -166,11 +167,8 @@ export function ChatControl({
       className="z-50"
       style={{ display: show ? undefined : "none" }}
     >
-      <div
-        ref={ref}
-        className="bg-zinc-900 bg-opacity-80 text-white p-4 rounded-lg shadow-lg w-80 z-50"
-      >
-        <h4 className="border-b border-zinc-600 pb-2 font-bold mb-2 flex items-center justify-between">
+      <div ref={ref} className={"p-4 w-80 z-50 " + panelStyle}>
+        <h4 className="border-b border-white/50  pb-2 font-bold mb-2 flex items-center justify-between">
           <span>AI Control Robot</span>
           <div className="flex gap-2">
             <button
@@ -237,7 +235,7 @@ export function ChatControl({
               onKeyDown={(e) => e.stopPropagation()}
               onKeyUp={(e) => e.stopPropagation()}
               placeholder="Type a command..."
-              className="flex-1 pl-10 p-2 rounded bg-zinc-700 text-white outline-none"
+              className="flex-1 pl-10 p-2 rounded bg-zinc-700 text-white outline-none text-sm"
             />
           </div>
         </div>

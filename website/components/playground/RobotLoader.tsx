@@ -8,9 +8,12 @@ import { ControlPanel } from "./keyboardControl/KeyboardControl";
 import { useRobotControl } from "@/hooks/useRobotControl";
 import { Canvas } from "@react-three/fiber";
 import { ChatControl } from "./chatControl/ChatControl";
+import LeaderControl from "../playground/leaderControl/LeaderControl";
+import { useLeaderRobotControl } from "@/hooks/useLeaderRobotControl";
 import { RobotScene } from "./RobotScene";
 import KeyboardControlButton from "../playground/controlButtons/KeyboardControlButton";
 import ChatControlButton from "../playground/controlButtons/ChatControlButton";
+import LeaderControlButton from "../playground/controlButtons/LeaderControlButton";
 
 export type JointDetails = {
   name: string;
@@ -39,12 +42,21 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
   const [jointDetails, setJointDetails] = useState<JointDetails[]>([]);
   const [showControlPanel, setShowControlPanel] = useState(() => {
     if (typeof window !== "undefined") {
-      return window.innerWidth >= 900
+      return window.innerWidth >= 900;
     }
     return true;
   });
+  const [showLeaderControl, setShowLeaderControl] = useState(false);
   const [showChatControl, setShowChatControl] = useState(false);
   const config = robotConfigMap[robotName];
+
+  // Get leader robot servo IDs (exclude continuous joint types)
+  const leaderServoIds = jointDetails
+    .filter((j) => j.jointType !== "continuous")
+    .map((j) => j.servoId);
+
+  // Initialize leader robot control hook
+  const leaderControl = useLeaderRobotControl(leaderServoIds);
 
   if (!config) {
     throw new Error(`Robot configuration for "${robotName}" not found.`);
@@ -77,6 +89,23 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
 
   return (
     <>
+      {/* LeaderControl overlay */}
+      <LeaderControl
+        show={showLeaderControl}
+        onHide={() => setShowLeaderControl(false)}
+        leaderControl={leaderControl}
+        jointDetails={jointDetails}
+        onSync={(leaderAngles: { servoId: number; angle: number }[]) => {
+          updateJointsDegrees(
+            leaderAngles.map(
+              ({ servoId, angle }: { servoId: number; angle: number }) => ({
+                servoId,
+                value: angle,
+              })
+            )
+          );
+        }}
+      />
       <Canvas
         shadows
         camera={{
@@ -97,6 +126,7 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
           />
         </Suspense>
       </Canvas>
+
       <ControlPanel
         show={showControlPanel}
         onHide={() => setShowControlPanel(false)}
@@ -117,13 +147,19 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
         robotName={robotName}
         systemPrompt={systemPrompt}
       />
+
       <div className="absolute bottom-5 left-0 right-0">
         <div className="flex justify-center items-center">
           <div className="flex gap-2 max-w-md">
+            <LeaderControlButton
+              showControlPanel={showLeaderControl}
+              onToggleControlPanel={() => setShowLeaderControl((v) => !v)}
+            />
             <KeyboardControlButton
               showControlPanel={showControlPanel}
               onToggleControlPanel={() => setShowControlPanel((v) => !v)}
             />
+
             <ChatControlButton
               showControlPanel={showChatControl}
               onToggleControlPanel={() => setShowChatControl((v) => !v)}
