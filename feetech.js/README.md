@@ -1,10 +1,8 @@
 # feetech.js
 
+> [bambot.org/feetech.js](https://bambot.org/feetech.js)
+
 Control feetech servos through browser
-
-## Documentations
-
-https://deepwiki.com/timqian/bambot/4.1-feetech.js-sdk
 
 ## Quick start
 
@@ -25,6 +23,11 @@ await scsServoSdk.connect();
 const position = await scsServoSdk.readPosition(1);
 console.log(position); // 1122
 ```
+
+## Documentations
+
+https://deepwiki.com/timqian/bambot/4.1-feetech.js-sdk
+
 
 ## Example usage:
 
