@@ -204,9 +204,9 @@
   <joint name="Wrist_Pitch" type="revolute">
     <parent link="Lower_Arm"/>
     <child link="Wrist_Pitch_Roll"/>
-    <origin xyz="0 0.0052 0.1349" rpy="-1 0 0"/>
+    <origin xyz="0 0.0052 0.1349" rpy="-0.5 0 0"/>
     <axis xyz="1 0 0"/>
-    <limit lower="-2.5" upper="1.2" effort="35" velocity="1"/>
+    <limit lower="-2.6" upper="0.5" effort="35" velocity="1"/>
   </joint>
 
   <joint name="Wrist_Roll" type="revolute">
@@ -220,8 +220,8 @@
   <joint name="Jaw" type="revolute">
     <parent link="Fixed_Jaw"/>
     <child link="Moving_Jaw"/>
-    <origin xyz="-0.0202 -0.0244 0" rpy="0 3.14158 0"/>
+    <origin xyz="-0.0202 -0.0244 0" rpy="0 3.14158 0.17"/>
     <axis xyz="0 0 1"/>
-    <limit lower="-0.2" upper="2.0" effort="35" velocity="1"/>
+    <limit lower="-0.03" upper="2.0" effort="35" velocity="1"/>
   </joint>
 </robot> 
