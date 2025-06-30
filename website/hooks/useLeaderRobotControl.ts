@@ -19,6 +19,15 @@ export function useLeaderRobotControl(servoIds: number[]) {
       setInitialPositions(initialPosMap);
       // Record servo IDs that can be successfully read
       const readable = Array.from(initialPosMap.keys());
+
+      try {
+        for (const id of readable) {
+          //disable torque for all servos
+          await scsServoSDK.writeTorqueEnable(id, false);
+        }
+      } catch (e) {
+        console.error(`Error disabling torque for servo:`, e);  
+      }
       setReadableServoIds(readable);
       setIsConnected(true);
     } catch (e) {
@@ -29,13 +38,6 @@ export function useLeaderRobotControl(servoIds: number[]) {
       throw e;
     }
 
-    try {
-      for (const id of readableServoIds) {
-        await scsServoSDK.writeTorqueEnable(id, false);
-      }
-    } catch (e) {
-      console.error(`Error disabling torque for servo ${id}:`, e);
-    }
   }, [servoIds]);
 
   // Disconnect
@@ -54,6 +56,7 @@ export function useLeaderRobotControl(servoIds: number[]) {
     if (!isConnected || readableServoIds.length === 0) return new Map();
     try {
       const pos = await scsServoSDK.syncReadPositions(readableServoIds);
+      
       // Calculate relative position change for each joint
       const positionChange = new Map<number, number>();
       pos.forEach((p, sid) => {

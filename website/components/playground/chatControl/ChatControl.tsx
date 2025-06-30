@@ -10,7 +10,7 @@ import {
   getBaseURLFromLocalStorage,
   getSystemPromptFromLocalStorage,
   getModelFromLocalStorage,
-} from "../../../lib/settings";
+} from "../../../lib/chatSettings";
 import useMeasure from "react-use-measure";
 import { panelStyle } from "@/components/playground/panelStyle";
 
@@ -52,16 +52,11 @@ export function ChatControl({
   });
 
   useEffect(() => {
-    if (
-      bounds.height > 0 &&
-      bounds.width > 0 &&
-      position.x === 0 &&
-      position.y === 0
-    ) {
+    if (bounds.height > 0) {
       setPosition((pos) => ({
         ...pos,
         x: window.innerWidth - bounds.width - 20,
-        y: 60,
+        y: 70,
       }));
     }
   }, [bounds.height]);

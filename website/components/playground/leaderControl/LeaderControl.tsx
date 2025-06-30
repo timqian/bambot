@@ -14,7 +14,7 @@ import { LeaderConnectionHelpDialog } from "./LeaderConnectionHelpDialog";
  * - onHide: () => void
  */
 
-const SYNC_INTERVAL = 15; // ms
+const SYNC_INTERVAL = 10; // ms
 
 const LeaderControl = ({
   leaderControl,
@@ -61,14 +61,11 @@ const LeaderControl = ({
   // Initially position to bottom left corner
   useEffect(() => {
     if (
-      bounds.height > 0 &&
-      bounds.width > 0 &&
-      position.x === 0 &&
-      position.y === 0
+      bounds.height > 0
     ) {
       setPosition({ x: 20, y: window.innerHeight - bounds.height - 20 });
     }
-  }, [ref, position.x, position.y]);
+  }, [bounds.height]);
 
   const handleConnect = async () => {
     setConnectionStatus("connecting");

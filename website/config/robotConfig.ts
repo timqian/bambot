@@ -41,6 +41,10 @@ export type RobotConfig = {
 export const robotConfigMap: { [key: string]: RobotConfig } = {
   "so-arm100": {
     urdfUrl: "/URDF/so_arm100.urdf",
+    // urdfUrl: "/so-101/so101.urdf",
+        // urdfUrl: "https://lomlytpintjpeu4a.public.blob.vercel-storage.com/so-101/so101.urdf",
+    // urdfUrl: "https://huggingface.co/datasets/bambot/robot-URDFs/resolve/main/URDF/so_arm100.urdf",
+    // urdfUrl: "https://hf-mirror.com/datasets/bambot/robot-URDFs/resolve/main/URDF/so_arm100.urdf",
     camera: { position: [-20, 10, -15], fov: 20 },
     orbitTarget: [0, 1, 0],
     keyboardControlMap: {

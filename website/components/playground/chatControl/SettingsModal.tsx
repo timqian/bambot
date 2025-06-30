@@ -9,7 +9,7 @@ import {
   setSystemPromptToLocalStorage,
   getModelFromLocalStorage,
   setModelToLocalStorage,
-} from "../../../lib/settings";
+} from "../../../lib/chatSettings";
 
 interface SettingsModalProps {
   show: boolean;

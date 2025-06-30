@@ -2,9 +2,11 @@
  * Control virtual degree with this hook, the real degree is auto managed
  */
 
-import { useState, useCallback, useEffect, useRef} from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { ScsServoSDK } from "feetech.js";
-import { servoPositionToAngle, degreesToServoPosition } from "../lib/utils"; // Import utility functions
+import { servoPositionToAngle, degreesToServoPosition } from "../lib/utils";
+import { RECORDING_INTERVAL } from "@/config/uiConfig";
+
 // import { JointDetails } from "@/components/RobotLoader"; // <-- IMPORT JointDetails type
 type JointDetails = {
   name: string;
@@ -42,11 +44,18 @@ export type UpdateJointsSpeed = (
   updates: { servoId: number; speed: number }[]
 ) => Promise<void>;
 
+export type RecordData = number[][]; // Array of arrays representing servo positions/speeds
+
 export function useRobotControl(initialJointDetails: JointDetails[]) {
   // 保证 SDK 实例唯一
   const scsServoSDK = useRef(new ScsServoSDK()).current;
   const [isConnected, setIsConnected] = useState(false);
   const [jointDetails, setJointDetails] = useState(initialJointDetails);
+
+  // Recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordData, setRecordData] = useState<RecordData>([]);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Joint states
   const [jointStates, setJointStates] = useState<JointState[]>(
@@ -93,7 +102,9 @@ export function useRobotControl(initialJointDetails: JointDetails[]) {
             newStates[i].realSpeed = 0;
           } else {
             await scsServoSDK.setPositionMode(jointDetails[i].servoId);
-            const servoPosition = await scsServoSDK.readPosition(jointDetails[i].servoId);
+            const servoPosition = await scsServoSDK.readPosition(
+              jointDetails[i].servoId
+            );
             const positionInDegrees = servoPositionToAngle(servoPosition);
             initialPos.push(positionInDegrees);
             newStates[i].realDegrees = positionInDegrees;
@@ -102,7 +113,10 @@ export function useRobotControl(initialJointDetails: JointDetails[]) {
             await scsServoSDK.writeTorqueEnable(jointDetails[i].servoId, true);
           }
         } catch (error) {
-          console.error(`Failed to initialize joint ${jointDetails[i].servoId}:`, error);
+          console.error(
+            `Failed to initialize joint ${jointDetails[i].servoId}:`,
+            error
+          );
           initialPos.push(0);
           if (jointDetails[i].jointType === "revolute") {
             newStates[i].realDegrees = "error";
@@ -117,7 +131,7 @@ export function useRobotControl(initialJointDetails: JointDetails[]) {
       console.log("Robot connected successfully.");
     } catch (error) {
       setIsConnected(false);
-      alert(error)
+      alert(error);
       console.error("Failed to connect to the robot:", error);
     }
   }, [jointStates, jointDetails]);
@@ -156,6 +170,54 @@ export function useRobotControl(initialJointDetails: JointDetails[]) {
       console.error("Failed to disconnect from the robot:", error);
     }
   }, [jointDetails]);
+
+  // Recording functions - 使用定时器确保每20ms都记录一帧
+  const startRecording = useCallback(() => {
+    setIsRecording(true);
+    setRecordData([]);
+
+    recordingIntervalRef.current = setInterval(() => {
+      const currentFrame: number[] = [];
+
+      jointDetails.forEach((joint) => {
+        const jointState = jointStates.find(
+          (state) => state.servoId === joint.servoId
+        );
+        if (jointState) {
+          if (joint.jointType === "revolute") {
+            currentFrame.push(jointState.virtualDegrees ?? 0);
+          } else if (joint.jointType === "continuous") {
+            currentFrame.push(jointState.virtualSpeed ?? 0);
+          }
+        } else {
+          currentFrame.push(0);
+        }
+      });
+
+      setRecordData((prev) => [...prev, currentFrame]);
+    }, RECORDING_INTERVAL);
+  }, [jointDetails, jointStates]);
+
+  const stopRecording = useCallback(() => {
+    setIsRecording(false);
+    if (recordingIntervalRef.current) {
+      clearInterval(recordingIntervalRef.current);
+      recordingIntervalRef.current = null;
+    }
+  }, []);
+
+  const clearRecordData = useCallback(() => {
+    setRecordData([]);
+  }, []);
+
+  // Clean up recording interval on unmount
+  useEffect(() => {
+    return () => {
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+    };
+  }, []);
 
   // Update revolute joint degrees
   const updateJointDegrees = useCallback(
@@ -362,7 +424,13 @@ export function useRobotControl(initialJointDetails: JointDetails[]) {
     updateJointDegrees,
     updateJointsDegrees,
     updateJointSpeed,
-    updateJointsSpeed, // New function
+    updateJointsSpeed,
     setJointDetails,
+    // Recording functions
+    isRecording,
+    recordData,
+    startRecording,
+    stopRecording,
+    clearRecordData,
   };
 }
