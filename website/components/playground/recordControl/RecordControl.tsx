@@ -3,6 +3,7 @@ import { Rnd } from "react-rnd";
 import useMeasure from "react-use-measure";
 import { panelStyle } from "@/components/playground/panelStyle";
 import { RECORDING_INTERVAL } from "@/config/uiConfig";
+import { ReplayHelpDialog } from "./ReplayHelpDialog";
 
 interface RecordControlProps {
   show: boolean;
@@ -274,23 +275,26 @@ const RecordControl = ({
             Stop
           </button>
 
-          <button
-            className={`flex-1 px-2 py-2 rounded text-xs whitespace-nowrap ${
-              recordingState === "stopped"
-                ? "bg-blue-600 hover:bg-blue-500"
-                : recordingState === "replaying"
-                ? "bg-orange-600 hover:bg-orange-500"
-                : "bg-gray-700 cursor-not-allowed"
-            }`}
-            onClick={
-              recordingState === "replaying" ? handleStopReplay : handleReplay
-            }
-            disabled={
-              recordingState !== "stopped" && recordingState !== "replaying"
-            }
-          >
-            {recordingState === "replaying" ? "Stop Replay" : "Replay"}
-          </button>
+          <div className="flex-1 flex items-center gap-2">
+            <button
+              className={`w-full px-2 py-2 rounded text-xs whitespace-nowrap ${
+                recordingState === "stopped"
+                  ? "bg-blue-600 hover:bg-blue-500"
+                  : recordingState === "replaying"
+                  ? "bg-orange-600 hover:bg-orange-500"
+                  : "bg-gray-700 cursor-not-allowed"
+              }`}
+              onClick={
+                recordingState === "replaying" ? handleStopReplay : handleReplay
+              }
+              disabled={
+                recordingState !== "stopped" && recordingState !== "replaying"
+              }
+            >
+              {recordingState === "replaying" ? "Stop Replay" : "Replay"}
+            </button>
+            <ReplayHelpDialog />
+          </div>
 
           {/* <button
             className={`flex-1 px-2 py-2 rounded text-xs ${

@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 // import { Bell } from "lucide-react";
 import { RiNotification2Line } from "@remixicon/react";
 
-import { NotificationDialog } from "@/components/playground/leaderControl/NotificationDialog";
+import { NotificationDialog } from "@/components/NotificationDialog";
 
 export default function Header() {
   const [showNotification, setShowNotification] = useState(false);
