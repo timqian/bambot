@@ -43,9 +43,9 @@ export type RobotConfig = {
 // Define configuration map per slug
 export const robotConfigMap: { [key: string]: RobotConfig } = {
   "so-arm100": {
-    // urdfUrl: "/URDF/so_arm100.urdf",
+    urdfUrl: "/URDFs/so101.urdf",
     // urdfUrl: "/so-101/so101.urdf",
-    urdfUrl: "https://lomlytpintjpeu4a.public.blob.vercel-storage.com/so101.urdf",
+    // urdfUrl: "https://lomlytpintjpeu4a.public.blob.vercel-storage.com/so101.urdf",
     // urdfUrl: "https://huggingface.co/datasets/bambot/robot-URDFs/resolve/main/URDF/so_arm100.urdf",
     // urdfUrl: "https://hf-mirror.com/datasets/bambot/robot-URDFs/resolve/main/URDF/so_arm100.urdf",
     camera: { position: [-30, 10, 30], fov: 12 },
@@ -118,7 +118,7 @@ export const robotConfigMap: { [key: string]: RobotConfig } = {
     `,
   },
   "bambot-v0": {
-    urdfUrl: "https://lomlytpintjpeu4a.public.blob.vercel-storage.com/bambot_v0.urdf",
+    urdfUrl: "/URDFs/bambot_v0.urdf",
     camera: { position: [-30, 25, 28], fov: 25 },
     orbitTarget: [0, 2, 0],
     keyboardControlMap: {
@@ -170,7 +170,7 @@ export const robotConfigMap: { [key: string]: RobotConfig } = {
     `,
   },
   "bambot-v0-base": {
-    urdfUrl: "https://lomlytpintjpeu4a.public.blob.vercel-storage.com/bambot_v0_base.urdf",
+    urdfUrl: "/URDFs/bambot_v0_base.urdf",
     camera: { position: [-30, 25, 28], fov: 25 },
     orbitTarget: [0, 2, 0],
     jointNameIdMap: {
@@ -187,7 +187,7 @@ export const robotConfigMap: { [key: string]: RobotConfig } = {
     If the user describes roughly wanting to make it longer or shorter, adjust the duration accordingly.`,
   },
   sts3215: {
-    urdfUrl: "https://lomlytpintjpeu4a.public.blob.vercel-storage.com/sts3215.urdf",
+    urdfUrl: "/URDFs/sts3215.urdf",
     camera: { position: [10, 10, 10], fov: 12 },
     orbitTarget: [0.5, 1, 0],
     keyboardControlMap: {
