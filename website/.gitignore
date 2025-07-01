@@ -1,5 +1,4 @@
-public/URDF/lekiwi/
-public/URDFs/
+public/URDFs/lekiwi/
 .DS_Store
 
 # dependencies

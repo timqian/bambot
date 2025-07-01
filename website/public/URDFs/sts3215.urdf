@@ -1,0 +1,43 @@
+<?xml version='1.0' encoding='utf-8'?>
+<robot name="sts3215">
+  <material name="black">
+    <color rgba="0.1 0.1 0.1 1.0"/>
+  </material>
+  <material name="green">
+    <color rgba="0.06 0.4 0.1 1.0"/>
+  </material>
+
+  <link name="Base">
+    <visual>
+      <origin xyz="0 0 -0.01" rpy="-1.57079 0 0"/>
+      <geometry>
+        <mesh filename="bambot_assets/Base_Motor.stl"/>
+        
+      </geometry>
+      <material name="black"/>
+    </visual>
+  </link>
+
+  <link name="Rotation_Pitch">
+    <inertial>
+      <mass value="0.119226"/>
+      <origin xyz="-9.07886e-05 0.0590972 0.01089" rpy="0 0 0"/>
+      <inertia ixx="5.94278e-05" ixy="0" ixz="0" iyy="5.89975e-05" iyz="0" izz="3.13712e-05"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <box size="0.07 0.005 0.021"/>
+      </geometry>
+      <material name="green"/>
+    </visual>
+  </link>
+
+
+  <joint name="Rotation" type="revolute">
+    <parent link="Base"/>
+    <child link="Rotation_Pitch"/>
+    <origin xyz="0 0.065 0.036" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-3.14158" upper="3.14158" effort="35" velocity="1"/>
+  </joint>
+</robot>
