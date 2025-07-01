@@ -4,40 +4,34 @@ import { ScsServoSDK } from "feetech.js";
 export function useLeaderRobotControl(servoIds: number[]) {
   const scsServoSDK = useRef(new ScsServoSDK()).current;
   const [isConnected, setIsConnected] = useState(false);
-  const [initialPositions, setInitialPositions] = useState<Map<number, number>>(
-    new Map()
-  );
   const [readableServoIds, setReadableServoIds] = useState<number[]>([]);
 
   // Connect to leader robot
   const connectLeader = useCallback(async () => {
     try {
       await scsServoSDK.connect();
-      // Read initial positions
+      // Read initial positions to see which servos are readable
       const pos = await scsServoSDK.syncReadPositions(servoIds);
-      const initialPosMap = new Map(pos);
-      setInitialPositions(initialPosMap);
-      // Record servo IDs that can be successfully read
-      const readable = Array.from(initialPosMap.keys());
+      const readable = Array.from(new Map(pos).keys());
 
-      try {
-        for (const id of readable) {
-          //disable torque for all servos
-          await scsServoSDK.writeTorqueEnable(id, false);
+      if (readable.length > 0) {
+        try {
+          for (const id of readable) {
+            //disable torque for all servos
+            await scsServoSDK.writeTorqueEnable(id, false);
+          }
+        } catch (e) {
+          console.error(`Error disabling torque for servo:`, e);
         }
-      } catch (e) {
-        console.error(`Error disabling torque for servo:`, e);  
       }
       setReadableServoIds(readable);
       setIsConnected(true);
     } catch (e) {
       setIsConnected(false);
-      setInitialPositions(new Map());
       setReadableServoIds([]);
       alert(e);
       throw e;
     }
-
   }, [servoIds]);
 
   // Disconnect
@@ -46,36 +40,26 @@ export function useLeaderRobotControl(servoIds: number[]) {
       await scsServoSDK.disconnect();
     } finally {
       setIsConnected(false);
-      setInitialPositions(new Map());
       setReadableServoIds([]);
     }
   }, []);
 
-  // Get joint angles and calculate position changes
-  const getPositionChange = useCallback(async () => {
+  // Get joint positions
+  const getPositions = useCallback(async () => {
     if (!isConnected || readableServoIds.length === 0) return new Map();
     try {
       const pos = await scsServoSDK.syncReadPositions(readableServoIds);
-      
-      // Calculate relative position change for each joint
-      const positionChange = new Map<number, number>();
-      pos.forEach((p, sid) => {
-        const servoId = Number(sid);
-        const initial = initialPositions.get(servoId) ?? 0;
-        positionChange.set(servoId, p - initial);
-      });
-      return positionChange;
+      return new Map<number, number>(pos);
     } catch (e) {
       console.error("Error reading positions:", e);
       return new Map();
     }
-  }, [isConnected, readableServoIds, initialPositions]);
+  }, [isConnected, readableServoIds]);
 
   return {
     isConnected,
     connectLeader,
     disconnectLeader,
-    initialPositions,
-    getPositionChange,
+    getPositions,
   };
 }

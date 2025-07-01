@@ -94,18 +94,18 @@ export function RobotScene({
         const jointObj = robotRef.current!.joints[state.name];
         if (jointObj) {
           if (
-            state.virtualDegrees !== undefined &&
+            state.degrees !== undefined &&
+            typeof state.degrees === "number" &&
             jointObj.jointType !== "continuous"
           ) {
-            jointObj.setJointValue(degreesToRadians(state.virtualDegrees));
+            jointObj.setJointValue(degreesToRadians(state.degrees));
           } else if (
-            state.virtualSpeed !== undefined &&
+            state.speed !== undefined &&
+            typeof state.speed === "number" &&
             jointObj.jointType === "continuous"
           ) {
             const currentAngle = Number(jointObj.angle) || 0;
-            jointObj.setJointValue(
-              currentAngle + (state.virtualSpeed * delta) / 500
-            );
+            jointObj.setJointValue(currentAngle + (state.speed * delta) / 500);
           }
         }
       });

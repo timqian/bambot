@@ -20,15 +20,14 @@ type RevoluteJointsTableProps = {
 const KEY_UPDATE_INTERVAL_MS = 3;
 const KEY_UPDATE_STEP_DEGREES = 0.15;
 
-const formatVirtualDegrees = (degrees?: number) =>
-  degrees !== undefined
-    ? `${degrees > 0 ? "+" : ""}${degrees.toFixed(1)}°`
-    : "/";
-const formatRealDegrees = (degrees?: number | "N/A" | "error") => {
+const formatDegrees = (degrees?: number | "N/A" | "error") => {
   if (degrees === "error") {
     return <span className="text-red-500">Error</span>;
   }
-  return degrees === "N/A" ? "/" : `${degrees?.toFixed(1)}°`;
+  if (typeof degrees === "number") {
+    return `${degrees.toFixed(1)}°`;
+  }
+  return "/";
 };
 
 // compoundMovements 约定：keys[0] 是正向运动，keys[1] 是反向运动
@@ -107,7 +106,8 @@ export function RevoluteJointsTable({
         .map((joint) => {
           const decreaseKey = currentControlMap[joint.servoId!]?.[1];
           const increaseKey = currentControlMap[joint.servoId!]?.[0];
-          let currentDegrees = joint.virtualDegrees || 0;
+          let currentDegrees =
+            typeof joint.degrees === "number" ? joint.degrees : 0;
           let newValue = currentDegrees;
 
           if (decreaseKey && currentPressedKeys.has(decreaseKey)) {
@@ -147,14 +147,18 @@ export function RevoluteJointsTable({
           (j) => j.servoId === cm.primaryJoint
         );
         if (!primaryJoint) return;
-        const primary = primaryJoint.virtualDegrees || 0;
+        const primary =
+          typeof primaryJoint.degrees === "number" ? primaryJoint.degrees : 0;
 
         // 取第一个 dependent joint 作为 dependent
         const dependentJointId = cm.dependents[0]?.joint;
         const dependentJoint = currentJoints.find(
           (j) => j.servoId === dependentJointId
         );
-        const dependent = dependentJoint?.virtualDegrees || 0;
+        const dependent =
+          typeof dependentJoint?.degrees === "number"
+            ? dependentJoint.degrees
+            : 0;
 
         // 步进大小总是 KEY_UPDATE_STEP_DEGREES
         // sign 决定方向，正向为 +1，反向为 -1
@@ -205,7 +209,10 @@ export function RevoluteJointsTable({
             (j) => j.servoId === dep.joint
           );
           if (!dependentJoint) return;
-          const dependent = dependentJoint.virtualDegrees || 0;
+          const dependent =
+            typeof dependentJoint.degrees === "number"
+              ? dependentJoint.degrees
+              : 0;
           let deltaDependent = 0;
           try {
             // eslint-disable-next-line no-new-func
@@ -287,9 +294,6 @@ export function RevoluteJointsTable({
             <th className="border-b border-zinc-600 pb-1 text-center pl-2">
               Angle
             </th>
-            <th className="border-b border-zinc-600 pb-1 text-center pl-2">
-              Real Angle
-            </th>
             <th className="border-b border-zinc-600 pb-1 text-center px-2">
               Control
             </th>
@@ -313,10 +317,7 @@ export function RevoluteJointsTable({
                 </td>
 
                 <td className="pr-2 text-center w-16">
-                  {formatVirtualDegrees(detail.virtualDegrees)}
-                </td>
-                <td className="pl-2 text-center w-16">
-                  {formatRealDegrees(detail.realDegrees)}
+                  {formatDegrees(detail.degrees)}
                 </td>
                 <td className="py-1 px-4 flex items-center">
                   <button
@@ -346,7 +347,9 @@ export function RevoluteJointsTable({
                       radiansToDegrees(detail.limit?.upper ?? Math.PI)
                     )}
                     step="0.1"
-                    value={detail.virtualDegrees || 0}
+                    value={
+                      typeof detail.degrees === "number" ? detail.degrees : 0
+                    }
                     // Note: onChange is only triggered by user sliding the range input,
                     // not when the `value` prop changes programmatically (e.g., via button clicks).
                     onChange={(e) => {

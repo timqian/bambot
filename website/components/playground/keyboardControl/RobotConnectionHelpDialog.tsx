@@ -28,7 +28,7 @@ export function RobotConnectionHelpDialog() {
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <div>
+          {/* <div>
             <div className="font-semibold mb-2">Before connecting:</div>
             <ul className="list-disc list-inside space-y-1 text-zinc-300">
               <li className="text-red-400 font-semibold">
@@ -38,12 +38,12 @@ export function RobotConnectionHelpDialog() {
               <li>Power on your robot</li>
               <li>Select the correct serial device when prompted</li>
             </ul>
-          </div>
+          </div> */}
                     <div>
             <div className="font-semibold mb-2">How it works:</div>
             <ul className="list-disc list-inside space-y-1 text-zinc-300">
-              <li>The follower robot will mirror the movements</li>
-              <li><span className="text-red-400 font-semibold">Position changes</span> are synchronized in real-time</li>
+              {/* <li>The joints of the follower robot will mirror the positions of the virtual robot</li> */}
+              <li>Servo positions are mirrored in real-time</li>
             </ul>
           </div>
           <div>

@@ -80,6 +80,7 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
     keyboardControlMap,
     compoundMovements,
     systemPrompt,
+    urdfInitJointAngles,
   } = config;
 
   const {
@@ -97,7 +98,7 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
     startRecording,
     stopRecording,
     clearRecordData,
-  } = useRobotControl(jointDetails);
+  } = useRobotControl(jointDetails, urdfInitJointAngles);
 
   useEffect(() => {
     updateJointDetails(jointDetails);
@@ -206,13 +207,21 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
         leaderControl={leaderControl}
         jointDetails={jointDetails}
         onSync={(leaderAngles: { servoId: number; angle: number }[]) => {
+          const revoluteJoints = jointDetails.filter(
+            (j) => j.jointType === "revolute"
+          );
+          const revoluteServoIds = new Set(
+            revoluteJoints.map((j) => j.servoId)
+          );
           updateJointsDegrees(
-            leaderAngles.map(
-              ({ servoId, angle }: { servoId: number; angle: number }) => ({
-                servoId,
-                value: angle,
-              })
-            )
+            leaderAngles
+              .filter((la) => revoluteServoIds.has(la.servoId))
+              .map(
+                ({ servoId, angle }: { servoId: number; angle: number }) => ({
+                  servoId,
+                  value: angle,
+                })
+              )
           );
         }}
       />

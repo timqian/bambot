@@ -13,13 +13,14 @@ type ContinuousJointsTableProps = {
   maxSpeed: number;
 };
 
-const formatVirtualSpeed = (speed?: number) =>
-  speed !== undefined ? speed.toFixed(0) : "/";
-const formatRealSpeed = (speed?: number | "N/A" | "error") => {
+const formatSpeed = (speed?: number | "N/A" | "error") => {
   if (speed === "error") {
     return <span className="text-red-500">Error</span>;
   }
-  return speed === "N/A" ? "/" : `${speed?.toFixed(0)}`;
+  if (typeof speed === "number") {
+    return speed.toFixed(0);
+  }
+  return "/";
 };
 
 export function ContinuousJointsTable({
@@ -90,9 +91,6 @@ export function ContinuousJointsTable({
               <th className="border-b border-gray-600 pb-1 text-center px-2">
                 Speed
               </th>
-              <th className="border-b border-gray-600 pb-1 text-center px-2">
-                Real Speed
-              </th>
               <th className="px-8 border-b border-gray-600">Control</th>
             </tr>
           </thead>
@@ -101,10 +99,7 @@ export function ContinuousJointsTable({
               <tr key={detail.servoId}>
                 <td className="py-1">{detail.name}</td>
                 <td className="py-1 pr-2 text-center">
-                  {formatVirtualSpeed(detail.virtualSpeed)}
-                </td>
-                <td className="py-1 pl-2 text-center">
-                  {formatRealSpeed(detail.realSpeed)}
+                  {formatSpeed(detail.speed)}
                 </td>
               </tr>
             ))}

@@ -28,7 +28,7 @@ export function LeaderConnectionHelpDialog() {
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <div>
+          {/* <div>
             <div className="font-semibold mb-2">Before connecting:</div>
             <ul className="list-disc list-inside space-y-1 text-zinc-300">
               <li className="text-red-400 font-semibold">
@@ -38,17 +38,14 @@ export function LeaderConnectionHelpDialog() {
               <li>Power on your leader robot</li>
               <li>Select the correct serial device when prompted</li>
             </ul>
-          </div>
+          </div> */}
           <div>
             <div className="font-semibold mb-2">How it works:</div>
             <ul className="list-disc list-inside space-y-1 text-zinc-300">
-              <li>Move the leader robot joints manually</li>
-              <li>The follower robot will mirror the movements</li>
+              {/* <li>After connecting, move the leader robot manually</li>
+              <li>The follower robot will mirror the movements</li> */}
               <li>
-                <span className="text-red-400 font-semibold">
-                  Position changes
-                </span>{" "}
-                are synchronized in real-time
+                Servo positions are synchronized in real-time
               </li>
             </ul>
           </div>
