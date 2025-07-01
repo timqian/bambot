@@ -51,7 +51,7 @@ export function RobotConnectionHelpDialog() {
               Safety tips:
             </div>
             <ul className="list-disc list-inside space-y-1 text-zinc-300">
-              <li>Keep hands clear of moving parts</li>
+                <li>Do not move the follower robot by hand; torque is enabled and this may damage the servos.</li>
               <li>Use slower speeds when first connecting</li>
               <li>Disconnect immediately if unexpected behavior occurs</li>
             </ul>
