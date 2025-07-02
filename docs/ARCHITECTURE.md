@@ -1,6 +1,7 @@
 # Bambot Architecture Documentation
 
 ## Table of Contents
+
 - [Overview](#overview)
 - [System Architecture](#system-architecture)
 - [Component Details](#component-details)
@@ -68,10 +69,12 @@ Bambot is a web-based platform for controlling various types of robots through a
 ### 1. **Frontend Components** (`website/`)
 
 #### Core Pages
+
 - **Landing Page** (`app/page.tsx`): Displays available robots with play/assemble options
 - **Play Page** (`app/play/[slug]/page.tsx`): Main robot control interface
 
 #### Key Components
+
 - **RobotScene** (`components/RobotScene.tsx`): 3D visualization using Three.js
 - **ControlPanel** (`components/ControlPanel.tsx`): UI for selecting control modes
 - **KeyboardControl**: Maps keyboard inputs to robot movements
@@ -81,6 +84,7 @@ Bambot is a web-based platform for controlling various types of robots through a
 ### 2. **Hardware SDK** (`feetech.js/`)
 
 #### Core Modules
+
 - **scsServoSDK.mjs**: High-level API for servo control
   - `connect()`: Establishes serial connection
   - `writePos()`: Sets servo position
@@ -95,6 +99,7 @@ Bambot is a web-based platform for controlling various types of robots through a
 ### 3. **Robot Configurations**
 
 Each robot is defined in `robotConfigMap` with:
+
 ```typescript
 interface RobotConfig {
   urdfPath: string;           // Path to URDF model
@@ -108,6 +113,7 @@ interface RobotConfig {
 ## Data Flow
 
 ### Control Flow Sequence
+
 ```
 1. User Input (Keyboard/Leader/AI)
          │
@@ -132,6 +138,7 @@ interface RobotConfig {
 ```
 
 ### State Synchronization
+
 - Joint states are maintained in the `useRobotControl` hook
 - Updates trigger both 3D visualization and hardware commands
 - Recording system captures states at regular intervals (50ms default)
@@ -139,11 +146,13 @@ interface RobotConfig {
 ## Architecture Patterns
 
 ### 1. **Configuration-Driven Design**
+
 - All robot-specific details centralized in configuration objects
 - Easy to add new robots without modifying core logic
 - Supports different robot types (arms, wheeled, quadruped, humanoid)
 
 ### 2. **Hook-Based State Management**
+
 ```typescript
 // Custom hooks encapsulate complex logic
 const useRobotControl = (robotConfig, sdk) => {
@@ -154,11 +163,13 @@ const useRobotControl = (robotConfig, sdk) => {
 ```
 
 ### 3. **Real-Time Control Architecture**
+
 - Direct serial communication for low latency (~10ms round trip)
 - Optimistic UI updates for responsive feel
 - Graceful degradation when hardware not connected
 
 ### 4. **Modular Control Interfaces**
+
 - Each control mode is a separate component
 - Shared state through context/props
 - Easy to add new control paradigms
@@ -166,6 +177,7 @@ const useRobotControl = (robotConfig, sdk) => {
 ## Technology Stack
 
 ### Frontend
+
 - **Framework**: Next.js 15.3.2 (App Router)
 - **UI Library**: React 19
 - **Language**: TypeScript
@@ -174,11 +186,13 @@ const useRobotControl = (robotConfig, sdk) => {
 - **Components**: Radix UI
 
 ### Hardware Communication
+
 - **Protocol**: Web Serial API
 - **Format**: Custom binary protocol (Feetech)
 - **Baud Rate**: 1,000,000 (configurable)
 
 ### AI Integration
+
 - **SDK**: Vercel AI SDK
 - **Model**: OpenAI GPT-4
 - **Interface**: Streaming chat responses
@@ -189,6 +203,7 @@ const useRobotControl = (robotConfig, sdk) => {
 
 1. Create URDF model in `public/urdfs/`
 2. Add configuration to `robotConfigMap`:
+
 ```typescript
 export const robotConfigMap = {
   "your-robot": {
