@@ -64,7 +64,7 @@ export function useRobotControl(
       jointType: j.jointType,
       degrees:
         j.jointType === "revolute"
-          ? urdfInitJointAngles?.[j.name] ?? 180
+          ? urdfInitJointAngles?.[j.name] ?? 0 
           : undefined,
       speed: j.jointType === "continuous" ? 0 : undefined,
       servoId: j.servoId, // Assign servoId based on index
@@ -82,7 +82,7 @@ export function useRobotControl(
         jointType: j.jointType,
         degrees:
           j.jointType === "revolute"
-            ? urdfInitJointAngles?.[j.name] ?? 180
+            ? urdfInitJointAngles?.[j.name] ?? 0
             : undefined,
         speed: j.jointType === "continuous" ? 0 : undefined,
         servoId: j.servoId, // Assign servoId based on index

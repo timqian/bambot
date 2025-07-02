@@ -1,56 +1,17 @@
 "use client";
 
 import { StarField } from "@/components/star-field";
+import { robotConfigMap } from "@/config/robotConfig";
 
 import Link from "next/link";
 
 export default function Home() {
-  const robots = [
-    {
-      id: 1,
-      name: "so-arm100",
-      image: "/so-arm100.jpg",
-      playLink: "/play/so-arm100",
-      assembleLink:
-        "https://huggingface.co/docs/lerobot/so101",
-    },
-    {
-      id: 2,
-      name: "bambot v0",
-      image: "/bambot_v0.jpg",
-      playLink: "/play/bambot-v0",
-      assembleLink: "https://github.com/timqian/bambot/tree/main/hardware",
-    },
-    {
-      id: 3,
-      name: "bambot base v0",
-      image: "/bambot_v0_base.png",
-      playLink: "/play/bambot-v0-base",
-      assembleLink: "https://github.com/timqian/bambot/tree/main/hardware",
-    },
-    {
-      id: 0,
-      name: "sts3215 servo",
-      image: "/sts3215.png",
-      playLink: "/play/sts3215",
-      assembleLink: "",
-    },
-    // {
-    //   id: 3,
-    //   name: "bambot base v0",
-    //   image: "/bambot_v0.jpg",
-    //   playLink: "/play/bambot-base-v0",
-    //   assembleLink: "/assemble/bambot-base-v0",
-    // },
-    // Example: Add a 4th bot to test layout
-    // {
-    //   id: 4,
-    //   name: "Example Bot 4",
-    //   image: "/bambot_v0.jpg", // Use appropriate image
-    //   playLink: "/play/example-bot-4",
-    //   assembleLink: "/assemble/example-bot-4",
-    // },
-  ];
+  const robots = Object.entries(robotConfigMap).map(([name, config]) => ({
+    name,
+    image: config.image,
+    playLink: `/play/${name}`,
+    assembleLink: config.assembleLink,
+  }));
 
   return (
     <main className="relative">
@@ -65,7 +26,7 @@ export default function Home() {
             {robots.map((robot) => (
               // Added width constraints for responsiveness and max 3 per row on large screens
               <div
-                key={robot.id}
+                key={robot.name}
                 className="rounded-2xl shadow-lg  shadow-zinc-800 border border-zinc-500 overflow-hidden w-[90%] sm:w-[40%] lg:w-[25%]" // Adjust percentages/basis as needed
               >
                 <div className="relative z-10">
@@ -83,16 +44,20 @@ export default function Home() {
                 <div className="flex">
                   <Link
                     href={robot.playLink}
-                    className="bg-black text-white w-1/2 py-2 text-center hover:bg-zinc-800 border-r border-t border-zinc-500"
+                    className={`bg-black text-white py-2 text-center hover:bg-zinc-800 border-t border-zinc-500 ${
+                      robot.assembleLink ? "w-1/2 border-r" : "w-full"
+                    }`}
                   >
                     Play
                   </Link>
-                  <Link
-                    href={robot.assembleLink}
-                    className="bg-black text-white w-1/2 py-2 text-center hover:bg-zinc-800 border-t border-zinc-500"
-                  >
-                    Assemble
-                  </Link>
+                  {robot.assembleLink && (
+                    <Link
+                      href={robot.assembleLink}
+                      className="bg-black text-white w-1/2 py-2 text-center hover:bg-zinc-800 border-t border-zinc-500"
+                    >
+                      Assemble
+                    </Link>
+                  )}
                 </div>
               </div>
             ))}

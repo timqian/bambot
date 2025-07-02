@@ -106,7 +106,7 @@ export function ControlPanel({
     >
       <div
         ref={ref}
-        className={"max-h-[90vh] overflow-y-auto text-sm " + panelStyle}
+        className={"max-h-[80vh] overflow-y-auto text-sm " + panelStyle}
       >
         <h3 className="mt-0 mb-4 border-b border-white/50  pb-1 font-bold text-base flex justify-between items-center">
           <span>Joint Controls</span>
