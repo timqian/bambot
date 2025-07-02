@@ -20,7 +20,7 @@ export default function Home() {
           {" "}
           {/* Ensure text-center container takes full width */}
           <h1 className="text-6xl mb-4 font-bold">BamBot</h1>
-          <p className="text-2xl mb-8">Open source, low-cost AI robots 🤖</p>
+          <p className="text-2xl mb-8">Make it easy to play with robots 🤖</p>
           {/* Changed from grid to flex for flexible centering */}
           <div className="container mx-auto p-4 flex flex-wrap justify-center gap-8 relative z-10">
             {robots.map((robot) => (

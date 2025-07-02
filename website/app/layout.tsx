@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "BamBot",
-  description: "Open source, low-cost AI robots 🤖",
+  description: "Make it easy to play with robots 🤖",
 };
 
 export default function RootLayout({
