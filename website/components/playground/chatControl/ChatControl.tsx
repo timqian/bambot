@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Rnd } from "react-rnd";
 import { generateText, tool } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
+import { createAnthropic } from "@ai-sdk/anthropic";
 import { SettingsModal } from "./SettingsModal";
 import { z } from "zod";
 import {
@@ -45,12 +46,24 @@ export function ChatControl({
     configSystemPrompt || // <-- Use configSystemPrompt if present
     `You can help control a robot by pressing keyboard keys. Use the keyPress tool to simulate key presses. Each key will be held down for 1 second by default. If the user describes roughly wanting to make it longer or shorter, adjust the duration accordingly.`;
 
-  // Create openai instance with current apiKey and baseURL
+  // Create provider instances
   const openai = createOpenAI({
     apiKey,
-    baseURL,
+    baseURL: baseURL === "https://api.openai.com/v1/" ? undefined : baseURL,
+  });
+  
+  const anthropic = createAnthropic({
+    apiKey,
   });
 
+  // Select provider based on base URL
+  const getSelectedModel = () => {
+    if (baseURL === "https://api.anthropic.com/v1") {
+      return anthropic(model);
+    } else {
+      return openai(model);
+    }
+  };
   useEffect(() => {
     if (bounds.height > 0) {
       setPosition((pos) => ({
@@ -71,7 +84,7 @@ export function ChatControl({
     setMessages((prev) => [...prev, { sender: "User", text: command }]);
     try {
       const result = await generateText({
-        model: openai(model),
+        model: getSelectedModel(),
         prompt: command,
         system: systemPrompt,
         tools: {
@@ -125,14 +138,17 @@ export function ChatControl({
       let text = result.text.trim();
       const content = result.response?.messages[1]?.content;
       for (const element of content ?? []) {
-        text += `\n\n${element.result}`;
+        if (typeof element === 'object' && 'result' in element) {
+          text += `\n\n${element.result}`;
+        }
       }
       setMessages((prev) => [...prev, { sender: "AI", text }]);
     } catch (error) {
       console.error("Error generating text:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
       setMessages((prev) => [
         ...prev,
-        { sender: "AI", text: "Error: Unable to process your request." },
+        { sender: "AI", text: `Error: ${errorMessage}` },
       ]);
     }
   };
@@ -156,6 +172,7 @@ export function ChatControl({
 
   return (
     <Rnd
+      enableResizing={false}
       position={position}
       onDragStop={(_, d) => setPosition({ x: d.x, y: d.y })}
       bounds="window"
@@ -226,8 +243,10 @@ export function ChatControl({
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              onKeyDown={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+                handleKeyPress(e);
+              }}
               onKeyUp={(e) => e.stopPropagation()}
               placeholder="Type a command..."
               className="flex-1 pl-10 p-2 rounded bg-zinc-700 text-white outline-none text-sm"

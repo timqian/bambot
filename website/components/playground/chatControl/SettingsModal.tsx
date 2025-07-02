@@ -31,7 +31,7 @@ export function SettingsModal({
   const [systemPrompt, setSystemPromptState] = useState("");
   const [model, setModelState] = useState("");
 
-  type ModelType = "OpenAI" | "Ollama" | "Custom";
+  type ModelType = "OpenAI" | "Ollama" | "Custom" | "Claude";
   const [modelType, setModelType] = useState<ModelType>("OpenAI");
   const [showUseDefaultPrompt, setShowUseDefaultPrompt] = useState(false);
 
@@ -52,7 +52,12 @@ export function SettingsModal({
         setModelType("Ollama");
         setBaseURLState("http://localhost:11434/v1");
         setModelState(getModelFromLocalStorage() || "mistral-small3.1");
-      } else {
+     
+      } else if (base === "https://api.anthropic.com/v1") {
+        setModelType("Claude");
+        setBaseURLState("https://api.anthropic.com/v1");
+        setModelState(getModelFromLocalStorage() ||
+      "claude-3-5-sonnet-20241022"); } else {
         setModelType("Custom");
         setBaseURLState(base);
         setModelState(getModelFromLocalStorage());
@@ -76,6 +81,8 @@ export function SettingsModal({
       setBaseURLState("https://api.openai.com/v1/");
     } else if (type === "Ollama") {
       setBaseURLState("http://localhost:11434/v1");
+    } else if (type === "Claude") {
+      setBaseURLState("https://api.anthropic.com/v1");
     } else {
       setBaseURLState(getBaseURLFromLocalStorage() || "");
     }
@@ -124,6 +131,7 @@ export function SettingsModal({
             className="p-1 rounded bg-zinc-700 text-white outline-none text-base font-semibold ml-4"
           >
             <option value="OpenAI">OpenAI</option>
+            <option value="Claude">Claude</option>
             <option value="Ollama">Ollama</option>
             <option value="Custom">Custom</option>
           </select>
@@ -140,6 +148,21 @@ export function SettingsModal({
                 className="underline text-blue-300 ml-1"
               >
                 https://platform.openai.com/api-keys
+              </a>
+              .<br />
+              The API Key is stored only in your browser.
+            </>
+          )}
+          {modelType === "Claude" && (
+            <>
+              Get your Claude API key at
+              <a
+                href="https://console.anthropic.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline text-blue-300 ml-1"
+              >
+                https://console.anthropic.com/
               </a>
               .<br />
               The API Key is stored only in your browser.
@@ -204,6 +227,8 @@ export function SettingsModal({
                 ? "mistral-small3.1"
                 : modelType === "OpenAI"
                 ? "gpt-4.1-nano"
+                : modelType === "Claude"
+                ? "claude-3-5-sonnet-20241022"
                 : ""
             }
             className="flex-1 p-2 rounded bg-zinc-700 text-white outline-none"

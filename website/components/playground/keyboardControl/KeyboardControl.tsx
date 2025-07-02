@@ -27,6 +27,7 @@ type ControlPanelProps = {
   updateJointsSpeed: UpdateJointsSpeed; // Add updateJointsSpeed
 
   isConnected: boolean;
+  gamepadActive?: boolean; // Add gamepadActive prop
 
   connectRobot: () => void;
   disconnectRobot: () => void;
@@ -49,6 +50,7 @@ export function ControlPanel({
   disconnectRobot,
   keyboardControlMap, // Destructure new prop
   compoundMovements, // Destructure new prop
+  gamepadActive = false, // Destructure gamepadActive prop
 }: ControlPanelProps) {
   const [connectionStatus, setConnectionStatus] = useState<
     "idle" | "connecting" | "disconnecting"
@@ -95,6 +97,7 @@ export function ControlPanel({
 
   return (
     <Rnd
+      enableResizing={false}
       position={position}
       onDragStop={(_, d) => {
         setPosition({ x: d.x, y: d.y });
@@ -128,6 +131,7 @@ export function ControlPanel({
             updateJointsDegrees={updateJointsDegrees}
             keyboardControlMap={keyboardControlMap}
             compoundMovements={compoundMovements}
+            gamepadActive={gamepadActive}
           />
         )}
 
