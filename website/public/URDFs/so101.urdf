@@ -353,37 +353,14 @@ https://cad.onshape.com/documents/7715cc284bb430fe6dab4ffd/w/4fd0791b683777b02f8
       </geometry>
     </collision>
   </link>
-  <!-- Joint from gripper to moving_jaw_so101_v1 -->
-  <joint name="Jaw" type="revolute">
-    <origin xyz="0.0202 0.0188 -0.0234" rpy="1.5708 3.315 0" />
-    <parent link="gripper" />
-    <child link="moving_jaw_so101_v1" />
+
+  <!-- Joint from base to shoulder -->
+  <joint name="Rotation" type="revolute">
+    <origin xyz="-0.124202 -0.168068 0.0948817" rpy="3.14159 0 0" />
+    <parent link="base" />
+    <child link="shoulder" />
     <axis xyz="0 0 1" />
-    <limit effort="10" velocity="10" lower="3.14" upper="4.88692" />
-  </joint>
-  <!-- Joint from wrist to gripper -->
-  <joint name="Wrist_Roll" type="revolute">
-    <origin xyz="2.77556e-16 -0.0611 0.0181" rpy="1.5708 3.1902695 3.14159" />
-    <parent link="wrist" />
-    <child link="gripper" />
-    <axis xyz="0 0 1" />
-    <limit effort="10" velocity="10" lower="0.39774" upper="5.9828" />
-  </joint>
-  <!-- Joint from lower_arm to wrist -->
-  <joint name="Wrist_Pitch" type="revolute">
-    <origin xyz="-0.1349 0.0052 8.44651e-17" rpy="0 0 1.57079" />
-    <parent link="lower_arm" />
-    <child link="wrist" />
-    <axis xyz="0 0 1" />
-    <limit effort="10" velocity="10" lower="1.48353" upper="4.79965" />
-  </joint>
-  <!-- Joint from upper_arm to lower_arm -->
-  <joint name="Elbow" type="revolute">
-    <origin xyz="-0.11257 -0.028 2.09886e-16" rpy="0 0 4.71239" />
-    <parent link="upper_arm" />
-    <child link="lower_arm" />
-    <axis xyz="0 0 1" />
-    <limit effort="10" velocity="10" lower="1.39626" upper="4.71239" />
+    <limit effort="10" velocity="10" lower="1.22014" upper="5.05986" />
   </joint>
   <!-- Joint from shoulder to upper_arm -->
   <joint name="Pitch" type="revolute">
@@ -393,12 +370,36 @@ https://cad.onshape.com/documents/7715cc284bb430fe6dab4ffd/w/4fd0791b683777b02f8
     <axis xyz="0 0 1" />
     <limit effort="10" velocity="10" lower="1.39467" upper="4.88692" />
   </joint>
-  <!-- Joint from base to shoulder -->
-  <joint name="Rotation" type="revolute">
-    <origin xyz="-0.124202 -0.168068 0.0948817" rpy="3.14159 0 0" />
-    <parent link="base" />
-    <child link="shoulder" />
+  <!-- Joint from upper_arm to lower_arm -->
+  <joint name="Elbow" type="revolute">
+    <origin xyz="-0.11257 -0.028 2.09886e-16" rpy="0 0 4.71239" />
+    <parent link="upper_arm" />
+    <child link="lower_arm" />
     <axis xyz="0 0 1" />
-    <limit effort="10" velocity="10" lower="1.22014" upper="5.05986" />
+    <limit effort="10" velocity="10" lower="1.39626" upper="4.71239" />
+  </joint>
+  <!-- Joint from lower_arm to wrist -->
+  <joint name="Wrist_Pitch" type="revolute">
+    <origin xyz="-0.1349 0.0052 8.44651e-17" rpy="0 0 1.57079" />
+    <parent link="lower_arm" />
+    <child link="wrist" />
+    <axis xyz="0 0 1" />
+    <limit effort="10" velocity="10" lower="1.48353" upper="4.79965" />
+  </joint>
+  <!-- Joint from wrist to gripper -->
+  <joint name="Wrist_Roll" type="revolute">
+    <origin xyz="2.77556e-16 -0.0611 0.0181" rpy="1.5708 3.1902695 3.14159" />
+    <parent link="wrist" />
+    <child link="gripper" />
+    <axis xyz="0 0 1" />
+    <limit effort="10" velocity="10" lower="0.39774" upper="5.9828" />
+  </joint>
+  <!-- Joint from gripper to moving_jaw_so101_v1 -->
+  <joint name="Jaw" type="revolute">
+    <origin xyz="0.0202 0.0188 -0.0234" rpy="1.5708 3.315 0" />
+    <parent link="gripper" />
+    <child link="moving_jaw_so101_v1" />
+    <axis xyz="0 0 1" />
+    <limit effort="10" velocity="10" lower="3.14" upper="4.88692" />
   </joint>
 </robot>
