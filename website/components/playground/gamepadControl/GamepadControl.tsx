@@ -8,6 +8,7 @@ import { RevoluteJointsTable } from "./RevoluteJointsTable";
 import { ContinuousJointsTable } from "./ContinuousJointsTable";
 import { panelStyle } from "@/components/playground/panelStyle";
 import { RobotConnectionHelpDialog } from "@/components/RobotConnectionHelpDialog";
+import { Slider } from "@/components/ui/slider";
 
 import { RobotConfig } from "@/config/robotConfig";
 import {
@@ -56,13 +57,14 @@ export function GamepadControlPanel({
   const [ref, bounds] = useMeasure();
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [hasDragged, setHasDragged] = useState(false);
+  const [maxSpeed, setMaxSpeed] = useState(10); // Add state for max speed
 
   useEffect(() => {
     if (bounds.height > 0 && !hasDragged) {
       setPosition((pos) => ({
         ...pos,
         x: 20, // Position 20px from left edge
-        y: 20, // Position 20px from top edge
+        y: 60, // Position 60px from top edge
       }));
     }
   }, [bounds.height, hasDragged]);
@@ -120,6 +122,26 @@ export function GamepadControlPanel({
           </button>
         </h3>
 
+        {/* Speed Control Slider */}
+        <div className="mt-4 mb-4">
+          <label className="block text-xs font-semibold mb-2 text-zinc-300">
+            Max Speed: {maxSpeed}
+          </label>
+          <Slider
+            value={[maxSpeed]}
+            onValueChange={(value) => setMaxSpeed(value[0])}
+            max={50}
+            min={1}
+            step={1}
+            className="w-full"
+          />
+          <div className="flex justify-between text-xs text-zinc-500 mt-1">
+            <span>1</span>
+            <span>25</span>
+            <span>50</span>
+          </div>
+        </div>
+
         {/* Revolute Joints Table */}
         {revoluteJoints.length > 0 && (
           <RevoluteJointsTable
@@ -137,7 +159,7 @@ export function GamepadControlPanel({
             joints={continuousJoints}
             updateJointSpeed={updateJointSpeed}
             updateJointsSpeed={updateJointsSpeed}
-            maxSpeed={10}
+            maxSpeed={maxSpeed}
           />
         )}
 

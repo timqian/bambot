@@ -1,3 +1,5 @@
+"use client";
+
 // Panel visibility state management
 const PANEL_SETTINGS_KEY = "panel_settings";
 

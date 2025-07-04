@@ -27,8 +27,8 @@ export function ContinuousJointsTable({
   joints,
   updateJointSpeed,
   updateJointsSpeed,
+  maxSpeed,
 }: ContinuousJointsTableProps) {
-  const maxSpeed = 1000;
   const [gamepadState, setGamepadState] = useState<string | null>(null);
   const [gamepadConnected, setGamepadConnected] = useState(false);
 
@@ -36,24 +36,29 @@ export function ContinuousJointsTable({
     (direction: string) => {
       setGamepadState(direction);
 
+      // Scale maxSpeed (1-50) to servo speed range
+      // STS3215 servos support -10000 to +10000, but typical range is -2500 to +2500
+      // Map slider 1-50 to speed 50-2500 (50x multiplier gives good range)
+      const scaledSpeed = maxSpeed * 50;
+
       switch (direction) {
         case "forward":
           updateJointsSpeed([
-            { servoId: joints[0].servoId!, speed: -maxSpeed },
-            { servoId: joints[2].servoId!, speed: maxSpeed },
+            { servoId: joints[0].servoId!, speed: -scaledSpeed },
+            { servoId: joints[2].servoId!, speed: scaledSpeed },
           ]);
           break;
         case "backward":
           updateJointsSpeed([
-            { servoId: joints[0].servoId!, speed: maxSpeed },
-            { servoId: joints[2].servoId!, speed: -maxSpeed },
+            { servoId: joints[0].servoId!, speed: scaledSpeed },
+            { servoId: joints[2].servoId!, speed: -scaledSpeed },
           ]);
           break;
         case "left":
           updateJointsSpeed(
             joints.map((joint) => ({
               servoId: joint.servoId!,
-              speed: maxSpeed,
+              speed: scaledSpeed,
             }))
           );
           break;
@@ -61,7 +66,7 @@ export function ContinuousJointsTable({
           updateJointsSpeed(
             joints.map((joint) => ({
               servoId: joint.servoId!,
-              speed: -maxSpeed,
+              speed: -scaledSpeed,
             }))
           );
           break;
@@ -148,7 +153,7 @@ export function ContinuousJointsTable({
   return (
     <div className="mt-4 relative">
       <h4 className="text-sm font-semibold mb-2 text-zinc-300">
-        Continuous Joints (Wheels)
+        Continuous Joints (Wheels) - Speed: {maxSpeed * 50} / 2500
       </h4>
 
       {/* Gamepad status */}
