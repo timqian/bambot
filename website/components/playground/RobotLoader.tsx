@@ -1,25 +1,31 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
-import { robotConfigMap } from "@/config/robotConfig";
 import * as THREE from "three";
-import { Html, useProgress } from "@react-three/drei";
-import { ControlPanel } from "./keyboardControl/KeyboardControl";
-import { useRobotControl } from "@/hooks/useRobotControl";
 import { Canvas } from "@react-three/fiber";
+import { Html, useProgress } from "@react-three/drei";
+
+import { RobotScene } from "./RobotScene";
+
+import RecordButton from "./controlButtons/RecordButton";
+import GamepadControlButton from "./controlButtons/GamepadControlButton";
+import LeaderControlButton from "../playground/controlButtons/LeaderControlButton";
+import ChatControlButton from "../playground/controlButtons/ChatControlButton";
+
+import { KeyboardControlPanel } from "./keyboardControl/KeyboardControl";
+import { GamepadControlPanel } from "./gamepadControl/GamepadControl";
 import { ChatControl } from "./chatControl/ChatControl";
 import LeaderControl from "../playground/leaderControl/LeaderControl";
-import { useLeaderRobotControl } from "@/hooks/useLeaderRobotControl";
-import { RobotScene } from "./RobotScene";
 import KeyboardControlButton from "../playground/controlButtons/KeyboardControlButton";
-import ChatControlButton from "../playground/controlButtons/ChatControlButton";
-import LeaderControlButton from "../playground/controlButtons/LeaderControlButton";
-import RecordButton from "./controlButtons/RecordButton";
 import RecordControl from "./recordControl/RecordControl";
+
+import { useLeaderRobotControl } from "@/hooks/useLeaderRobotControl";
+import { useRobotControl } from "@/hooks/useRobotControl";
 import {
   getPanelStateFromLocalStorage,
   setPanelStateToLocalStorage,
 } from "@/lib/panelSettings";
+import { robotConfigMap } from "@/config/robotConfig";
 
 export type JointDetails = {
   name: string;
@@ -58,6 +64,9 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
   });
   const [showRecordControl, setShowRecordControl] = useState(() => {
     return getPanelStateFromLocalStorage("recordControl", robotName) ?? false;
+  });
+  const [showGamepadControl, setShowGamepadControl] = useState(() => {
+    return getPanelStateFromLocalStorage("gamepadControl", robotName) ?? false;
   });
   const config = robotConfigMap[robotName];
 
@@ -137,6 +146,14 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
     });
   };
 
+  const toggleGamepadControl = () => {
+    setShowGamepadControl((prev) => {
+      const newState = !prev;
+      setPanelStateToLocalStorage("gamepadControl", newState, robotName);
+      return newState;
+    });
+  };
+
   const hideControlPanel = () => {
     setShowControlPanel(false);
     setPanelStateToLocalStorage("keyboardControl", false, robotName);
@@ -155,6 +172,11 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
   const hideRecordControl = () => {
     setShowRecordControl(false);
     setPanelStateToLocalStorage("recordControl", false, robotName);
+  };
+
+  const hideGamepadControl = () => {
+    setShowGamepadControl(false);
+    setPanelStateToLocalStorage("gamepadControl", false, robotName);
   };
 
   return (
@@ -180,7 +202,7 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
         </Suspense>
       </Canvas>
 
-      <ControlPanel
+      <KeyboardControlPanel
         show={showControlPanel}
         onHide={hideControlPanel}
         updateJointsSpeed={updateJointsSpeed}
@@ -193,6 +215,20 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
         disconnectRobot={disconnectRobot}
         keyboardControlMap={keyboardControlMap}
         compoundMovements={compoundMovements}
+      />
+      <GamepadControlPanel
+        show={showGamepadControl}
+        onHide={hideGamepadControl}
+        jointStates={jointStates}
+        updateJointDegrees={updateJointDegrees}
+        updateJointsDegrees={updateJointsDegrees}
+        updateJointSpeed={updateJointSpeed}
+        updateJointsSpeed={updateJointsSpeed}
+        isConnected={isConnected}
+        connectRobot={connectRobot}
+        disconnectRobot={disconnectRobot}
+        gamepadControlMap={config.gamepadControlMap}
+        compoundMovements={config.compoundMovements}
       />
       <ChatControl
         show={showChatControl}
@@ -254,6 +290,10 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
             <KeyboardControlButton
               showControlPanel={showControlPanel}
               onToggleControlPanel={toggleControlPanel}
+            />
+            <GamepadControlButton
+              showControlPanel={showGamepadControl}
+              onToggleControlPanel={toggleGamepadControl}
             />
             <ChatControlButton
               showControlPanel={showChatControl}

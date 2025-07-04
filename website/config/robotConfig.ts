@@ -31,6 +31,12 @@ export type RobotConfig = {
   keyboardControlMap?: {
     [key: string]: string[];
   };
+  gamepadControlMap?: {
+    [key: string]: {
+      buttons?: string[]; // [decrease, increase] button names
+      axis?: string; // axis name for analog control
+    };
+  };
   jointNameIdMap?: {
     [key: string]: number;
   };
@@ -61,6 +67,14 @@ export const robotConfigMap: { [key: string]: RobotConfig } = {
       4: ["4", "r"],
       5: ["5", "t"],
       6: ["6", "y"],
+    },
+    gamepadControlMap: {
+      1: { buttons: ["X", "A"], axis: "LS-X" }, // Rotation: X/A buttons or Left Stick X
+      2: { buttons: ["Down", "Up"], axis: "LS-Y" }, // Pitch: D-pad Up/Down or Left Stick Y
+      3: { buttons: ["LB", "RB"] }, // Elbow: Left/Right Bumpers
+      4: { buttons: ["Left", "Right"], axis: "RS-Y" }, // Wrist Pitch: D-pad Left/Right or Right Stick Y
+      5: { buttons: ["Y", "B"], axis: "RS-X" }, // Wrist Roll: Y/B buttons or Right Stick X
+      6: { buttons: ["LT", "RT"] }, // Jaw: Left/Right Triggers
     },
     // map between joint names in URDF and servo IDs
     jointNameIdMap: {
@@ -229,8 +243,7 @@ export const robotConfigMap: { [key: string]: RobotConfig } = {
       right_elbow_joint: 22,
       right_wrist_roll_joint: 23,
     },
-    urdfInitJointAngles: {
-    },
+    urdfInitJointAngles: {},
     systemPrompt: `You can help control the unitree-go2 robot by pressing keyboard keys. Use the keyPress tool to simulate key presses. Each key will be held down for 1 second by default. If the user describes roughly wanting to make it longer or shorter, adjust the duration accordingly.`,
   },
   "bambot-v0": {
