@@ -8,6 +8,7 @@ import { RevoluteJointsTable } from "./RevoluteJointsTable";
 import { ContinuousJointsTable } from "./ContinuousJointsTable";
 import { panelStyle } from "@/components/playground/panelStyle";
 import { RobotConnectionHelpDialog } from "@/components/RobotConnectionHelpDialog";
+import { Slider } from "@/components/ui/slider";
 
 import { RobotConfig } from "@/config/robotConfig";
 import {
@@ -18,53 +19,52 @@ import {
   UpdateJointsSpeed,
 } from "@/hooks/useRobotControl";
 
-// const baudRate = 1000000; // Define baud rate for serial communication - Keep if needed elsewhere, remove if only for UI
-
 // --- Control Panel Component ---
-type KeyboardControlPanelProps = {
-  jointStates: JointState[]; // Use JointState type from useRobotControl
-  updateJointDegrees: UpdateJointDegrees; // Updated type
-  updateJointsDegrees: UpdateJointsDegrees; // Updated type
-  updateJointSpeed: UpdateJointSpeed; // Updated type
-  updateJointsSpeed: UpdateJointsSpeed; // Add updateJointsSpeed
+type GamepadControlPanelProps = {
+  jointStates: JointState[];
+  updateJointDegrees: UpdateJointDegrees;
+  updateJointsDegrees: UpdateJointsDegrees;
+  updateJointSpeed: UpdateJointSpeed;
+  updateJointsSpeed: UpdateJointsSpeed;
 
   isConnected: boolean;
 
   connectRobot: () => void;
   disconnectRobot: () => void;
-  keyboardControlMap: RobotConfig["keyboardControlMap"]; // New prop for keyboard control
-  compoundMovements?: RobotConfig["compoundMovements"]; // Use type from robotConfig
-  onHide?: () => void; // 新增 onHide 属性
-  show?: boolean; // 新增 show 属性
+  gamepadControlMap: RobotConfig["gamepadControlMap"]; // New prop for gamepad control
+  compoundMovements?: RobotConfig["compoundMovements"];
+  onHide?: () => void;
+  show?: boolean;
 };
 
-export function KeyboardControlPanel({
+export function GamepadControlPanel({
   show = true,
   onHide,
   jointStates,
   updateJointDegrees,
   updateJointsDegrees,
   updateJointSpeed,
-  updateJointsSpeed, // Pass updateJointsSpeed
+  updateJointsSpeed,
   isConnected,
   connectRobot,
   disconnectRobot,
-  keyboardControlMap, // Destructure new prop
-  compoundMovements, // Destructure new prop
-}: KeyboardControlPanelProps) {
+  gamepadControlMap,
+  compoundMovements,
+}: GamepadControlPanelProps) {
   const [connectionStatus, setConnectionStatus] = useState<
     "idle" | "connecting" | "disconnecting"
   >("idle");
   const [ref, bounds] = useMeasure();
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [hasDragged, setHasDragged] = useState(false);
+  const [maxSpeed, setMaxSpeed] = useState(10); // Add state for max speed
 
   useEffect(() => {
     if (bounds.height > 0 && !hasDragged) {
       setPosition((pos) => ({
         ...pos,
-        x: window.innerWidth - bounds.width - 20,
-        y: window.innerHeight - bounds.height - 20,
+        x: 20, // Position 20px from left edge
+        y: 60, // Position 60px from top edge
       }));
     }
   }, [bounds.height, hasDragged]);
@@ -110,10 +110,10 @@ export function KeyboardControlPanel({
         ref={ref}
         className={"max-h-[80vh] overflow-y-auto text-sm " + panelStyle}
       >
-        <h3 className="mt-0 mb-4 border-b border-white/50  pb-1 font-bold text-base flex justify-between items-center">
-          <span>Joint Controls</span>
+        <h3 className="mt-0 mb-4 border-b border-white/50 pb-1 font-bold text-base flex justify-between items-center">
+          <span>Gamepad Controls</span>
           <button
-            onClick={onHide} // 优先调用 onHide
+            onClick={onHide}
             onTouchEnd={onHide}
             className="ml-2 text-xl hover:bg-zinc-800 px-2 rounded-full"
             title="Collapse"
@@ -122,13 +122,33 @@ export function KeyboardControlPanel({
           </button>
         </h3>
 
+        {/* Speed Control Slider */}
+        <div className="mt-4 mb-4">
+          <label className="block text-xs font-semibold mb-2 text-zinc-300">
+            Max Speed: {maxSpeed}
+          </label>
+          <Slider
+            value={[maxSpeed]}
+            onValueChange={(value) => setMaxSpeed(value[0])}
+            max={50}
+            min={1}
+            step={1}
+            className="w-full"
+          />
+          <div className="flex justify-between text-xs text-zinc-500 mt-1">
+            <span>1</span>
+            <span>25</span>
+            <span>50</span>
+          </div>
+        </div>
+
         {/* Revolute Joints Table */}
         {revoluteJoints.length > 0 && (
           <RevoluteJointsTable
             joints={revoluteJoints}
             updateJointDegrees={updateJointDegrees}
             updateJointsDegrees={updateJointsDegrees}
-            keyboardControlMap={keyboardControlMap}
+            gamepadControlMap={gamepadControlMap}
             compoundMovements={compoundMovements}
           />
         )}
@@ -138,7 +158,8 @@ export function KeyboardControlPanel({
           <ContinuousJointsTable
             joints={continuousJoints}
             updateJointSpeed={updateJointSpeed}
-            updateJointsSpeed={updateJointsSpeed} // Pass updateJointsSpeed to ContinuousJointsTable
+            updateJointsSpeed={updateJointsSpeed}
+            maxSpeed={maxSpeed}
           />
         )}
 
