@@ -411,11 +411,11 @@ export function RevoluteJointsTable({
                           isDecreaseActive
                             ? "bg-blue-600"
                             : "bg-zinc-700 hover:bg-zinc-600"
-                        } text-white text-xs font-bold w-8 h-5 text-center uppercase select-none mr-1`}
+                        } text-white text-xs font-bold h-5 text-center uppercase select-none mr-1 px-1`}
                         style={{
                           clipPath:
                             "polygon(0 50%, 30% 0, 100% 0, 100% 100%, 30% 100%)",
-                          minWidth: "2em",
+                          minWidth: "3em",
                           minHeight: "1.8em",
                           fontWeight: 600,
                           boxShadow: "0 1px 2px 0 rgba(0,0,0,0.04)",
@@ -456,11 +456,11 @@ export function RevoluteJointsTable({
                           isIncreaseActive
                             ? "bg-blue-600"
                             : "bg-zinc-700 hover:bg-zinc-600"
-                        } text-white text-xs font-semibold w-8 h-5 text-center uppercase select-none ml-1`}
+                        } text-white text-xs font-semibold h-5 text-center uppercase select-none ml-1 px-1`}
                         style={{
                           clipPath:
                             "polygon(100% 50%, 70% 0, 0 0, 0 100%, 70% 100%)",
-                          minWidth: "2em",
+                          minWidth: "3em",
                           minHeight: "1.8em",
                           fontWeight: 600,
                           boxShadow: "0 1px 2px 0 rgba(0,0,0,0.04)",
@@ -516,11 +516,11 @@ export function RevoluteJointsTable({
                               isDecreaseActive
                                 ? "bg-blue-600"
                                 : "bg-zinc-700 hover:bg-zinc-600"
-                            } text-white text-xs font-bold w-8 h-5 text-center uppercase select-none`}
+                            } text-white text-xs font-bold h-5 text-center uppercase select-none px-1`}
                             style={{
                               clipPath:
                                 "polygon(0 50%, 30% 0, 100% 0, 100% 100%, 30% 100%)",
-                              minWidth: "2em",
+                              minWidth: "3em",
                               minHeight: "1.8em",
                               fontWeight: 600,
                               boxShadow: "0 1px 2px 0 rgba(0,0,0,0.04)",
@@ -540,11 +540,11 @@ export function RevoluteJointsTable({
                               isIncreaseActive
                                 ? "bg-blue-600"
                                 : "bg-zinc-700 hover:bg-zinc-600"
-                            } text-white text-xs font-semibold w-8 h-5 text-center uppercase select-none`}
+                            } text-white text-xs font-semibold h-5 text-center uppercase select-none px-1`}
                             style={{
                               clipPath:
                                 "polygon(100% 50%, 70% 0, 0 0, 0 100%, 70% 100%)",
-                              minWidth: "2em",
+                              minWidth: "3em",
                               minHeight: "1.8em",
                               fontWeight: 600,
                               boxShadow: "0 1px 2px 0 rgba(0,0,0,0.04)",

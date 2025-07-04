@@ -97,7 +97,7 @@ export const robotConfigMap: { [key: string]: RobotConfig } = {
       // Jaw compound movements
       {
         name: "Jaw down & up",
-        keys: ["8", "i"],
+        keys: ["8", "i"], // Keyboard keys
         primaryJoint: 2,
         primaryFormula: "primary < 100 ? 1 : -1", // Example: sign depends on primary and dependent
         dependents: [
@@ -115,7 +115,37 @@ export const robotConfigMap: { [key: string]: RobotConfig } = {
       },
       {
         name: "Jaw backward & forward",
-        keys: ["o", "u"],
+        keys: ["o", "u"], // Keyboard keys
+        primaryJoint: 2,
+        primaryFormula: "1",
+        dependents: [
+          {
+            joint: 3,
+            formula: "-0.9* deltaPrimary",
+          },
+        ],
+      },
+      // Gamepad compound movements (adding gamepad button equivalents)
+      {
+        name: "Gamepad Jaw down & up",
+        keys: ["Start", "Back"], // Gamepad buttons for compound movement
+        primaryJoint: 2,
+        primaryFormula: "primary < 100 ? 1 : -1",
+        dependents: [
+          {
+            joint: 3,
+            formula: "primary < 100 ? -1.9 * deltaPrimary : 0.4 * deltaPrimary",
+          },
+          {
+            joint: 4,
+            formula:
+              "primary < 100 ? (primary < 10 ? 0 : 0.51 * deltaPrimary) : -0.4 * deltaPrimary",
+          },
+        ],
+      },
+      {
+        name: "Gamepad Precise Control",
+        keys: ["LS", "RS"], // Left and Right Stick buttons for precise compound movement
         primaryJoint: 2,
         primaryFormula: "1",
         dependents: [
