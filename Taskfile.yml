@@ -1,0 +1,223 @@
+version: '3'
+
+vars:
+  WEBSITE_DIR: website
+  DOCS_DIR: docs
+
+tasks:
+  default:
+    desc: "Show available tasks"
+    cmds:
+      - task --list
+
+  # Installation tasks
+  install:
+    desc: "Install all dependencies"
+    dir: "{{.WEBSITE_DIR}}"
+    cmds:
+      - bun install --force
+    sources:
+      - package.json
+      - bun.lockb
+    generates:
+      - node_modules/**/*
+
+  clean:
+    desc: "Clean node_modules and build artifacts"
+    dir: "{{.WEBSITE_DIR}}"
+    cmds:
+      - rm -rf node_modules
+      - rm -rf .next
+      - rm -rf dist
+
+  # Development tasks
+  dev:
+    desc: "Start development server"
+    dir: "{{.WEBSITE_DIR}}"
+    deps: [install]
+    cmds:
+      - npm run dev
+
+  dev:turbo:
+    desc: "Start development server with Turbopack"
+    dir: "{{.WEBSITE_DIR}}"
+    deps: [install]
+    cmds:
+      - npm run dev --turbo
+
+  # Build tasks
+  build:
+    desc: "Build the application"
+    dir: "{{.WEBSITE_DIR}}"
+    deps: [install]
+    cmds:
+      - npm run build
+    sources:
+      - "**/*.{ts,tsx,js,jsx}"
+      - "package.json"
+      - "next.config.js"
+      - "tailwind.config.ts"
+      - "tsconfig.json"
+    generates:
+      - .next/**/*
+
+  start:
+    desc: "Start production server"
+    dir: "{{.WEBSITE_DIR}}"
+    deps: [build]
+    cmds:
+      - npm run start
+
+  # Code quality tasks
+  lint:
+    desc: "Run ESLint"
+    dir: "{{.WEBSITE_DIR}}"
+    deps: [install]
+    cmds:
+      - npm run lint
+
+  lint:fix:
+    desc: "Run ESLint with auto-fix"
+    dir: "{{.WEBSITE_DIR}}"
+    deps: [install]
+    cmds:
+      - npm run lint -- --fix
+
+  type-check:
+    desc: "Run TypeScript type checking"
+    dir: "{{.WEBSITE_DIR}}"
+    deps: [install]
+    cmds:
+      - npx tsc --noEmit
+
+  # Testing tasks
+  test:
+    desc: "Run all tests"
+    cmds:
+      - task: type-check
+      - task: lint
+
+  # Documentation tasks
+  docs:serve:
+    desc: "Serve documentation locally"
+    dir: "{{.DOCS_DIR}}"
+    cmds:
+      - |
+        if command -v python3 &> /dev/null; then
+          python3 -m http.server 8080
+        elif command -v python &> /dev/null; then
+          python -m SimpleHTTPServer 8080
+        else
+          echo "Python not found. Install Python to serve docs."
+          exit 1
+        fi
+
+  # Hardware SDK tasks
+  sdk:link:
+    desc: "Link local feetech.js SDK for development"
+    dir: "{{.WEBSITE_DIR}}"
+    cmds:
+      - npm link ../feetech.js
+
+  sdk:unlink:
+    desc: "Unlink local feetech.js SDK"
+    dir: "{{.WEBSITE_DIR}}"
+    cmds:
+      - npm unlink feetech.js
+      - npm install
+
+  # Project maintenance tasks
+  update:
+    desc: "Update all dependencies"
+    dir: "{{.WEBSITE_DIR}}"
+    cmds:
+      - npm update
+      - npm audit fix
+
+  security:check:
+    desc: "Run security audit"
+    dir: "{{.WEBSITE_DIR}}"
+    cmds:
+      - npm audit
+
+  # Git tasks
+  git:status:
+    desc: "Show git status"
+    cmds:
+      - git status
+
+  git:log:
+    desc: "Show recent git commits"
+    cmds:
+      - git log --oneline -10
+
+  # Full workflow tasks
+  ci:
+    desc: "Run CI pipeline (install, lint, type-check, build)"
+    cmds:
+      - task: install
+      - task: lint
+      - task: type-check
+      - task: build
+
+  deploy:check:
+    desc: "Check if ready for deployment"
+    cmds:
+      - task: ci
+      - echo "✅ Ready for deployment"
+
+  # Quick start tasks
+  setup:
+    desc: "Initial project setup"
+    cmds:
+      - task: install
+      - echo "✅ Project setup complete. Run 'task dev' to start development."
+
+  reset:
+    desc: "Reset project to clean state"
+    cmds:
+      - task: clean
+      - task: install
+      - echo "✅ Project reset complete."
+
+  # Help tasks
+  help:robot:
+    desc: "Show robot connection help"
+    cmds:
+      - |
+        echo "🤖 Robot Connection Help:"
+        echo ""
+        echo "1. Connect your robot via USB"
+        echo "2. Open Chrome/Edge (Web Serial API required)"
+        echo "3. Go to http://localhost:3000"
+        echo "4. Click 'Connect' and select your robot's serial port"
+        echo "5. Use keyboard controls or other interfaces"
+        echo ""
+        echo "Supported robots:"
+        echo "- SO-ARM100 (6-DOF robotic arm)"
+        echo "- Bambot v0 (wheeled robot with dual arms)"
+        echo "- Unitree Go2 (quadruped)"
+        echo "- Unitree G1 (humanoid)"
+        echo "- STS3215 (single servo demo)"
+
+  help:controls:
+    desc: "Show control modes help"
+    cmds:
+      - |
+        echo "🎮 Control Modes:"
+        echo ""
+        echo "1. Keyboard Control:"
+        echo "   - WASD/Arrow keys: Basic movement"
+        echo "   - Letter keys: Joint control (varies by robot)"
+        echo "   - R: Start/stop recording"
+        echo "   - P: Playback recording"
+        echo "   - Space: Emergency stop"
+        echo ""
+        echo "2. Leader-Follower Mode:"
+        echo "   - Connect two identical robots"
+        echo "   - Move the leader, follower copies movements"
+        echo ""
+        echo "3. AI Chat Control:"
+        echo "   - Natural language commands"
+        echo "   - Robot-specific prompts"
+        echo "   - Real-time execution"

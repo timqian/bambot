@@ -13,11 +13,13 @@ type RobotPanelSettings = {
 };
 
 function getAllPanelSettings(): RobotPanelSettings {
+  if (typeof window === 'undefined') return {};
   const stored = localStorage.getItem(PANEL_SETTINGS_KEY);
   return stored ? JSON.parse(stored) : {};
 }
 
 function saveAllPanelSettings(settings: RobotPanelSettings) {
+  if (typeof window === 'undefined') return;
   localStorage.setItem(PANEL_SETTINGS_KEY, JSON.stringify(settings));
 }
 
