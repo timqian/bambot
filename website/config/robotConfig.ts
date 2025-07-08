@@ -121,6 +121,96 @@ export const robotConfigMap: { [key: string]: RobotConfig } = {
     - "t" and "5" for rotating jaw
     `,
   },
+  "bambot-v0": {
+    urdfUrl: "/URDFs/bambot_v0.urdf",
+    image: "/bambot_v0.jpg",
+    assembleLink: "https://github.com/timqian/bambot/tree/main/hardware",
+    camera: { position: [-30, 25, 28], fov: 25 },
+    orbitTarget: [0, 2, 0],
+    keyboardControlMap: {
+      1: ["1", "q"],
+      2: ["2", "w"],
+      3: ["3", "e"],
+      4: ["4", "r"],
+      5: ["5", "t"],
+      6: ["6", "y"],
+      7: ["a", "z"],
+      8: ["s", "x"],
+      9: ["d", "c"],
+      10: ["f", "v"],
+      11: ["g", "b"],
+      12: ["h", "n"],
+    },
+    jointNameIdMap: {
+      R_Rotation: 1,
+      R_Pitch: 2,
+      R_Elbow: 3,
+      R_Wrist_Pitch: 4,
+      R_Wrist_Roll: 5,
+      R_Jaw: 6,
+      L_Rotation: 7,
+      L_Pitch: 8,
+      L_Elbow: 9,
+      L_Wrist_Pitch: 10,
+      L_Wrist_Roll: 11,
+      L_Jaw: 12,
+      left_wheel: 13,
+      back_wheel: 14,
+      right_wheel: 15,
+    },
+    urdfInitJointAngles: {
+      R_Rotation: 180,
+      R_Pitch: 180,
+      R_Elbow: 180,
+      R_Wrist_Pitch: 180,
+      R_Wrist_Roll: 180,
+      R_Jaw: 180,
+      L_Rotation: 180,
+      L_Pitch: 180,
+      L_Elbow: 180,
+      L_Wrist_Pitch: 180,
+      L_Wrist_Roll: 180,
+      L_Jaw: 180,
+    },
+    systemPrompt: `You can help control the bambot-v0 robot by pressing keyboard keys. Use the keyPress tool to simulate key presses. Each key will be held down for 1 second by default. If the user describes roughly wanting to make it longer or shorter, adjust the duration accordingly.
+    `,
+  },
+  "bambot-v0-base": {
+    urdfUrl: "/URDFs/bambot_v0_base.urdf",
+    image: "/bambot_v0_base.png",
+    assembleLink: "https://github.com/timqian/bambot/tree/main/hardware",
+    camera: { position: [-30, 25, 28], fov: 25 },
+    orbitTarget: [0, 2, 0],
+    jointNameIdMap: {
+      left_wheel: 13,
+      back_wheel: 14,
+      right_wheel: 15,
+    },
+    systemPrompt: `You can help control the bambot-v0-base robot by pressing keyboard keys. Use the keyPress tool to simulate key presses. Each key will be held down for 1 second by default.
+    The robot can be controlled with the following keys: 
+    - "ArrowUp" to move forward
+    - "ArrowDown" to move backward
+    - "ArrowLeft" to turn left
+    - "ArrowRight" to turn right
+    If the user describes roughly wanting to make it longer or shorter, adjust the duration accordingly.`,
+  },
+  sts3215: {
+    urdfUrl: "/URDFs/sts3215.urdf",
+    image: "/sts3215.png",
+    assembleLink: "",
+    camera: { position: [10, 10, 10], fov: 12 },
+    orbitTarget: [0.5, 1, 0],
+    keyboardControlMap: {
+      1: ["1", "q"],
+    },
+    jointNameIdMap: {
+      Rotation: 1,
+    },
+    urdfInitJointAngles: {
+      Rotation: 0,
+    },
+    systemPrompt: `You can help control the sts3215 robot by pressing keyboard keys. Use the keyPress tool to simulate key presses. Each key will be held down for 1 second by default. The robot can be controlled with the following keys: "1" and "q" for rotation.`,
+  },
   "unitree-go2": {
     urdfUrl: "/URDFs/unitree-go2/go2.urdf",
     image: "/unitree-go2.png",
@@ -232,95 +322,5 @@ export const robotConfigMap: { [key: string]: RobotConfig } = {
     urdfInitJointAngles: {
     },
     systemPrompt: `You can help control the unitree-go2 robot by pressing keyboard keys. Use the keyPress tool to simulate key presses. Each key will be held down for 1 second by default. If the user describes roughly wanting to make it longer or shorter, adjust the duration accordingly.`,
-  },
-  "bambot-v0": {
-    urdfUrl: "/URDFs/bambot_v0.urdf",
-    image: "/bambot_v0.jpg",
-    assembleLink: "https://github.com/timqian/bambot/tree/main/hardware",
-    camera: { position: [-30, 25, 28], fov: 25 },
-    orbitTarget: [0, 2, 0],
-    keyboardControlMap: {
-      1: ["1", "q"],
-      2: ["2", "w"],
-      3: ["3", "e"],
-      4: ["4", "r"],
-      5: ["5", "t"],
-      6: ["6", "y"],
-      7: ["a", "z"],
-      8: ["s", "x"],
-      9: ["d", "c"],
-      10: ["f", "v"],
-      11: ["g", "b"],
-      12: ["h", "n"],
-    },
-    jointNameIdMap: {
-      R_Rotation: 1,
-      R_Pitch: 2,
-      R_Elbow: 3,
-      R_Wrist_Pitch: 4,
-      R_Wrist_Roll: 5,
-      R_Jaw: 6,
-      L_Rotation: 7,
-      L_Pitch: 8,
-      L_Elbow: 9,
-      L_Wrist_Pitch: 10,
-      L_Wrist_Roll: 11,
-      L_Jaw: 12,
-      left_wheel: 13,
-      back_wheel: 14,
-      right_wheel: 15,
-    },
-    urdfInitJointAngles: {
-      R_Rotation: 180,
-      R_Pitch: 180,
-      R_Elbow: 180,
-      R_Wrist_Pitch: 180,
-      R_Wrist_Roll: 180,
-      R_Jaw: 180,
-      L_Rotation: 180,
-      L_Pitch: 180,
-      L_Elbow: 180,
-      L_Wrist_Pitch: 180,
-      L_Wrist_Roll: 180,
-      L_Jaw: 180,
-    },
-    systemPrompt: `You can help control the bambot-v0 robot by pressing keyboard keys. Use the keyPress tool to simulate key presses. Each key will be held down for 1 second by default. If the user describes roughly wanting to make it longer or shorter, adjust the duration accordingly.
-    `,
-  },
-  "bambot-v0-base": {
-    urdfUrl: "/URDFs/bambot_v0_base.urdf",
-    image: "/bambot_v0_base.png",
-    assembleLink: "https://github.com/timqian/bambot/tree/main/hardware",
-    camera: { position: [-30, 25, 28], fov: 25 },
-    orbitTarget: [0, 2, 0],
-    jointNameIdMap: {
-      left_wheel: 13,
-      back_wheel: 14,
-      right_wheel: 15,
-    },
-    systemPrompt: `You can help control the bambot-v0-base robot by pressing keyboard keys. Use the keyPress tool to simulate key presses. Each key will be held down for 1 second by default.
-    The robot can be controlled with the following keys: 
-    - "ArrowUp" to move forward
-    - "ArrowDown" to move backward
-    - "ArrowLeft" to turn left
-    - "ArrowRight" to turn right
-    If the user describes roughly wanting to make it longer or shorter, adjust the duration accordingly.`,
-  },
-  sts3215: {
-    urdfUrl: "/URDFs/sts3215.urdf",
-    image: "/sts3215.png",
-    assembleLink: "",
-    camera: { position: [10, 10, 10], fov: 12 },
-    orbitTarget: [0.5, 1, 0],
-    keyboardControlMap: {
-      1: ["1", "q"],
-    },
-    jointNameIdMap: {
-      Rotation: 1,
-    },
-    urdfInitJointAngles: {
-      Rotation: 0,
-    },
-    systemPrompt: `You can help control the sts3215 robot by pressing keyboard keys. Use the keyPress tool to simulate key presses. Each key will be held down for 1 second by default. The robot can be controlled with the following keys: "1" and "q" for rotation.`,
   },
 };
