@@ -65,6 +65,28 @@ const translations = {
     editThisPage: "✏️ Edit this page",
     editDescription:
       "Found an issue or want to improve this page? Edit it on GitHub!",
+    // New translations for position limits and corrections
+    positionLimits: "Position Limits",
+    maxPosLimit: "Max Position Limit",
+    minPosLimit: "Min Position Limit",
+    readMaxLimit: "Read Max Limit",
+    readMinLimit: "Read Min Limit",
+    setMaxLimit: "Set Max Limit",
+    setMinLimit: "Set Min Limit",
+    positionCorrection: "Position Correction",
+    readCorrection: "Read Correction",
+    setCorrection: "Set Correction",
+    syncLimitOperations: "🎯 Sync Limit Operations",
+    syncCorrectionOperations: "🔧 Sync Correction Operations",
+    syncReadMaxLimits: "Sync Read Max Limits",
+    syncWriteMaxLimits: "Sync Write Max Limits",
+    syncReadMinLimits: "Sync Read Min Limits",
+    syncWriteMinLimits: "Sync Write Min Limits",
+    syncReadCorrections: "Sync Read Position Corrections",
+    syncWriteCorrections: "Sync Write Position Corrections",
+    maxLimits: "Max Limits",
+    minLimits: "Min Limits",
+    corrections: "Corrections",
   },
   zh: {
     title: "飞特舵机控制面板",
@@ -120,6 +142,28 @@ const translations = {
     language: "语言",
     editThisPage: "✏️ 编辑此页面",
     editDescription: "发现问题或想改进此页面？在 GitHub 上编辑它！",
+    // New translations for position limits and corrections
+    positionLimits: "位置限制",
+    maxPosLimit: "最大位置限制",
+    minPosLimit: "最小位置限制",
+    readMaxLimit: "读取最大限制",
+    readMinLimit: "读取最小限制",
+    setMaxLimit: "设置最大限制",
+    setMinLimit: "设置最小限制",
+    positionCorrection: "位置校正",
+    readCorrection: "读取校正",
+    setCorrection: "设置校正",
+    syncLimitOperations: "🎯 同步限制操作",
+    syncCorrectionOperations: "🔧 同步校正操作",
+    syncReadMaxLimits: "同步读取最大限制",
+    syncWriteMaxLimits: "同步写入最大限制",
+    syncReadMinLimits: "同步读取最小限制",
+    syncWriteMinLimits: "同步写入最小限制",
+    syncReadCorrections: "同步读取位置校正",
+    syncWriteCorrections: "同步写入位置校正",
+    maxLimits: "最大限制",
+    minLimits: "最小限制",
+    corrections: "校正",
   },
 };
 
@@ -160,6 +204,11 @@ function FeetechPageContent() {
   const [accelerationWrite, setAccelerationWrite] = useState(50);
   const [wheelSpeedWrite, setWheelSpeedWrite] = useState(0);
 
+  // New states for position limits and corrections
+  const [maxPosLimitWrite, setMaxPosLimitWrite] = useState(4095);
+  const [minPosLimitWrite, setMinPosLimitWrite] = useState(0);
+  const [posCorrectionWrite, setPosCorrectionWrite] = useState(0);
+
   // Read results states
   const [readPosResult, setReadPosResult] = useState("");
   const [readBaudResult, setReadBaudResult] = useState("");
@@ -169,12 +218,31 @@ function FeetechPageContent() {
   const [wheelSpeedResult, setWheelSpeedResult] = useState("");
   const [idChangeResult, setIdChangeResult] = useState("");
 
+  // New result states for position limits and corrections
+  const [readMaxLimitResult, setReadMaxLimitResult] = useState("");
+  const [readMinLimitResult, setReadMinLimitResult] = useState("");
+  const [maxLimitResult, setMaxLimitResult] = useState("");
+  const [minLimitResult, setMinLimitResult] = useState("");
+  const [readCorrectionResult, setReadCorrectionResult] = useState("");
+  const [correctionResult, setCorrectionResult] = useState("");
+
   // Sync operation states
   const [syncWriteData, setSyncWriteData] = useState("1:1500,2:2500");
   const [syncWriteSpeedData, setSyncWriteSpeedData] = useState("1:500,2:-1000");
   // Add sync read positions state
   const [syncReadIds, setSyncReadIds] = useState("1,2");
   const [syncReadPositionsResult, setSyncReadPositionsResult] = useState("");
+
+  // New sync operation states for limits and corrections
+  const [syncMaxLimitData, setSyncMaxLimitData] = useState("1:4095,2:4095");
+  const [syncMinLimitData, setSyncMinLimitData] = useState("1:0,2:0");
+  const [syncCorrectionData, setSyncCorrectionData] = useState("1:0,2:0");
+  const [syncReadMaxLimitIds, setSyncReadMaxLimitIds] = useState("1,2");
+  const [syncReadMinLimitIds, setSyncReadMinLimitIds] = useState("1,2");
+  const [syncReadCorrectionIds, setSyncReadCorrectionIds] = useState("1,2");
+  const [syncMaxLimitsResult, setSyncMaxLimitsResult] = useState("");
+  const [syncMinLimitsResult, setSyncMinLimitsResult] = useState("");
+  const [syncCorrectionsResult, setSyncCorrectionsResult] = useState("");
 
   // Scan states
   const [scanStartId, setScanStartId] = useState(1);
@@ -438,6 +506,140 @@ function FeetechPageContent() {
     }
   };
 
+  // New handlers for position limits
+  const handleReadMaxPosLimit = async () => {
+    if (!isConnected) {
+      log("Error: Not connected");
+      return;
+    }
+    log(`Reading max position limit for servo ${servoId}...`);
+    setReadMaxLimitResult("Reading...");
+    try {
+      const limit = await scsServoSDK.readMaxPosLimit(servoId);
+      setReadMaxLimitResult(`Max Limit: ${limit}`);
+      log(`Servo ${servoId} max position limit: ${limit}`);
+    } catch (err: any) {
+      setReadMaxLimitResult(`Error: ${err.message}`);
+      log(
+        `Error reading max position limit for servo ${servoId}: ${err.message}`
+      );
+      console.error(err);
+    }
+  };
+
+  const handleWriteMaxPosLimit = async () => {
+    if (!isConnected) {
+      log("Error: Not connected");
+      return;
+    }
+    log(
+      `Writing max position limit ${maxPosLimitWrite} to servo ${servoId}...`
+    );
+    setMaxLimitResult("Setting max limit...");
+    try {
+      await scsServoSDK.writeMaxPosLimit(servoId, maxPosLimitWrite);
+      log(
+        `Successfully wrote max position limit ${maxPosLimitWrite} to servo ${servoId}.`
+      );
+      setMaxLimitResult(`Success: Max limit set to ${maxPosLimitWrite}`);
+    } catch (err: any) {
+      log(
+        `Error writing max position limit for servo ${servoId}: ${err.message}`
+      );
+      setMaxLimitResult(`Error: ${err.message}`);
+      console.error(err);
+    }
+  };
+
+  const handleReadMinPosLimit = async () => {
+    if (!isConnected) {
+      log("Error: Not connected");
+      return;
+    }
+    log(`Reading min position limit for servo ${servoId}...`);
+    setReadMinLimitResult("Reading...");
+    try {
+      const limit = await scsServoSDK.readMinPosLimit(servoId);
+      setReadMinLimitResult(`Min Limit: ${limit}`);
+      log(`Servo ${servoId} min position limit: ${limit}`);
+    } catch (err: any) {
+      setReadMinLimitResult(`Error: ${err.message}`);
+      log(
+        `Error reading min position limit for servo ${servoId}: ${err.message}`
+      );
+      console.error(err);
+    }
+  };
+
+  const handleWriteMinPosLimit = async () => {
+    if (!isConnected) {
+      log("Error: Not connected");
+      return;
+    }
+    log(
+      `Writing min position limit ${minPosLimitWrite} to servo ${servoId}...`
+    );
+    setMinLimitResult("Setting min limit...");
+    try {
+      await scsServoSDK.writeMinPosLimit(servoId, minPosLimitWrite);
+      log(
+        `Successfully wrote min position limit ${minPosLimitWrite} to servo ${servoId}.`
+      );
+      setMinLimitResult(`Success: Min limit set to ${minPosLimitWrite}`);
+    } catch (err: any) {
+      log(
+        `Error writing min position limit for servo ${servoId}: ${err.message}`
+      );
+      setMinLimitResult(`Error: ${err.message}`);
+      console.error(err);
+    }
+  };
+
+  // New handlers for position correction
+  const handleReadPosCorrection = async () => {
+    if (!isConnected) {
+      log("Error: Not connected");
+      return;
+    }
+    log(`Reading position correction for servo ${servoId}...`);
+    setReadCorrectionResult("Reading...");
+    try {
+      const correction = await scsServoSDK.readPosCorrection(servoId);
+      setReadCorrectionResult(`Correction: ${correction}`);
+      log(`Servo ${servoId} position correction: ${correction}`);
+    } catch (err: any) {
+      setReadCorrectionResult(`Error: ${err.message}`);
+      log(
+        `Error reading position correction for servo ${servoId}: ${err.message}`
+      );
+      console.error(err);
+    }
+  };
+
+  const handleWritePosCorrection = async () => {
+    if (!isConnected) {
+      log("Error: Not connected");
+      return;
+    }
+    log(
+      `Writing position correction ${posCorrectionWrite} to servo ${servoId}...`
+    );
+    setCorrectionResult("Setting correction...");
+    try {
+      await scsServoSDK.writePosCorrection(servoId, posCorrectionWrite);
+      log(
+        `Successfully wrote position correction ${posCorrectionWrite} to servo ${servoId}.`
+      );
+      setCorrectionResult(`Success: Correction set to ${posCorrectionWrite}`);
+    } catch (err: any) {
+      log(
+        `Error writing position correction for servo ${servoId}: ${err.message}`
+      );
+      setCorrectionResult(`Error: ${err.message}`);
+      console.error(err);
+    }
+  };
+
   const handleSyncWrite = async () => {
     if (!isConnected) {
       log("Error: Not connected");
@@ -573,76 +775,245 @@ function FeetechPageContent() {
     }
   };
 
-  const handleScanServos = async () => {
+  // New sync handlers for position limits
+  const handleSyncReadMaxLimits = async () => {
     if (!isConnected) {
       log("Error: Not connected");
       return;
     }
+    const ids = syncReadMaxLimitIds
+      .split(",")
+      .map((id) => parseInt(id.trim(), 10))
+      .filter((id) => !isNaN(id) && id > 0 && id < 253);
+    if (ids.length === 0) {
+      log("Sync Read Max Limits: No valid IDs provided.");
+      setSyncMaxLimitsResult("No valid IDs provided.");
+      return;
+    }
+    log(`Sync reading max limits for IDs: ${ids.join(", ")}`);
+    setSyncMaxLimitsResult("Reading...");
+    try {
+      const limits = await scsServoSDK.syncReadMaxPosLimits(ids);
+      let logMsg = "";
+      limits.forEach((limit, id) => {
+        logMsg += `  Servo ${id}: Max Limit=${limit}\n`;
+      });
+      setSyncMaxLimitsResult(logMsg);
+      log(`Sync Read Max Limits Result:\n${logMsg}`);
+    } catch (err: any) {
+      setSyncMaxLimitsResult(`Error: ${err.message}`);
+      log(`Sync Read Max Limits Failed: ${err.message}`);
+      console.error(err);
+    }
+  };
 
-    if (scanStartId < 1 || scanEndId > 252 || scanStartId > scanEndId) {
-      const errorMsg =
-        "Error: Invalid scan ID range. Please enter values between 1 and 252, with Start ID <= End ID.";
-      log(errorMsg);
-      setScanResults(errorMsg);
+  const handleSyncWriteMaxLimits = async () => {
+    if (!isConnected) {
+      log("Error: Not connected");
+      return;
+    }
+    const limitMap = new Map();
+    const pairs = syncMaxLimitData.split(",");
+    let validData = false;
+
+    pairs.forEach((pair) => {
+      const parts = pair.split(":");
+      if (parts.length === 2) {
+        const id = parseInt(parts[0].trim(), 10);
+        const limit = parseInt(parts[1].trim(), 10);
+        if (
+          !isNaN(id) &&
+          id > 0 &&
+          id < 253 &&
+          !isNaN(limit) &&
+          limit >= 0 &&
+          limit <= 4095
+        ) {
+          limitMap.set(id, limit);
+          validData = true;
+        } else {
+          log(`Sync Write Max Limits: Invalid data "${pair}". Skipping.`);
+        }
+      } else {
+        log(`Sync Write Max Limits: Invalid format "${pair}". Skipping.`);
+      }
+    });
+
+    if (!validData) {
+      log("Sync Write Max Limits: No valid servo limit data provided.");
       return;
     }
 
-    const startMsg = `Starting servo scan (IDs ${scanStartId}-${scanEndId})...`;
-    log(startMsg);
-    setScanResults(startMsg + "\n");
-    setIsScanning(true);
+    log(
+      `Sync writing max limits: ${Array.from(limitMap.entries())
+        .map(([id, limit]) => `${id}:${limit}`)
+        .join(", ")}...`
+    );
+    try {
+      await scsServoSDK.syncWriteMaxPosLimits(limitMap);
+      log(`Sync write max limits command sent successfully.`);
+    } catch (err: any) {
+      log(`Sync Write Max Limits Failed: ${err.message}`);
+      console.error(err);
+    }
+  };
 
-    let foundCount = 0;
-    let results = startMsg + "\n";
+  const handleSyncReadMinLimits = async () => {
+    if (!isConnected) {
+      log("Error: Not connected");
+      return;
+    }
+    const ids = syncReadMinLimitIds
+      .split(",")
+      .map((id) => parseInt(id.trim(), 10))
+      .filter((id) => !isNaN(id) && id > 0 && id < 253);
+    if (ids.length === 0) {
+      log("Sync Read Min Limits: No valid IDs provided.");
+      setSyncMinLimitsResult("No valid IDs provided.");
+      return;
+    }
+    log(`Sync reading min limits for IDs: ${ids.join(", ")}`);
+    setSyncMinLimitsResult("Reading...");
+    try {
+      const limits = await scsServoSDK.syncReadMinPosLimits(ids);
+      let logMsg = "";
+      limits.forEach((limit, id) => {
+        logMsg += `  Servo ${id}: Min Limit=${limit}\n`;
+      });
+      setSyncMinLimitsResult(logMsg);
+      log(`Sync Read Min Limits Result:\n${logMsg}`);
+    } catch (err: any) {
+      setSyncMinLimitsResult(`Error: ${err.message}`);
+      log(`Sync Read Min Limits Failed: ${err.message}`);
+      console.error(err);
+    }
+  };
 
-    for (let id = scanStartId; id <= scanEndId; id++) {
-      let resultMsg = `Scanning ID ${id}... `;
-      try {
-        const position = await scsServoSDK.readPosition(id);
-        foundCount++;
+  const handleSyncWriteMinLimits = async () => {
+    if (!isConnected) {
+      log("Error: Not connected");
+      return;
+    }
+    const limitMap = new Map();
+    const pairs = syncMinLimitData.split(",");
+    let validData = false;
 
-        let mode = "ReadError";
-        let baudRateIndex = "ReadError";
-        try {
-          mode = await scsServoSDK.readMode(id);
-        } catch (modeErr: any) {
-          log(
-            `    Warning: Could not read mode for servo ${id}: ${modeErr.message}`
-          );
-        }
-        try {
-          baudRateIndex = await scsServoSDK.readBaudRate(id);
-        } catch (baudErr: any) {
-          log(
-            `    Warning: Could not read baud rate for servo ${id}: ${baudErr.message}`
-          );
-        }
-
-        resultMsg += `FOUND: Pos=${position}, Mode=${mode}, BaudIdx=${baudRateIndex}`;
-        log(
-          `  Servo ${id} FOUND: Position=${position}, Mode=${mode}, BaudIndex=${baudRateIndex}`
-        );
-      } catch (err: any) {
+    pairs.forEach((pair) => {
+      const parts = pair.split(":");
+      if (parts.length === 2) {
+        const id = parseInt(parts[0].trim(), 10);
+        const limit = parseInt(parts[1].trim(), 10);
         if (
-          err.message.includes("timeout") ||
-          err.message.includes("No response") ||
-          err.message.includes("failed: RX")
+          !isNaN(id) &&
+          id > 0 &&
+          id < 253 &&
+          !isNaN(limit) &&
+          limit >= 0 &&
+          limit <= 4095
         ) {
-          // Expected for non-existent servos
+          limitMap.set(id, limit);
+          validData = true;
         } else {
-          resultMsg += `ERROR: ${err.message}`;
-          log(`  Servo ${id}: Unexpected error - ${err.message}`);
+          log(`Sync Write Min Limits: Invalid data "${pair}". Skipping.`);
         }
+      } else {
+        log(`Sync Write Min Limits: Invalid format "${pair}". Skipping.`);
       }
-      results += resultMsg + "\n";
-      setScanResults(results);
+    });
+
+    if (!validData) {
+      log("Sync Write Min Limits: No valid servo limit data provided.");
+      return;
     }
 
-    const finishMsg = `Servo scan finished. Found ${foundCount} servo(s).`;
-    log(finishMsg);
-    results += finishMsg + "\n";
-    setScanResults(results);
-    setIsScanning(false);
+    log(
+      `Sync writing min limits: ${Array.from(limitMap.entries())
+        .map(([id, limit]) => `${id}:${limit}`)
+        .join(", ")}...`
+    );
+    try {
+      await scsServoSDK.syncWriteMinPosLimits(limitMap);
+      log(`Sync write min limits command sent successfully.`);
+    } catch (err: any) {
+      log(`Sync Write Min Limits Failed: ${err.message}`);
+      console.error(err);
+    }
+  };
+
+  // New sync handlers for position corrections
+  const handleSyncReadCorrections = async () => {
+    if (!isConnected) {
+      log("Error: Not connected");
+      return;
+    }
+    const ids = syncReadCorrectionIds
+      .split(",")
+      .map((id) => parseInt(id.trim(), 10))
+      .filter((id) => !isNaN(id) && id > 0 && id < 253);
+    if (ids.length === 0) {
+      log("Sync Read Corrections: No valid IDs provided.");
+      setSyncCorrectionsResult("No valid IDs provided.");
+      return;
+    }
+    log(`Sync reading corrections for IDs: ${ids.join(", ")}`);
+    setSyncCorrectionsResult("Reading...");
+    try {
+      const corrections = await scsServoSDK.syncReadPosCorrection(ids);
+      let logMsg = "";
+      corrections.forEach((correction, id) => {
+        logMsg += `  Servo ${id}: Correction=${correction}\n`;
+      });
+      setSyncCorrectionsResult(logMsg);
+      log(`Sync Read Corrections Result:\n${logMsg}`);
+    } catch (err: any) {
+      setSyncCorrectionsResult(`Error: ${err.message}`);
+      log(`Sync Read Corrections Failed: ${err.message}`);
+      console.error(err);
+    }
+  };
+
+  const handleSyncWriteCorrections = async () => {
+    if (!isConnected) {
+      log("Error: Not connected");
+      return;
+    }
+    const correctionMap = new Map();
+    const pairs = syncCorrectionData.split(",");
+    let validData = false;
+
+    pairs.forEach((pair) => {
+      const parts = pair.split(":");
+      if (parts.length === 2) {
+        const id = parseInt(parts[0].trim(), 10);
+        const correction = parseInt(parts[1].trim(), 10);
+        if (!isNaN(id) && id > 0 && id < 253 && !isNaN(correction)) {
+          correctionMap.set(id, correction);
+          validData = true;
+        } else {
+          log(`Sync Write Corrections: Invalid data "${pair}". Skipping.`);
+        }
+      } else {
+        log(`Sync Write Corrections: Invalid format "${pair}". Skipping.`);
+      }
+    });
+
+    if (!validData) {
+      log("Sync Write Corrections: No valid servo correction data provided.");
+      return;
+    }
+
+    log(
+      `Sync writing corrections: ${Array.from(correctionMap.entries())
+        .map(([id, correction]) => `${id}:${correction}`)
+        .join(", ")}...`
+    );
+    try {
+      await scsServoSDK.syncWritePosCorrection(correctionMap);
+      log(`Sync write corrections command sent successfully.`);
+    } catch (err: any) {
+      log(`Sync Write Corrections Failed: ${err.message}`);
+      console.error(err);
+    }
   };
 
   useEffect(() => {
@@ -1003,7 +1374,7 @@ function FeetechPageContent() {
             </div>
 
             <Button
-              onClick={handleScanServos}
+              // onClick={handleScanServos}
               disabled={!isConnected || isScanning}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white disabled:bg-zinc-600"
             >
@@ -1062,7 +1433,7 @@ function FeetechPageContent() {
                   />
                   <Button
                     onClick={handleWriteId}
-                    className="bg-green-600 hover:bg-green-700 text-white"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     {t.changeId}
                   </Button>
@@ -1095,7 +1466,7 @@ function FeetechPageContent() {
                   />
                   <Button
                     onClick={handleWriteBaud}
-                    className="bg-blue-700 hover:bg-blue-600 text-white"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     Set
                   </Button>
@@ -1150,13 +1521,13 @@ function FeetechPageContent() {
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     onClick={handleTorqueEnable}
-                    className="bg-green-600 hover:bg-green-700 text-white"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     {t.enableTorque}
                   </Button>
                   <Button
                     onClick={handleTorqueDisable}
-                    className="bg-green-600 hover:bg-green-700 text-white"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     {t.disableTorque}
                   </Button>
@@ -1184,7 +1555,7 @@ function FeetechPageContent() {
                   />
                   <Button
                     onClick={handleWriteAcceleration}
-                    className="bg-green-600 hover:bg-green-700 text-white"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     {t.setAcceleration}
                   </Button>
@@ -1202,13 +1573,13 @@ function FeetechPageContent() {
                 <div className="grid grid-cols-2 gap-2">
                   <Button
                     onClick={handleSetWheelMode}
-                    className="bg-green-600 hover:bg-green-700 text-white"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     {t.wheelMode}
                   </Button>
                   <Button
                     onClick={handleSetPositionMode}
-                    className="bg-green-600 hover:bg-green-700 text-white"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     {t.positionMode}
                   </Button>
@@ -1236,7 +1607,7 @@ function FeetechPageContent() {
                   />
                   <Button
                     onClick={handleWriteWheelSpeed}
-                    className="bg-green-600 hover:bg-green-700 text-white"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     {t.setSpeed}
                   </Button>
@@ -1246,6 +1617,135 @@ function FeetechPageContent() {
                     {wheelSpeedResult}
                   </p>
                 )}
+              </div>
+
+              {/* Position Limits Control */}
+              <div className="space-y-4">
+                <h3 className="font-medium text-zinc-300">
+                  {t.positionLimits}
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleReadMaxPosLimit}
+                      variant="outline"
+                      className="bg-green-600 hover:bg-green-700 text-white flex-1"
+                    >
+                      {t.readMaxLimit}
+                    </Button>
+                    <Input
+                      type="number"
+                      value={maxPosLimitWrite}
+                      onChange={(e) =>
+                        setMaxPosLimitWrite(parseInt(e.target.value, 10))
+                      }
+                      min="0"
+                      max="4095"
+                      className="bg-zinc-700 border-zinc-600 text-white w-20"
+                    />
+                    <Button
+                      onClick={handleWriteMaxPosLimit}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      {t.setMaxLimit}
+                    </Button>
+                  </div>
+                  {readMaxLimitResult && (
+                    <p className="text-sm text-zinc-400 bg-zinc-900 p-2 rounded border border-zinc-600">
+                      {readMaxLimitResult}
+                    </p>
+                  )}
+                  {maxLimitResult && (
+                    <p className="text-sm text-zinc-400 bg-zinc-900 p-2 rounded border border-zinc-600">
+                      {maxLimitResult}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="font-medium text-zinc-300">{t.minPosLimit}</h3>
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleReadMinPosLimit}
+                      variant="outline"
+                      className="bg-green-600 hover:bg-green-700 text-white flex-1"
+                    >
+                      {t.readMinLimit}
+                    </Button>
+                    <Input
+                      type="number"
+                      value={minPosLimitWrite}
+                      onChange={(e) =>
+                        setMinPosLimitWrite(parseInt(e.target.value, 10))
+                      }
+                      min="0"
+                      max="4095"
+                      className="bg-zinc-700 border-zinc-600 text-white w-20"
+                    />
+                    <Button
+                      onClick={handleWriteMinPosLimit}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      {t.setMinLimit}
+                    </Button>
+                  </div>
+                  {readMinLimitResult && (
+                    <p className="text-sm text-zinc-400 bg-zinc-900 p-2 rounded border border-zinc-600">
+                      {readMinLimitResult}
+                    </p>
+                  )}
+                  {minLimitResult && (
+                    <p className="text-sm text-zinc-400 bg-zinc-900 p-2 rounded border border-zinc-600">
+                      {minLimitResult}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Position Correction Control */}
+              <div className="space-y-4">
+                <h3 className="font-medium text-zinc-300">
+                  {t.positionCorrection}
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleReadPosCorrection}
+                      variant="outline"
+                      className="bg-green-600 hover:bg-green-700 text-white flex-1"
+                    >
+                      {t.readCorrection}
+                    </Button>
+                    <Input
+                      type="number"
+                      value={posCorrectionWrite}
+                      onChange={(e) =>
+                        setPosCorrectionWrite(parseInt(e.target.value, 10))
+                      }
+                      min="-127"
+                      max="127"
+                      className="bg-zinc-700 border-zinc-600 text-white w-20"
+                    />
+                    <Button
+                      onClick={handleWritePosCorrection}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      {t.setCorrection}
+                    </Button>
+                  </div>
+                  {readCorrectionResult && (
+                    <p className="text-sm text-zinc-400 bg-zinc-900 p-2 rounded border border-zinc-600">
+                      {readCorrectionResult}
+                    </p>
+                  )}
+                  {correctionResult && (
+                    <p className="text-sm text-zinc-400 bg-zinc-900 p-2 rounded border border-zinc-600">
+                      {correctionResult}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -1300,7 +1800,7 @@ function FeetechPageContent() {
                 />
                 <Button
                   onClick={handleSyncWrite}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   {t.syncWritePositions}
                 </Button>
@@ -1320,15 +1820,160 @@ function FeetechPageContent() {
                 />
                 <Button
                   onClick={handleSyncWriteSpeed}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                 >
                   {t.syncWriteSpeeds}
                 </Button>
               </div>
             </div>
+
+            <div className="space-y-4">
+              <h3 className="font-medium text-zinc-300">
+                {t.syncReadMaxLimits}
+              </h3>
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  value={syncReadMaxLimitIds}
+                  onChange={(e) => setSyncReadMaxLimitIds(e.target.value)}
+                  placeholder={t.syncReadPositionsPlaceholder}
+                  className="bg-zinc-700 border-zinc-600 text-white"
+                />
+                <Button
+                  onClick={handleSyncReadMaxLimits}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {t.syncReadMaxLimits}
+                </Button>
+                <label className="text-xs font-medium text-zinc-400">
+                  {t.maxLimits}
+                </label>
+                <pre className="bg-zinc-900 p-2 rounded border border-zinc-600 text-xs text-zinc-300 max-h-24 overflow-y-auto whitespace-pre-wrap">
+                  {syncMaxLimitsResult}
+                </pre>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <h3 className="font-medium text-zinc-300">
+                {t.syncWriteMaxLimits}
+              </h3>
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  value={syncMaxLimitData}
+                  onChange={(e) => setSyncMaxLimitData(e.target.value)}
+                  placeholder="1:4095,2:4095"
+                  className="bg-zinc-700 border-zinc-600 text-white"
+                />
+                <Button
+                  onClick={handleSyncWriteMaxLimits}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {t.syncWriteMaxLimits}
+                </Button>
+              </div>
+            </div>
+
+            {/* Pos Min Limits */}
+            <div className="space-y-4">
+              <h3 className="font-medium text-zinc-300">
+                {t.syncReadMinLimits}
+              </h3>
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  value={syncReadMinLimitIds}
+                  onChange={(e) => setSyncReadMinLimitIds(e.target.value)}
+                  placeholder={t.syncReadPositionsPlaceholder}
+                  className="bg-zinc-700 border-zinc-600 text-white"
+                />
+                <Button
+                  onClick={handleSyncReadMinLimits}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {t.syncReadMinLimits}
+                </Button>
+
+                <label className="text-xs font-medium text-zinc-400">
+                  {t.minLimits}
+                </label>
+                <pre className="bg-zinc-900 p-2 rounded border border-zinc-600 text-xs text-zinc-300 max-h-24 overflow-y-auto whitespace-pre-wrap">
+                  {syncMinLimitsResult}
+                </pre>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="font-medium text-zinc-300">
+                {t.syncWriteMinLimits}
+              </h3>
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  value={syncMinLimitData}
+                  onChange={(e) => setSyncMinLimitData(e.target.value)}
+                  placeholder="1:0,2:0"
+                  className="bg-zinc-700 border-zinc-600 text-white"
+                />
+                <Button
+                  onClick={handleSyncWriteMinLimits}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {t.syncWriteMinLimits}
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="font-medium text-zinc-300">
+                {t.syncReadCorrections}
+              </h3>
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  value={syncReadCorrectionIds}
+                  onChange={(e) => setSyncReadCorrectionIds(e.target.value)}
+                  placeholder={t.syncReadPositionsPlaceholder}
+                  className="bg-zinc-700 border-zinc-600 text-white"
+                />
+                <Button
+                  onClick={handleSyncReadCorrections}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {t.syncReadCorrections}
+                </Button>
+
+                <label className="text-xs font-medium text-zinc-400">
+                  {t.corrections}
+                </label>
+                <pre className="bg-zinc-900 p-2 rounded border border-zinc-600 text-xs text-zinc-300 max-h-24 overflow-y-auto whitespace-pre-wrap">
+                  {syncCorrectionsResult}
+                </pre>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="font-medium text-zinc-300">
+                {t.syncWriteCorrections}
+              </h3>
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  value={syncCorrectionData}
+                  onChange={(e) => setSyncCorrectionData(e.target.value)}
+                  placeholder="1:0,2:5"
+                  className="bg-zinc-700 border-zinc-600 text-white"
+                />
+                <Button
+                  onClick={handleSyncWriteCorrections}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {t.syncWriteCorrections}
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
-
         {/* Log Output Section */}
         <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-6 shadow-lg">
           <h2 className="text-xl font-semibold mb-4 text-white flex items-center gap-2">
