@@ -290,6 +290,78 @@ function FeetechPageContent() {
     }
   };
 
+  const handleScanServos = async () => {
+    if (!isConnected) {
+      log("Error: Not connected");
+      return;
+    }
+
+    if (scanStartId < 1 || scanEndId > 252 || scanStartId > scanEndId) {
+      const errorMsg =
+        "Error: Invalid scan ID range. Please enter values between 1 and 252, with Start ID <= End ID.";
+      log(errorMsg);
+      setScanResults(errorMsg);
+      return;
+    }
+
+    const startMsg = `Starting servo scan (IDs ${scanStartId}-${scanEndId})...`;
+    log(startMsg);
+    setScanResults(startMsg + "\n");
+    setIsScanning(true);
+
+    let foundCount = 0;
+    let results = startMsg + "\n";
+
+    for (let id = scanStartId; id <= scanEndId; id++) {
+      let resultMsg = `Scanning ID ${id}... `;
+      try {
+        const position = await scsServoSDK.readPosition(id);
+        foundCount++;
+
+        let mode = "ReadError";
+        let baudRateIndex = "ReadError";
+        try {
+          mode = await scsServoSDK.readMode(id);
+        } catch (modeErr: any) {
+          log(
+            `    Warning: Could not read mode for servo ${id}: ${modeErr.message}`
+          );
+        }
+        try {
+          baudRateIndex = await scsServoSDK.readBaudRate(id);
+        } catch (baudErr: any) {
+          log(
+            `    Warning: Could not read baud rate for servo ${id}: ${baudErr.message}`
+          );
+        }
+
+        resultMsg += `FOUND: Pos=${position}, Mode=${mode}, BaudIdx=${baudRateIndex}`;
+        log(
+          `  Servo ${id} FOUND: Position=${position}, Mode=${mode}, BaudIndex=${baudRateIndex}`
+        );
+      } catch (err: any) {
+        if (
+          err.message.includes("timeout") ||
+          err.message.includes("No response") ||
+          err.message.includes("failed: RX")
+        ) {
+          // Expected for non-existent servos
+        } else {
+          resultMsg += `ERROR: ${err.message}`;
+          log(`  Servo ${id}: Unexpected error - ${err.message}`);
+        }
+      }
+      results += resultMsg + "\n";
+      setScanResults(results);
+    }
+
+    const finishMsg = `Servo scan finished. Found ${foundCount} servo(s).`;
+    log(finishMsg);
+    results += finishMsg + "\n";
+    setScanResults(results);
+    setIsScanning(false);
+  };
+
   const handleWriteId = async () => {
     if (!isConnected) {
       log("Error: Not connected");
@@ -1374,7 +1446,7 @@ function FeetechPageContent() {
             </div>
 
             <Button
-              // onClick={handleScanServos}
+              onClick={handleScanServos}
               disabled={!isConnected || isScanning}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white disabled:bg-zinc-600"
             >
