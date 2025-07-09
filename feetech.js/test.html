@@ -137,22 +137,65 @@
 
             <label for="wheelSpeedWrite">Write Wheel Speed:</label>
             <input type="number" id="wheelSpeedWrite" value="0" min="-2500" max="2500">
-            <button id="writeWheelSpeedBtn">Write Speed</button>
+            <button id="writeWheelSpeedBtn">Write Speed</button><br>
+
+            <label for="posCorrectionWrite">Position Correction:</label>
+            <input type="number" id="posCorrectionWrite" value="0" min="-2047" max="2047">
+            <button id="writePosCorrectionBtn">Write</button>
+            <button id="readPosCorrectionBtn">Read</button>
+            <span id="readPosCorrectionResult"></span><br>
+
+            <label for="maxPosLimitWrite">Max Position Limit:</label>
+            <input type="number" id="maxPosLimitWrite" value="4095" min="0" max="4095">
+            <button id="writeMaxPosLimitBtn">Write</button>
+            <button id="readMaxPosLimitBtn">Read</button>
+            <span id="readMaxPosLimitResult"></span><br>
+
+            <label for="minPosLimitWrite">Min Position Limit:</label>
+            <input type="number" id="minPosLimitWrite" value="0" min="0" max="4095">
+            <button id="writeMinPosLimitBtn">Write</button>
+            <button id="readMinPosLimitBtn">Read</button>
+            <span id="readMinPosLimitResult"></span><br>
         </div>
 
          <div class="section">
             <h2>Sync Operations</h2>
-            <label for="syncReadIds">Sync Read IDs (csv):</label>
+            <label for="syncReadIds">Sync Read Positions (IDs csv):</label>
             <input type="text" id="syncReadIds" value="1,2,3" style="width: 150px;">
-            <button id="syncReadBtn">Sync Read Positions</button><br>
+            <button id="syncReadBtn">Read</button><br>
 
-            <label for="syncWriteData">Sync Write (id:pos,...):</label>
+            <label for="syncWriteData">Sync Write Positions (id:pos,...):</label>
             <input type="text" id="syncWriteData" value="1:1500,2:2500" style="width: 200px;">
-            <button id="syncWriteBtn">Sync Write Positions</button><br>
+            <button id="syncWriteBtn">Write</button><br>
 
-            <label for="syncWriteSpeedData">Sync Write Speed (id:speed,...):</label>
+            <label for="syncWriteSpeedData">Sync Write Speeds (id:speed,...):</label>
             <input type="text" id="syncWriteSpeedData" value="1:500,2:-1000" style="width: 200px;">
-            <button id="syncWriteSpeedBtn">Sync Write Speeds</button> <!-- New Button -->
+            <button id="syncWriteSpeedBtn">Write</button><br>
+
+            
+            <label for="syncReadCorrectionIds">Sync Read Corrections (IDs csv):</label>
+            <input type="text" id="syncReadCorrectionIds" value="1,2,3" style="width: 150px;">
+            <button id="syncReadCorrectionBtn">Read</button><br>
+            
+            <label for="syncWriteCorrectionData">Sync Write Corrections (id:corr,...):</label>
+            <input type="text" id="syncWriteCorrectionData" value="1:10,2:-20" style="width: 200px;">
+            <button id="syncWriteCorrectionBtn">Write</button><br>
+
+            <label for="syncReadMaxPosLimitIds">Sync Read Max Pos Limits (IDs csv):</label>
+            <input type="text" id="syncReadMaxPosLimitIds" value="1,2,3" style="width: 150px;">
+            <button id="syncReadMaxPosLimitsBtn">Read</button><br>
+
+            <label for="syncWriteMaxPosLimitData">Sync Write Max Pos Limits (id:limit,...):</label>
+            <input type="text" id="syncWriteMaxPosLimitData" value="1:4000,2:4000" style="width: 200px;">
+            <button id="syncWriteMaxPosLimitsBtn">Write</button><br>
+
+            <label for="syncReadMinPosLimitIds">Sync Read Min Pos Limits (IDs csv):</label>
+            <input type="text" id="syncReadMinPosLimitIds" value="1,2,3" style="width: 150px;">
+            <button id="syncReadMinPosLimitsBtn">Read</button><br>
+
+            <label for="syncWriteMinPosLimitData">Sync Write Min Pos Limits (id:limit,...):</label>
+            <input type="text" id="syncWriteMinPosLimitData" value="1:100,2:100" style="width: 200px;">
+            <button id="syncWriteMinPosLimitsBtn">Write</button><br>
         </div>
 
 
@@ -195,13 +238,41 @@
         const removeWheelModeBtn = document.getElementById('removeWheelModeBtn'); // Get reference to the new button
         const wheelSpeedWriteInput = document.getElementById('wheelSpeedWrite');
         const writeWheelSpeedBtn = document.getElementById('writeWheelSpeedBtn');
+        const posCorrectionWriteInput = document.getElementById('posCorrectionWrite');
+        const writePosCorrectionBtn = document.getElementById('writePosCorrectionBtn');
+        const readPosCorrectionBtn = document.getElementById('readPosCorrectionBtn');
+        const readPosCorrectionResult = document.getElementById('readPosCorrectionResult');
+
+        const maxPosLimitWriteInput = document.getElementById('maxPosLimitWrite');
+        const writeMaxPosLimitBtn = document.getElementById('writeMaxPosLimitBtn');
+        const readMaxPosLimitBtn = document.getElementById('readMaxPosLimitBtn');
+        const readMaxPosLimitResult = document.getElementById('readMaxPosLimitResult');
+
+        const minPosLimitWriteInput = document.getElementById('minPosLimitWrite');
+        const writeMinPosLimitBtn = document.getElementById('writeMinPosLimitBtn');
+        const readMinPosLimitBtn = document.getElementById('readMinPosLimitBtn');
+        const readMinPosLimitResult = document.getElementById('readMinPosLimitResult');
 
         const syncReadIdsInput = document.getElementById('syncReadIds');
         const syncReadBtn = document.getElementById('syncReadBtn');
+        const syncReadCorrectionIdsInput = document.getElementById('syncReadCorrectionIds');
+        const syncReadCorrectionBtn = document.getElementById('syncReadCorrectionBtn');
         const syncWriteDataInput = document.getElementById('syncWriteData');
         const syncWriteBtn = document.getElementById('syncWriteBtn');
         const syncWriteSpeedDataInput = document.getElementById('syncWriteSpeedData'); // New Input
         const syncWriteSpeedBtn = document.getElementById('syncWriteSpeedBtn');       // New Button
+        const syncWriteCorrectionDataInput = document.getElementById('syncWriteCorrectionData');
+        const syncWriteCorrectionBtn = document.getElementById('syncWriteCorrectionBtn');
+
+        const syncReadMaxPosLimitIdsInput = document.getElementById('syncReadMaxPosLimitIds');
+        const syncReadMaxPosLimitsBtn = document.getElementById('syncReadMaxPosLimitsBtn');
+        const syncWriteMaxPosLimitDataInput = document.getElementById('syncWriteMaxPosLimitData');
+        const syncWriteMaxPosLimitsBtn = document.getElementById('syncWriteMaxPosLimitsBtn');
+        const syncReadMinPosLimitIdsInput = document.getElementById('syncReadMinPosLimitIds');
+        const syncReadMinPosLimitsBtn = document.getElementById('syncReadMinPosLimitsBtn');
+        const syncWriteMinPosLimitDataInput = document.getElementById('syncWriteMinPosLimitData');
+        const syncWriteMinPosLimitsBtn = document.getElementById('syncWriteMinPosLimitsBtn');
+
         const scanServosBtn = document.getElementById('scanServosBtn'); // Get reference to the scan button
         const scanStartIdInput = document.getElementById('scanStartId'); // Get reference to start ID input
         const scanEndIdInput = document.getElementById('scanEndId');   // Get reference to end ID input
@@ -431,6 +502,276 @@
                 log(`Successfully wrote wheel speed ${speed} to servo ${id}.`);
             } catch (err) {
                  log(`Error writing wheel speed for servo ${id}: ${err.message}`);
+                 console.error(err);
+            }
+        };
+
+        writePosCorrectionBtn.onclick = async () => {
+            if (!isConnected) { log('Error: Not connected'); return; }
+            const id = parseInt(servoIdInput.value, 10);
+            const correction = parseInt(posCorrectionWriteInput.value, 10);
+            log(`Writing position correction ${correction} to servo ${id}...`);
+            try {
+                await scsServoSDK.writePosCorrection(id, correction);
+                log(`Successfully wrote position correction ${correction} to servo ${id}.`);
+            } catch (err) {
+                 log(`Error writing position correction for servo ${id}: ${err.message}`);
+                 console.error(err);
+            }
+        };
+
+        readPosCorrectionBtn.onclick = async () => {
+            if (!isConnected) { log('Error: Not connected'); return; }
+            const id = parseInt(servoIdInput.value, 10);
+            log(`Reading position correction for servo ${id}...`);
+            readPosCorrectionResult.textContent = 'Reading...';
+            try {
+                const correction = await scsServoSDK.readPosCorrection(id);
+                readPosCorrectionResult.textContent = `Correction: ${correction}`;
+                log(`Servo ${id} position correction: ${correction}`);
+            } catch (err) {
+                 readPosCorrectionResult.textContent = `Error: ${err.message}`;
+                 log(`Error reading position correction for servo ${id}: ${err.message}`);
+                 console.error(err);
+            }
+        };
+
+        readMaxPosLimitBtn.onclick = async () => {
+            if (!isConnected) { log('Error: Not connected'); return; }
+            const id = parseInt(servoIdInput.value, 10);
+            log(`Reading max position limit for servo ${id}...`);
+            readMaxPosLimitResult.textContent = 'Reading...';
+            try {
+                const limit = await scsServoSDK.readMaxPosLimit(id);
+                readMaxPosLimitResult.textContent = `Limit: ${limit}`;
+                log(`Servo ${id} max position limit: ${limit}`);
+            } catch (err) {
+                 readMaxPosLimitResult.textContent = `Error: ${err.message}`;
+                 log(`Error reading max position limit for servo ${id}: ${err.message}`);
+                 console.error(err);
+            }
+        };
+
+        writeMaxPosLimitBtn.onclick = async () => {
+            if (!isConnected) { log('Error: Not connected'); return; }
+            const id = parseInt(servoIdInput.value, 10);
+            const limit = parseInt(maxPosLimitWriteInput.value, 10);
+            log(`Writing max position limit ${limit} to servo ${id}...`);
+            try {
+                await scsServoSDK.writeMaxPosLimit(id, limit);
+                log(`Successfully wrote max position limit ${limit} to servo ${id}.`);
+            } catch (err) {
+                 log(`Error writing max position limit for servo ${id}: ${err.message}`);
+                 console.error(err);
+            }
+        };
+
+        readMinPosLimitBtn.onclick = async () => {
+            if (!isConnected) { log('Error: Not connected'); return; }
+            const id = parseInt(servoIdInput.value, 10);
+            log(`Reading min position limit for servo ${id}...`);
+            readMinPosLimitResult.textContent = 'Reading...';
+            try {
+                const limit = await scsServoSDK.readMinPosLimit(id);
+                readMinPosLimitResult.textContent = `Limit: ${limit}`;
+                log(`Servo ${id} min position limit: ${limit}`);
+            } catch (err) {
+                 readMinPosLimitResult.textContent = `Error: ${err.message}`;
+                 log(`Error reading min position limit for servo ${id}: ${err.message}`);
+                 console.error(err);
+            }
+        };
+
+        writeMinPosLimitBtn.onclick = async () => {
+            if (!isConnected) { log('Error: Not connected'); return; }
+            const id = parseInt(servoIdInput.value, 10);
+            const limit = parseInt(minPosLimitWriteInput.value, 10);
+            log(`Writing min position limit ${limit} to servo ${id}...`);
+            try {
+                await scsServoSDK.writeMinPosLimit(id, limit);
+                log(`Successfully wrote min position limit ${limit} to servo ${id}.`);
+            } catch (err) {
+                 log(`Error writing min position limit for servo ${id}: ${err.message}`);
+                 console.error(err);
+            }
+        };
+
+        syncReadMaxPosLimitsBtn.onclick = async () => {
+            if (!isConnected) { log('Error: Not connected'); return; }
+            const idsString = syncReadMaxPosLimitIdsInput.value;
+            const ids = idsString.split(',').map(s => parseInt(s.trim(), 10)).filter(id => !isNaN(id) && id > 0 && id < 253);
+            if (ids.length === 0) {
+                log('Sync Read Max Pos Limits: No valid servo IDs provided.');
+                return;
+            }
+            log(`Sync reading max position limits for servos: ${ids.join(', ')}...`);
+            try {
+                const limits = await scsServoSDK.syncReadMaxPosLimits(ids);
+                let logMsg = 'Sync Read Max Pos Limits Successful:\n';
+                limits.forEach((limit, id) => {
+                    logMsg += `  Servo ${id}: Limit=${limit}\n`;
+                });
+                log(logMsg.trim());
+            } catch (err) {
+                 log(`Sync Read Max Pos Limits Failed: ${err.message}`);
+                 console.error(err);
+            }
+        };
+
+        syncWriteMaxPosLimitsBtn.onclick = async () => {
+            if (!isConnected) { log('Error: Not connected'); return; }
+            const dataString = syncWriteMaxPosLimitDataInput.value;
+            const limitMap = new Map();
+            const pairs = dataString.split(',');
+            let validData = false;
+
+            pairs.forEach(pair => {
+                const parts = pair.split(':');
+                if (parts.length === 2) {
+                    const id = parseInt(parts[0].trim(), 10);
+                    const limit = parseInt(parts[1].trim(), 10);
+                    if (!isNaN(id) && id > 0 && id < 253 && !isNaN(limit) && limit >= 0 && limit <= 4095) {
+                        limitMap.set(id, limit);
+                        validData = true;
+                    } else {
+                         log(`Sync Write Max Pos Limit: Invalid data pair "${pair}". ID (1-252), Limit (0-4095). Skipping.`);
+                    }
+                } else {
+                    log(`Sync Write Max Pos Limit: Invalid format "${pair}". Skipping.`);
+                }
+            });
+
+            if (!validData) {
+                log('Sync Write Max Pos Limit: No valid servo limit data provided.');
+                return;
+            }
+
+            log(`Sync writing max pos limits: ${Array.from(limitMap.entries()).map(([id, limit]) => `${id}:${limit}`).join(', ')}...`);
+            try {
+                await scsServoSDK.syncWriteMaxPosLimits(limitMap);
+                log(`Sync write max pos limit command sent successfully.`);
+            } catch (err) {
+                 log(`Sync Write Max Pos Limit Failed: ${err.message}`);
+                 console.error(err);
+            }
+        };
+
+        syncReadMinPosLimitsBtn.onclick = async () => {
+            if (!isConnected) { log('Error: Not connected'); return; }
+            const idsString = syncReadMinPosLimitIdsInput.value;
+            const ids = idsString.split(',').map(s => parseInt(s.trim(), 10)).filter(id => !isNaN(id) && id > 0 && id < 253);
+            if (ids.length === 0) {
+                log('Sync Read Min Pos Limits: No valid servo IDs provided.');
+                return;
+            }
+            log(`Sync reading min position limits for servos: ${ids.join(', ')}...`);
+            try {
+                const limits = await scsServoSDK.syncReadMinPosLimits(ids);
+                let logMsg = 'Sync Read Min Pos Limits Successful:\n';
+                limits.forEach((limit, id) => {
+                    logMsg += `  Servo ${id}: Limit=${limit}\n`;
+                });
+                log(logMsg.trim());
+            } catch (err) {
+                 log(`Sync Read Min Pos Limits Failed: ${err.message}`);
+                 console.error(err);
+            }
+        };
+
+        syncWriteMinPosLimitsBtn.onclick = async () => {
+            if (!isConnected) { log('Error: Not connected'); return; }
+            const dataString = syncWriteMinPosLimitDataInput.value;
+            const limitMap = new Map();
+            const pairs = dataString.split(',');
+            let validData = false;
+
+            pairs.forEach(pair => {
+                const parts = pair.split(':');
+                if (parts.length === 2) {
+                    const id = parseInt(parts[0].trim(), 10);
+                    const limit = parseInt(parts[1].trim(), 10);
+                    if (!isNaN(id) && id > 0 && id < 253 && !isNaN(limit) && limit >= 0 && limit <= 4095) {
+                        limitMap.set(id, limit);
+                        validData = true;
+                    } else {
+                         log(`Sync Write Min Pos Limit: Invalid data pair "${pair}". ID (1-252), Limit (0-4095). Skipping.`);
+                    }
+                } else {
+                    log(`Sync Write Min Pos Limit: Invalid format "${pair}". Skipping.`);
+                }
+            });
+
+            if (!validData) {
+                log('Sync Write Min Pos Limit: No valid servo limit data provided.');
+                return;
+            }
+
+            log(`Sync writing min pos limits: ${Array.from(limitMap.entries()).map(([id, limit]) => `${id}:${limit}`).join(', ')}...`);
+            try {
+                await scsServoSDK.syncWriteMinPosLimits(limitMap);
+                log(`Sync write min pos limit command sent successfully.`);
+            } catch (err) {
+                 log(`Sync Write Min Pos Limit Failed: ${err.message}`);
+                 console.error(err);
+            }
+        };
+
+        syncReadCorrectionBtn.onclick = async () => {
+            if (!isConnected) { log('Error: Not connected'); return; }
+            const idsString = syncReadCorrectionIdsInput.value;
+            const ids = idsString.split(',').map(s => parseInt(s.trim(), 10)).filter(id => !isNaN(id) && id > 0 && id < 253);
+            if (ids.length === 0) {
+                log('Sync Read Correction: No valid servo IDs provided.');
+                return;
+            }
+            log(`Sync reading corrections for servos: ${ids.join(', ')}...`);
+            try {
+                const corrections = await scsServoSDK.syncReadPosCorrection(ids);
+                let logMsg = 'Sync Read Correction Successful:\n';
+                corrections.forEach((corr, id) => {
+                    logMsg += `  Servo ${id}: Correction=${corr}\n`;
+                });
+                log(logMsg.trim());
+            } catch (err) {
+                 log(`Sync Read Correction Failed: ${err.message}`);
+                 console.error(err);
+            }
+        };
+
+        syncWriteCorrectionBtn.onclick = async () => {
+            if (!isConnected) { log('Error: Not connected'); return; }
+            const dataString = syncWriteCorrectionDataInput.value;
+            const correctionMap = new Map();
+            const pairs = dataString.split(',');
+            let validData = false;
+
+            pairs.forEach(pair => {
+                const parts = pair.split(':');
+                if (parts.length === 2) {
+                    const id = parseInt(parts[0].trim(), 10);
+                    const corr = parseInt(parts[1].trim(), 10);
+                    if (!isNaN(id) && id > 0 && id < 253 && !isNaN(corr) && corr >= -2047 && corr <= 2047) {
+                        correctionMap.set(id, corr);
+                        validData = true;
+                    } else {
+                         log(`Sync Write Correction: Invalid data pair "${pair}". ID (1-252), Corr (-2047-2047). Skipping.`);
+                    }
+                } else {
+                    log(`Sync Write Correction: Invalid format "${pair}". Skipping.`);
+                }
+            });
+
+            if (!validData) {
+                log('Sync Write Correction: No valid servo correction data provided.');
+                return;
+            }
+
+            log(`Sync writing corrections: ${Array.from(correctionMap.entries()).map(([id, corr]) => `${id}:${corr}`).join(', ')}...`);
+            try {
+                await scsServoSDK.syncWritePosCorrection(correctionMap);
+                log(`Sync write correction command sent successfully.`);
+            } catch (err) {
+                 log(`Sync Write Correction Failed: ${err.message}`);
                  console.error(err);
             }
         };

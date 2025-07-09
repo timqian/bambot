@@ -28,6 +28,9 @@ const ADDR_SCS_MODE = 33;
 const ADDR_SCS_LOCK = 55;
 const ADDR_SCS_ID = 5; // Address for Servo ID
 const ADDR_SCS_BAUD_RATE = 6; // Address for Baud Rate
+const ADDR_POS_CORRECTION = 31; // Address for Position Correction
+const ADDR_MIN_POS_LIMIT = 9; // Address for Min Position
+const ADDR_MAX_POS_LIMIT = 11; // Address for Max Position
 
 // --- Class-based multi-instance implementation ---
 export class ScsServoSDK {
@@ -262,25 +265,56 @@ export class ScsServoSDK {
     }
   }
 
+
+  async unlockServo(servoId) {
+    const [result, error] = await this.packetHandler.write1ByteTxRx(
+      this.portHandler,
+      servoId,
+      ADDR_SCS_LOCK,
+      0
+    );
+    if (result !== COMM_SUCCESS) {
+      throw new Error(
+        `Failed to unlock servo ${servoId}: ${this.packetHandler.getTxRxResult(
+          result
+        )}, Error: ${error}`
+      );
+    }
+  }
+
+  async lockServo(servoId) {
+    const [result, error] = await this.packetHandler.write1ByteTxRx(
+      this.portHandler,
+      servoId,
+      ADDR_SCS_LOCK,
+      1
+    );
+    if (result !== COMM_SUCCESS) {
+      throw new Error(
+        `Failed to lock servo ${servoId}: ${this.packetHandler.getTxRxResult(
+          result
+        )}, Error: ${error}`
+      );
+    }
+  }
+
+  async tryLockServo(servoId) {
+    try {
+      await this.lockServo(servoId);
+    } catch (err) {
+      console.warn(`Failed to re-lock servo ${servoId}:`, err);
+    }
+  }
+
   async setWheelMode(servoId) {
     this.checkConnection();
     let unlocked = false;
     try {
       console.log(`Setting servo ${servoId} to wheel mode...`);
-      const [resUnlock, errUnlock] = await this.packetHandler.write1ByteTxRx(
-        this.portHandler,
-        servoId,
-        ADDR_SCS_LOCK,
-        0
-      );
-      if (resUnlock !== COMM_SUCCESS) {
-        throw new Error(
-          `Failed to unlock servo ${servoId}: ${this.packetHandler.getTxRxResult(
-            resUnlock
-          )}, Error: ${errUnlock}`
-        );
-      }
+
+      await this.unlockServo(servoId);
       unlocked = true;
+
       const [resMode, errMode] = await this.packetHandler.write1ByteTxRx(
         this.portHandler,
         servoId,
@@ -294,20 +328,10 @@ export class ScsServoSDK {
           )}, Error: ${errMode}`
         );
       }
-      const [resLock, errLock] = await this.packetHandler.write1ByteTxRx(
-        this.portHandler,
-        servoId,
-        ADDR_SCS_LOCK,
-        1
-      );
-      if (resLock !== COMM_SUCCESS) {
-        throw new Error(
-          `Failed to lock servo ${servoId} after setting mode: ${this.packetHandler.getTxRxResult(
-            resLock
-          )}, Error: ${errLock}`
-        );
-      }
+
+      await this.lockServo(servoId);
       unlocked = false;
+
       console.log(`Successfully set servo ${servoId} to wheel mode.`);
       return "success";
     } catch (err) {
@@ -326,20 +350,10 @@ export class ScsServoSDK {
     let unlocked = false;
     try {
       console.log(`Setting servo ${servoId} back to position mode...`);
-      const [resUnlock, errUnlock] = await this.packetHandler.write1ByteTxRx(
-        this.portHandler,
-        servoId,
-        ADDR_SCS_LOCK,
-        0
-      );
-      if (resUnlock !== COMM_SUCCESS) {
-        throw new Error(
-          `Failed to unlock servo ${servoId}: ${this.packetHandler.getTxRxResult(
-            resUnlock
-          )}, Error: ${errUnlock}`
-        );
-      }
+
+      await this.unlockServo(servoId);
       unlocked = true;
+
       const [resMode, errMode] = await this.packetHandler.write1ByteTxRx(
         this.portHandler,
         servoId,
@@ -353,20 +367,10 @@ export class ScsServoSDK {
           )}, Error: ${errMode}`
         );
       }
-      const [resLock, errLock] = await this.packetHandler.write1ByteTxRx(
-        this.portHandler,
-        servoId,
-        ADDR_SCS_LOCK,
-        1
-      );
-      if (resLock !== COMM_SUCCESS) {
-        throw new Error(
-          `Failed to lock servo ${servoId} after setting mode: ${this.packetHandler.getTxRxResult(
-            resLock
-          )}, Error: ${errLock}`
-        );
-      }
+
+      await this.lockServo(servoId);
       unlocked = false;
+
       console.log(`Successfully set servo ${servoId} back to position mode.`);
       return "success";
     } catch (err) {
@@ -383,16 +387,87 @@ export class ScsServoSDK {
     }
   }
 
-  async tryLockServo(servoId) {
+  async readPosCorrection(servoId) {
+    this.checkConnection();
     try {
-      await this.packetHandler.write1ByteTxRx(
+      const [rawValue, result, error] = await this.packetHandler.read2ByteTxRx(
         this.portHandler,
         servoId,
-        ADDR_SCS_LOCK,
-        1
+        ADDR_POS_CORRECTION
       );
-    } catch (lockErr) {
-      console.error(`Failed to re-lock servo ${servoId}:`, lockErr);
+      if (result !== COMM_SUCCESS) {
+        throw new Error(
+          `Error reading position correction from servo ${servoId}: ${this.packetHandler.getTxRxResult(
+            result
+          )}, Error code: ${error}`
+        );
+      }
+      // BIT 11 is the direction bit. Bits 0-10 are the magnitude (0-2047).
+      const magnitude = rawValue & 0x7ff; // bits 0-10
+      const direction = rawValue & 0x800 ? -1 : 1; // bit 11
+      return direction * magnitude;
+    } catch (err) {
+      console.error(
+        `Exception reading position correction from servo ${servoId}:`,
+        err
+      );
+      throw new Error(
+        `Exception reading position correction from servo ${servoId}: ${err.message}`
+      );
+    }
+  }
+
+  async writePosCorrection(servoId, correction) {
+    this.checkConnection();
+    let unlocked = false;
+    try {
+      // Correction must be in range -2047 to 2047
+      if (correction < -2047 || correction > 2047) {
+        throw new Error(
+          `Invalid correction value ${correction}. Must be between -2047 and 2047.`
+        );
+      }
+
+      await this.unlockServo(servoId);
+      unlocked = true;
+
+      // BIT 11 is direction: 0 for positive, 1 for negative
+      let value = Math.abs(correction) & 0x7ff; // bits 0-10
+      if (correction < 0) {
+        value |= 0x800; // set bit 11 for negative
+      }
+      // bits 12-15 are 0
+
+      const [result, error] = await this.packetHandler.write2ByteTxRx(
+        this.portHandler,
+        servoId,
+        ADDR_POS_CORRECTION,
+        value
+      );
+
+      if (result !== COMM_SUCCESS) {
+        throw new Error(
+          `Error writing position correction to servo ${servoId}: ${this.packetHandler.getTxRxResult(
+            result
+          )}, Error code: ${error}`
+        );
+      }
+
+      await this.lockServo(servoId);
+      unlocked = false;
+
+      return "success";
+    } catch (err) {
+      console.error(
+        `Exception writing position correction to servo ${servoId}:`,
+        err
+      );
+      if (unlocked) {
+        await this.tryLockServo(servoId);
+      }
+      throw new Error(
+        `Failed to write position correction to servo ${servoId}: ${err.message}`
+      );
     }
   }
 
@@ -571,6 +646,292 @@ export class ScsServoSDK {
     }
   }
 
+  async syncWritePosCorrection(servoCorrections) {
+    this.checkConnection();
+    const entries =
+      servoCorrections instanceof Map
+        ? servoCorrections.entries()
+        : Object.entries(servoCorrections);
+
+    for (const [idStr, correction] of entries) {
+      const servoId = parseInt(idStr, 10);
+      try {
+        await this.writePosCorrection(servoId, correction);
+      } catch (e) {
+        console.warn(
+          `Sync Write Correction: Exception writing to servo ID ${servoId}:`,
+          e
+        );
+        // Decide if you want to continue or stop on error.
+        // For now, we log a warning and continue.
+      }
+    }
+    return "success"; // Or you could return a map of successes/failures
+  }
+
+  async syncReadPosCorrection(servoIds) {
+    this.checkConnection();
+    if (!Array.isArray(servoIds) || servoIds.length === 0) {
+      console.log("Sync Read Correction: No servo IDs provided.");
+      return new Map();
+    }
+    const corrections = new Map();
+    for (const id of servoIds) {
+      if (id < 1 || id > 252) {
+        console.warn(`Sync Read Correction: Invalid servo ID ${id} skipped.`);
+        continue;
+      }
+      try {
+        const correction = await this.readPosCorrection(id);
+        corrections.set(id, correction);
+      } catch (e) {
+        console.warn(
+          `Sync Read Correction: Exception reading servo ID ${id}:`,
+          e
+        );
+      }
+    }
+    return corrections;
+  }
+
+  async syncReadMaxPosLimits(servoIds) {
+    this.checkConnection();
+    if (!Array.isArray(servoIds) || servoIds.length === 0) {
+      console.log("Sync Read Max Limits: No servo IDs provided.");
+      return new Map();
+    }
+    const limits = new Map();
+    for (const id of servoIds) {
+      if (id < 1 || id > 252) {
+        console.warn(`Sync Read Max Limits: Invalid servo ID ${id} skipped.`);
+        continue;
+      }
+      try {
+        const limit = await this.readMaxPosLimit(id);
+        limits.set(id, limit);
+      } catch (e) {
+        console.warn(
+          `Sync Read Max Limits: Exception reading servo ID ${id}:`,
+          e
+        );
+      }
+    }
+    return limits;
+  }
+
+  async syncWriteMaxPosLimits(servoLimits) {
+    this.checkConnection();
+    const entries =
+      servoLimits instanceof Map
+        ? servoLimits.entries()
+        : Object.entries(servoLimits);
+
+    for (const [idStr, limit] of entries) {
+      const servoId = parseInt(idStr, 10);
+      try {
+        await this.writeMaxPosLimit(servoId, limit);
+      } catch (e) {
+        console.warn(
+          `Sync Write Max Limits: Exception writing to servo ID ${servoId}:`,
+          e
+        );
+      }
+    }
+    return "success";
+  }
+
+  async syncReadMinPosLimits(servoIds) {
+    this.checkConnection();
+    if (!Array.isArray(servoIds) || servoIds.length === 0) {
+      console.log("Sync Read Min Limits: No servo IDs provided.");
+      return new Map();
+    }
+    const limits = new Map();
+    for (const id of servoIds) {
+      if (id < 1 || id > 252) {
+        console.warn(`Sync Read Min Limits: Invalid servo ID ${id} skipped.`);
+        continue;
+      }
+      try {
+        const limit = await this.readMinPosLimit(id);
+        limits.set(id, limit);
+      } catch (e) {
+        console.warn(
+          `Sync Read Min Limits: Exception reading servo ID ${id}:`,
+          e
+        );
+      }
+    }
+    return limits;
+  }
+
+  async syncWriteMinPosLimits(servoLimits) {
+    this.checkConnection();
+    const entries =
+      servoLimits instanceof Map
+        ? servoLimits.entries()
+        : Object.entries(servoLimits);
+
+    for (const [idStr, limit] of entries) {
+      const servoId = parseInt(idStr, 10);
+      try {
+        await this.writeMinPosLimit(servoId, limit);
+      } catch (e) {
+        console.warn(
+          `Sync Write Min Limits: Exception writing to servo ID ${servoId}:`,
+          e
+        );
+      }
+    }
+    return "success";
+  }
+
+  async readMaxPosLimit(servoId) {
+    this.checkConnection();
+    try {
+      const [limit, result, error] = await this.packetHandler.read2ByteTxRx(
+        this.portHandler,
+        servoId,
+        ADDR_MAX_POS_LIMIT
+      );
+      if (result !== COMM_SUCCESS) {
+        throw new Error(
+          `Error reading max position limit from servo ${servoId}: ${this.packetHandler.getTxRxResult(
+            result
+          )}, Error code: ${error}`
+        );
+      }
+      return limit;
+    } catch (err) {
+      console.error(
+        `Exception reading max position limit from servo ${servoId}:`,
+        err
+      );
+      throw new Error(
+        `Exception reading max position limit from servo ${servoId}: ${err.message}`
+      );
+    }
+  }
+
+  async readMinPosLimit(servoId) {
+    this.checkConnection();
+    try {
+      const [limit, result, error] = await this.packetHandler.read2ByteTxRx(
+        this.portHandler,
+        servoId,
+        ADDR_MIN_POS_LIMIT
+      );
+      if (result !== COMM_SUCCESS) {
+        throw new Error(
+          `Error reading min position limit from servo ${servoId}: ${this.packetHandler.getTxRxResult(
+            result
+          )}, Error code: ${error}`
+        );
+      }
+      return limit;
+    } catch (err) {
+      console.error(
+        `Exception reading min position limit from servo ${servoId}:`,
+        err
+      );
+      throw new Error(
+        `Exception reading min position limit from servo ${servoId}: ${err.message}`
+      );
+    }
+  }
+
+  async writeMaxPosLimit(servoId, limit) {
+    this.checkConnection();
+    let unlocked = false;
+    try {
+      if (limit < 0 || limit > 4095) {
+        throw new Error(
+          `Invalid limit value ${limit} for servo ${servoId}. Must be between 0 and 4095.`
+        );
+      }
+
+      await this.unlockServo(servoId);
+      unlocked = true;
+
+      const targetLimit = Math.round(limit);
+      const [result, error] = await this.packetHandler.write2ByteTxRx(
+        this.portHandler,
+        servoId,
+        ADDR_MAX_POS_LIMIT,
+        targetLimit
+      );
+      if (result !== COMM_SUCCESS) {
+        throw new Error(
+          `Error writing max position limit to servo ${servoId}: ${this.packetHandler.getTxRxResult(
+            result
+          )}, Error code: ${error}`
+        );
+      }
+
+      await this.lockServo(servoId);
+      unlocked = false;
+
+      return "success";
+    } catch (err) {
+      console.error(
+        `Exception writing max position limit to servo ${servoId}:`,
+        err
+      );
+      if (unlocked) {
+        await this.tryLockServo(servoId);
+      }
+      throw new Error(
+        `Failed to write max position limit to servo ${servoId}: ${err.message}`
+      );
+    }
+  }
+
+  async writeMinPosLimit(servoId, limit) {
+    this.checkConnection();
+    let unlocked = false;
+    try {
+      if (limit < 0 || limit > 4095) {
+        throw new Error(
+          `Invalid limit value ${limit} for servo ${servoId}. Must be between 0 and 4095.`
+        );
+      }
+
+      await this.unlockServo(servoId);
+      unlocked = true;
+
+      const targetLimit = Math.round(limit);
+      const [result, error] = await this.packetHandler.write2ByteTxRx(
+        this.portHandler,
+        servoId,
+        ADDR_MIN_POS_LIMIT,
+        targetLimit
+      );
+      if (result !== COMM_SUCCESS) {
+        throw new Error(
+          `Error writing min position limit to servo ${servoId}: ${this.packetHandler.getTxRxResult(
+            result
+          )}, Error code: ${error}`
+        );
+      }
+
+      await this.lockServo(servoId);
+      unlocked = false;
+
+      return "success";
+    } catch (err) {
+      console.error(
+        `Exception writing min position limit to servo ${servoId}:`,
+        err
+      );
+      if (unlocked) {
+        await this.tryLockServo(servoId);
+      }
+      throw new Error(
+        `Failed to write min position limit to servo ${servoId}: ${err.message}`
+      );
+    }
+  }
+
   async setBaudRate(servoId, baudRateIndex) {
     this.checkConnection();
     if (servoId < 1 || servoId > 252) {
@@ -588,20 +949,10 @@ export class ScsServoSDK {
       console.log(
         `Setting baud rate for servo ${servoId}: Index=${baudRateIndex}`
       );
-      const [resUnlock, errUnlock] = await this.packetHandler.write1ByteTxRx(
-        this.portHandler,
-        servoId,
-        ADDR_SCS_LOCK,
-        0
-      );
-      if (resUnlock !== COMM_SUCCESS) {
-        throw new Error(
-          `Failed to unlock servo ${servoId}: ${this.packetHandler.getTxRxResult(
-            resUnlock
-          )}, Error: ${errUnlock}`
-        );
-      }
+
+      await this.unlockServo(servoId);
       unlocked = true;
+
       const [resBaud, errBaud] = await this.packetHandler.write1ByteTxRx(
         this.portHandler,
         servoId,
@@ -615,20 +966,10 @@ export class ScsServoSDK {
           )}, Error: ${errBaud}`
         );
       }
-      const [resLock, errLock] = await this.packetHandler.write1ByteTxRx(
-        this.portHandler,
-        servoId,
-        ADDR_SCS_LOCK,
-        1
-      );
-      if (resLock !== COMM_SUCCESS) {
-        throw new Error(
-          `Failed to lock servo ${servoId} after setting baud rate: ${this.packetHandler.getTxRxResult(
-            resLock
-          )}, Error: ${errLock}.`
-        );
-      }
+
+      await this.lockServo(servoId);
       unlocked = false;
+
       console.log(
         `Successfully set baud rate for servo ${servoId}. Index: ${baudRateIndex}. Remember to potentially reconnect with the new baud rate.`
       );
@@ -667,20 +1008,10 @@ export class ScsServoSDK {
     let idWritten = false;
     try {
       console.log(`Setting servo ID: From ${currentServoId} to ${newServoId}`);
-      const [resUnlock, errUnlock] = await this.packetHandler.write1ByteTxRx(
-        this.portHandler,
-        currentServoId,
-        ADDR_SCS_LOCK,
-        0
-      );
-      if (resUnlock !== COMM_SUCCESS) {
-        throw new Error(
-          `Failed to unlock servo ${currentServoId}: ${this.packetHandler.getTxRxResult(
-            resUnlock
-          )}, Error: ${errUnlock}`
-        );
-      }
+
+      await this.unlockServo(currentServoId);
       unlocked = true;
+
       const [resId, errId] = await this.packetHandler.write1ByteTxRx(
         this.portHandler,
         currentServoId,
@@ -695,20 +1026,10 @@ export class ScsServoSDK {
         );
       }
       idWritten = true;
-      const [resLock, errLock] = await this.packetHandler.write1ByteTxRx(
-        this.portHandler,
-        newServoId,
-        ADDR_SCS_LOCK,
-        1
-      );
-      if (resLock !== COMM_SUCCESS) {
-        throw new Error(
-          `Failed to lock servo with new ID ${newServoId}: ${this.packetHandler.getTxRxResult(
-            resLock
-          )}, Error: ${errLock}. Configuration might be incomplete.`
-        );
-      }
+
+      await this.lockServo(newServoId);
       unlocked = false;
+
       console.log(
         `Successfully set servo ID from ${currentServoId} to ${newServoId}. Remember to use the new ID for future commands.`
       );

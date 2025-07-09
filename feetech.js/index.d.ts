@@ -23,6 +23,18 @@ export declare class ScsServoSDK {
   syncWriteWheelSpeed(servoSpeeds: ServoSpeeds): Promise<"success">;
   setBaudRate(servoId: number, baudRateIndex: number): Promise<"success">;
   setServoId(currentServoId: number, newServoId: number): Promise<"success">;
+  readMaxPosLimit(servoId: number): Promise<number>;
+  writeMaxPosLimit(servoId: number, limit: number): Promise<"success">;
+  readMinPosLimit(servoId: number): Promise<number>;
+  writeMinPosLimit(servoId: number, limit: number): Promise<"success">;
+  syncReadMaxPosLimits(servoIds: number[]): Promise<Map<number, number>>;
+  syncWriteMaxPosLimits(servoLimits: ServoPositions): Promise<"success">;
+  syncReadMinPosLimits(servoIds: number[]): Promise<Map<number, number>>;
+  syncWriteMinPosLimits(servoLimits: ServoPositions): Promise<"success">;
+  readPosCorrection(servoId: number): Promise<number>;
+  writePosCorrection(servoId: number, correction: number): Promise<"success">;
+  syncReadPosCorrection(servoIds: number[]): Promise<Map<number, number>>;
+  syncWritePosCorrection(servoCorrections: ServoPositions): Promise<"success">;
 }
 
 export declare const scsServoSDK: ScsServoSDK;
