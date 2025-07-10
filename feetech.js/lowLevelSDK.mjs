@@ -156,7 +156,14 @@ export class PortHandler {
   async clearPort() {
     if (this.reader) {
       await this.reader.releaseLock();
-      this.reader = this.port.readable.getReader();
+      // Vérifier que le port est toujours ouvert avant d'obtenir un nouveau reader
+      if (this.port && this.port.readable && this.isOpen) {
+        this.reader = this.port.readable.getReader();
+      } else {
+        console.warn('Port not available for clearPort, marking as disconnected');
+        this.reader = null;
+        this.isOpen = false;
+      }
     }
   }
   
@@ -171,7 +178,8 @@ export class PortHandler {
   }
   
   async writePort(data) {
-    if (!this.isOpen || !this.writer) {
+    if (!this.isOpen || !this.writer || !this.port || !this.port.writable) {
+      console.warn('Port not available for writing');
       return 0;
     }
     
@@ -180,12 +188,15 @@ export class PortHandler {
       return data.length;
     } catch (err) {
       console.error('Error writing to port:', err);
+      // Marquer comme déconnecté si erreur d'écriture
+      this.isOpen = false;
       return 0;
     }
   }
   
   async readPort(length) {
-    if (!this.isOpen || !this.reader) {
+    if (!this.isOpen || !this.reader || !this.port || !this.port.readable) {
+      console.warn('Port not available for reading');
       return [];
     }
     

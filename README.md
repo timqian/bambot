@@ -17,7 +17,65 @@
 
 Play with open-source, low-cost AI robots 🤖
 
+## 🚀 Getting Started
 
+### Prerequisites
+
+- **Node.js** (≥12.17.0)
+- **Bun** (recommended) or **npm**
+- **Chrome/Edge browser** (Web Serial API required)
+
+### Quick Setup
+
+```bash
+# Clone repository
+git clone https://github.com/timqian/bambot.git
+cd bambot
+
+# Install Task runner (if not installed)
+brew install go-task/tap/go-task  # macOS
+# or visit https://taskfile.dev/installation/
+
+# Setup and start
+task setup
+task dev
+```
+
+### Manual Installation
+
+```bash
+cd website
+bun install --force  # or npm install
+npm run dev
+```
+
+**Access**: Open `http://localhost:3000` in Chrome or Edge
+
+### Control Modes
+
+- **🎮 Keyboard**: WASD/Arrow keys for movement, letter keys for joints
+- **🤖 Leader-Follower**: Connect two robots for real-time copying
+- **💬 AI Chat**: Natural language robot control
+
+### Development Commands
+
+```bash
+task dev          # Start development server
+task build        # Build for production
+task lint         # Code linting
+task type-check   # TypeScript validation
+task test         # Run all tests
+task clean        # Clean build artifacts
+```
+
+### Hardware Connection (Optional)
+
+1. Connect robot via USB
+2. Click "Connect" in web interface
+3. Select serial port
+4. Choose control mode
+
+**Supported Robots**: SO-ARM100, Bambot v0, Unitree Go2/G1, STS3215
 
 ## Demo Video
 

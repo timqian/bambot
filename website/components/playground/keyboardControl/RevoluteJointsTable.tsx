@@ -1,5 +1,5 @@
 "use client";
-import Oeact, { useState, useEffect, useRef } from "react"; // Added useRef
+import React, { useState, useEffect, useRef } from "react"; // Fixed typo
 import {
   JointState,
   UpdateJointDegrees,
@@ -7,6 +7,7 @@ import {
 } from "../../../hooks/useRobotControl";
 import { radiansToDegrees } from "../../../lib/utils";
 import { RobotConfig } from "@/config/robotConfig";
+import { StadiaDebugger } from "@/lib/gamepadDebug";
 
 type RevoluteJointsTableProps = {
   joints: JointState[];
@@ -14,6 +15,7 @@ type RevoluteJointsTableProps = {
   updateJointsDegrees: UpdateJointsDegrees;
   keyboardControlMap: RobotConfig["keyboardControlMap"];
   compoundMovements?: RobotConfig["compoundMovements"]; // Use type from robotConfig
+  gamepadActive?: boolean; // Add prop to indicate if gamepad is active
 };
 
 // Define constants for interval and step size
@@ -39,8 +41,12 @@ export function RevoluteJointsTable({
   updateJointsDegrees,
   keyboardControlMap,
   compoundMovements,
+  gamepadActive = false,
 }: RevoluteJointsTableProps) {
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set());
+  const [gamepadDetected, setGamepadDetected] = useState(false);
+  const [gamepadDebugger] = useState(() => new StadiaDebugger());
+  
   // Refs to hold the latest values needed inside the interval callback
   const jointsRef = useRef(joints);
   const updateJointsDegreesRef = useRef(updateJointsDegrees);
@@ -59,8 +65,38 @@ export function RevoluteJointsTable({
     keyboardControlMapRef.current = keyboardControlMap;
   }, [keyboardControlMap]);
 
+  // Gamepad detection effect
+  useEffect(() => {
+    const checkGamepad = () => {
+      const gamepad = gamepadDebugger.detectGamepad();
+      setGamepadDetected(!!gamepad);
+    };
+
+    // Check immediately and then periodically
+    checkGamepad();
+    const interval = setInterval(checkGamepad, 2000);
+
+    // Listen for gamepad events
+    const handleConnect = () => setGamepadDetected(true);
+    const handleDisconnect = () => setGamepadDetected(false);
+
+    window.addEventListener('gamepadconnected', handleConnect);
+    window.addEventListener('gamepaddisconnected', handleDisconnect);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('gamepadconnected', handleConnect);
+      window.removeEventListener('gamepaddisconnected', handleDisconnect);
+    };
+  }, [gamepadDebugger]);
+
   // Effect for keyboard listeners
   useEffect(() => {
+    // Don't add keyboard listeners if gamepad is active
+    if (gamepadActive) {
+      return;
+    }
+
     const handleKeyDown = (event: KeyboardEvent) => {
       // Check if the pressed key is actually used for control to potentially prevent default
       // Note: Using the ref here ensures we check against the *latest* map
@@ -89,10 +125,15 @@ export function RevoluteJointsTable({
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, []); // Empty dependency array: sets up listeners once
+  }, [gamepadActive]); // Re-run when gamepadActive changes
 
   // Effect for handling continuous updates when keys are pressed
   useEffect(() => {
+    // Don't process key updates if gamepad is active
+    if (gamepadActive) {
+      return;
+    }
+
     let intervalId: NodeJS.Timeout | null = null;
 
     const updateJointsBasedOnKeys = () => {
@@ -264,17 +305,17 @@ export function RevoluteJointsTable({
         clearInterval(intervalId);
       }
     };
-  }, [pressedKeys]); // Re-run this effect only when pressedKeys changes
+  }, [pressedKeys, gamepadActive]); // Re-run this effect when pressedKeys or gamepadActive changes
 
   // Mouse handlers update the `pressedKeys` state, which triggers the interval effect
   const handleMouseDown = (key: string | undefined) => {
-    if (key) {
+    if (key && !gamepadActive) {
       setPressedKeys((prevKeys) => new Set(prevKeys).add(key));
     }
   };
 
   const handleMouseUp = (key: string | undefined) => {
-    if (key) {
+    if (key && !gamepadActive) {
       setPressedKeys((prevKeys) => {
         const newKeys = new Set(prevKeys);
         newKeys.delete(key);
@@ -285,7 +326,18 @@ export function RevoluteJointsTable({
 
   // Component rendering uses the `joints` prop for display
   return (
-    <div className="mt-4">
+    <div className={`mt-4 ${gamepadActive ? 'opacity-50 pointer-events-none' : ''}`}>
+      {gamepadActive && (
+        <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <div className="flex items-center space-x-2">
+            <span className="text-lg">⌨️</span>
+            <span className="font-semibold text-yellow-800">Keyboard Control Disabled</span>
+          </div>
+          <div className="text-sm text-yellow-700 mt-1">
+            Gamepad control is active. Close the gamepad panel to re-enable keyboard control.
+          </div>
+        </div>
+      )}
       <table className="table-auto w-full text-left text-sm">
         <thead>
           {/* ... existing table head ... */}
@@ -386,6 +438,27 @@ export function RevoluteJointsTable({
       {compoundMovements && compoundMovements.length > 0 && (
         <div className="mt-4">
           <div className="font-bold mb-2">Compound Movements</div>
+          {gamepadDetected && (
+            <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center space-x-2 mb-2">
+                <span className="text-lg">🎮</span>
+                <span className="font-semibold text-blue-800">Stadia Controller Connected!</span>
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              </div>
+              <div className="text-sm text-blue-700">
+                <p className="mb-1">Use your <strong>Stadia Controller</strong> for enhanced control:</p>
+                <ul className="list-disc list-inside ml-2 space-y-1 text-xs">
+                  <li><strong>A/B buttons:</strong> Close/Open Gripper</li>
+                  <li><strong>Left/Right Sticks:</strong> Precise joint control</li>
+                  <li><strong>L1/R1:</strong> Elbow control</li>
+                  <li><strong>X/Y:</strong> Special functions (Photo/Episode)</li>
+                </ul>
+                <div className="mt-2 text-xs text-blue-600">
+                  💡 Click the gamepad icon 🎮 in the taskbar for detailed control panel
+                </div>
+              </div>
+            </div>
+          )}
           <table className="table-auto w-full text-left text-sm">
             <tbody>
               {compoundMovements.map((cm, idx) => {

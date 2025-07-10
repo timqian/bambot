@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Bambot - Logs détaillés</title>
+    <style>
+        body { font-family: monospace; background: #1a1a1a; color: #00ff00; padding: 20px; }
+        .container { max-width: 1200px; margin: auto; }
+        .debug-panel { background: #2a2a2a; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        button { padding: 10px 20px; margin: 5px; background: #0066cc; color: white; border: none; cursor: pointer; border-radius: 3px; }
+        button:hover { background: #0088ff; }
+        .log-area { background: #000; padding: 10px; border: 1px solid #333; border-radius: 3px; height: 300px; overflow-y: auto; }
+        .error { color: #ff6666; }
+        .warning { color: #ffaa00; }
+        .success { color: #66ff66; }
+        .info { color: #66aaff; }
+        .servo-test { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
+        .servo-card { background: #333; padding: 10px; border-radius: 5px; }
+        input[type="number"] { background: #444; color: white; border: 1px solid #666; padding: 5px; margin: 5px; width: 80px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Debug Bambot - Logs détaillés</h1>
+        
+        <div class="debug-panel">
+            <h3>1. Connexion et test port série</h3>
+            <button id="connectSerial">Se connecter au port série</button>
+            <button id="scanServos">Scanner les servos (ID 1-20)</button>
+            <button id="clearLogs">Effacer les logs</button>
+        </div>
+
+        <div class="debug-panel">
+            <h3>2. Test servos individuels</h3>
+            <div class="servo-test" id="servoTests">
+                <!-- Tests servos générés dynamiquement -->
+            </div>
+        </div>
+
+        <div class="debug-panel">
+            <h3>3. Logs en temps réel</h3>
+            <div class="log-area" id="logArea">Prêt à débugger Bambot...</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { ScsServoSDK } from './feetech.js/index.mjs';
+        
+        const scsServoSDK = new ScsServoSDK();
+        const logArea = document.getElementById('logArea');
+        let isConnected = false;
+        
+        // Système de logs amélioré
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = type;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logArea.appendChild(logEntry);
+            logArea.scrollTop = logArea.scrollHeight;
+            
+            // Log aussi dans la console
+            console.log(`[BAMBOT-DEBUG] ${message}`);
+        }
+        
+        function logError(message, error) {
+            log(`❌ ${message}: ${error.message}`, 'error');
+            console.error('[BAMBOT-DEBUG]', message, error);
+        }
+        
+        function logSuccess(message) {
+            log(`✅ ${message}`, 'success');
+        }
+        
+        function logWarning(message) {
+            log(`⚠️ ${message}`, 'warning');
+        }
+        
+        // Connexion série
+        document.getElementById('connectSerial').onclick = async () => {
+            try {
+                log('🔌 Tentative de connexion au port série...', 'info');
+                
+                // Configuration de connexion détaillée
+                const options = {
+                    baudRate: 1000000,
+                    protocolEnd: 0
+                };
+                
+                log(`Configuration: baudRate=${options.baudRate}, protocolEnd=${options.protocolEnd}`, 'info');
+                
+                await scsServoSDK.connect(options);
+                isConnected = true;
+                logSuccess('Port série connecté avec succès');
+                
+                // Test de communication basique
+                log('📡 Test de communication...', 'info');
+                
+            } catch (error) {
+                logError('Échec de connexion série', error);
+                isConnected = false;
+            }
+        };
+        
+        // Scanner les servos
+        document.getElementById('scanServos').onclick = async () => {
+            if (!isConnected) {
+                logError('Scanner servos', new Error('Pas connecté au port série'));
+                return;
+            }
+            
+            log('🔍 Scan des servos ID 1-20...', 'info');
+            const foundServos = [];
+            
+            for (let id = 1; id <= 20; id++) {
+                try {
+                    log(`Test servo ID ${id}...`, 'info');
+                    
+                    // Test de lecture position
+                    const position = await scsServoSDK.readPosition(id);
+                    logSuccess(`Servo ${id} trouvé - Position: ${position}`);
+                    foundServos.push({ id, position });
+                    
+                    // Test lecture mode
+                    try {
+                        const mode = await scsServoSDK.readMode(id);
+                        log(`  Servo ${id} - Mode: ${mode} (0=Position, 1=Wheel)`, 'info');
+                    } catch (modeError) {
+                        logWarning(`  Servo ${id} - Impossible de lire le mode: ${modeError.message}`);
+                    }
+                    
+                } catch (error) {
+                    // Ignore les timeouts (servo non présent)
+                    if (!error.message.includes('timeout') && !error.message.includes('RX')) {
+                        logWarning(`Servo ${id} - Erreur: ${error.message}`);
+                    }
+                }
+                
+                // Petite pause entre les tests
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            if (foundServos.length > 0) {
+                logSuccess(`✨ Scan terminé - ${foundServos.length} servo(s) trouvé(s)`);
+                generateServoTests(foundServos);
+            } else {
+                logWarning('Aucun servo trouvé. Vérifiez les connexions et l\'alimentation.');
+            }
+        };
+        
+        // Générer les tests pour chaque servo trouvé
+        function generateServoTests(servos) {
+            const container = document.getElementById('servoTests');
+            container.innerHTML = '';
+            
+            servos.forEach(servo => {
+                const card = document.createElement('div');
+                card.className = 'servo-card';
+                card.innerHTML = `
+                    <h4>Servo ID ${servo.id}</h4>
+                    <p>Position actuelle: ${servo.position}</p>
+                    <div>
+                        <input type="number" id="pos-${servo.id}" placeholder="Position" min="0" max="4095" value="2048">
+                        <button onclick="testServoPosition(${servo.id})">Test Position</button>
+                    </div>
+                    <div>
+                        <button onclick="enableTorque(${servo.id})">Activer Torque</button>
+                        <button onclick="disableTorque(${servo.id})">Désactiver Torque</button>
+                    </div>
+                    <div>
+                        <button onclick="testServoMode(${servo.id})">Test Mode</button>
+                        <button onclick="readServoStatus(${servo.id})">Lire Status</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+        
+        // Fonctions de test servo (globales)
+        window.testServoPosition = async (servoId) => {
+            const posInput = document.getElementById(`pos-${servoId}`);
+            const position = parseInt(posInput.value);
+            
+            try {
+                log(`🎯 Test position servo ${servoId} → ${position}`, 'info');
+                await scsServoSDK.writePosition(servoId, position);
+                logSuccess(`Position ${position} envoyée au servo ${servoId}`);
+                
+                // Lire la position après écriture
+                setTimeout(async () => {
+                    try {
+                        const newPos = await scsServoSDK.readPosition(servoId);
+                        log(`📍 Position lue servo ${servoId}: ${newPos}`, 'info');
+                    } catch (readError) {
+                        logError(`Lecture position servo ${servoId}`, readError);
+                    }
+                }, 500);
+                
+            } catch (error) {
+                logError(`Test position servo ${servoId}`, error);
+            }
+        };
+        
+        window.enableTorque = async (servoId) => {
+            try {
+                log(`💪 Activation torque servo ${servoId}`, 'info');
+                await scsServoSDK.writeTorqueEnable(servoId, true);
+                logSuccess(`Torque activé servo ${servoId}`);
+            } catch (error) {
+                logError(`Activation torque servo ${servoId}`, error);
+            }
+        };
+        
+        window.disableTorque = async (servoId) => {
+            try {
+                log(`😴 Désactivation torque servo ${servoId}`, 'info');
+                await scsServoSDK.writeTorqueEnable(servoId, false);
+                logSuccess(`Torque désactivé servo ${servoId}`);
+            } catch (error) {
+                logError(`Désactivation torque servo ${servoId}`, error);
+            }
+        };
+        
+        window.testServoMode = async (servoId) => {
+            try {
+                log(`🔧 Test mode servo ${servoId}`, 'info');
+                const mode = await scsServoSDK.readMode(servoId);
+                log(`Mode servo ${servoId}: ${mode} (0=Position, 1=Wheel)`, 'info');
+                
+                // Test de changement de mode
+                log(`Changement vers mode position...`, 'info');
+                await scsServoSDK.setPositionMode(servoId);
+                logSuccess(`Servo ${servoId} configuré en mode position`);
+                
+            } catch (error) {
+                logError(`Test mode servo ${servoId}`, error);
+            }
+        };
+        
+        window.readServoStatus = async (servoId) => {
+            try {
+                log(`📊 Lecture status complet servo ${servoId}`, 'info');
+                
+                const position = await scsServoSDK.readPosition(servoId);
+                log(`  Position: ${position}`, 'info');
+                
+                const mode = await scsServoSDK.readMode(servoId);
+                log(`  Mode: ${mode}`, 'info');
+                
+                const baudRate = await scsServoSDK.readBaudRate(servoId);
+                log(`  Baud Rate Index: ${baudRate}`, 'info');
+                
+                logSuccess(`Status complet lu pour servo ${servoId}`);
+                
+            } catch (error) {
+                logError(`Lecture status servo ${servoId}`, error);
+            }
+        };
+        
+        // Clear logs
+        document.getElementById('clearLogs').onclick = () => {
+            logArea.innerHTML = '';
+            log('Logs effacés', 'info');
+        };
+        
+        // Instructions au démarrage
+        log('🚀 Debug Bambot initialisé', 'success');
+        log('1. Cliquez "Se connecter au port série"', 'info');
+        log('2. Puis "Scanner les servos"', 'info');
+        log('3. Testez chaque servo individuellement', 'info');
+        log('4. Consultez cette console ET la console Chrome (F12)', 'warning');
+    </script>
+</body>
+</html>

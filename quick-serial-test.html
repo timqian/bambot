@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quick Serial Test</title>
+    <style>
+        body { font-family: monospace; background: #1a1a1a; color: #00ff00; padding: 20px; }
+        button { padding: 10px 20px; margin: 10px; background: #0066cc; color: white; border: none; cursor: pointer; }
+        button:hover { background: #0088ff; }
+        pre { background: #000; padding: 10px; border: 1px solid #333; color: #00ff00; }
+    </style>
+</head>
+<body>
+    <h1>🚀 Test API Web Serial - Linux</h1>
+    
+    <button id="checkApi">1. Check API</button>
+    <button id="listPorts">2. List Ports</button>
+    <button id="requestPort">3. Request Port</button>
+    
+    <pre id="output">Prêt à tester...</pre>
+
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(msg) {
+            output.textContent += new Date().toLocaleTimeString() + ': ' + msg + '\n';
+            console.log(msg);
+        }
+        
+        // Test 1: Check API
+        document.getElementById('checkApi').onclick = () => {
+            output.textContent = '';
+            log('=== TEST API WEB SERIAL ===');
+            log('navigator.serial: ' + !!navigator.serial);
+            log('Secure context: ' + window.isSecureContext);
+            log('Protocol: ' + window.location.protocol);
+            log('User agent: ' + navigator.userAgent);
+            
+            if (navigator.serial) {
+                log('✅ API Web Serial disponible!');
+                log('Type: ' + typeof navigator.serial.requestPort);
+                log('getPorts: ' + typeof navigator.serial.getPorts);
+            } else {
+                log('❌ API Web Serial NON disponible');
+                log('Solutions:');
+                log('1. chrome://flags/#enable-experimental-web-platform-features');
+                log('2. Redémarrer Chrome');
+                log('3. Essayer: chromium --enable-web-serial-api');
+            }
+        };
+        
+        // Test 2: List existing ports
+        document.getElementById('listPorts').onclick = async () => {
+            if (!navigator.serial) {
+                log('❌ API non disponible');
+                return;
+            }
+            
+            try {
+                log('--- Listing ports ---');
+                const ports = await navigator.serial.getPorts();
+                log('Ports trouvés: ' + ports.length);
+                
+                if (ports.length === 0) {
+                    log('Aucun port autorisé. Utiliser "Request Port" d\'abord.');
+                } else {
+                    ports.forEach((port, i) => {
+                        const info = port.getInfo();
+                        log(`Port ${i+1}: VID=0x${(info.usbVendorId||0).toString(16)} PID=0x${(info.usbProductId||0).toString(16)}`);
+                    });
+                }
+            } catch (e) {
+                log('❌ Erreur: ' + e.message);
+            }
+        };
+        
+        // Test 3: Request port
+        document.getElementById('requestPort').onclick = async () => {
+            if (!navigator.serial) {
+                log('❌ API non disponible');
+                return;
+            }
+            
+            try {
+                log('--- Demande de port (popup attendu) ---');
+                const port = await navigator.serial.requestPort({
+                    filters: [
+                        // Votre device spécifique détecté
+                        { usbVendorId: 0x1a86, usbProductId: 0x55d3 },
+                        // Autres CH340/CH341
+                        { usbVendorId: 0x1a86, usbProductId: 0x7523 },
+                        { usbVendorId: 0x1a86, usbProductId: 0x5523 },
+                        // Générique CH340/CH341
+                        { usbVendorId: 0x1a86 }, 
+                        // FTDI
+                        { usbVendorId: 0x0403 },
+                        // CP210x
+                        { usbVendorId: 0x10c4 },
+                        // Arduino
+                        { usbVendorId: 0x2341 }
+                    ]
+                });
+                
+                if (port) {
+                    const info = port.getInfo();
+                    log('✅ Port sélectionné!');
+                    log(`VID: 0x${(info.usbVendorId||0).toString(16).padStart(4,'0')}`);
+                    log(`PID: 0x${(info.usbProductId||0).toString(16).padStart(4,'0')}`);
+                    
+                    // Test d'ouverture
+                    try {
+                        await port.open({ baudRate: 115200 });
+                        log('✅ Port ouvert à 115200 baud');
+                        await port.close();
+                        log('✅ Port fermé');
+                    } catch (openErr) {
+                        log('❌ Erreur ouverture: ' + openErr.message);
+                    }
+                } else {
+                    log('❌ Aucun port sélectionné');
+                }
+                
+            } catch (e) {
+                if (e.name === 'NotFoundError') {
+                    log('❌ Aucun port trouvé ou annulé par utilisateur');
+                    log('Vérifications:');
+                    log('- Device connecté et détecté par le système?');
+                    log('- Permissions /dev/ttyACM0 correctes?');
+                    log('- Aucune autre app utilise le port?');
+                } else {
+                    log('❌ Erreur: ' + e.message);
+                }
+            }
+        };
+        
+        // Auto-test
+        setTimeout(() => {
+            document.getElementById('checkApi').click();
+        }, 500);
+    </script>
+</body>
+</html>

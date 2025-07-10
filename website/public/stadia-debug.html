@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stadia Controller Debug - SO101</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.4;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #00ff00;
+            padding-bottom: 20px;
+        }
+        
+        .header h1 {
+            color: #ffffff;
+            text-shadow: 0 0 10px #00ff00;
+        }
+        
+        .status {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .status-box {
+            flex: 1;
+            background: #2a2a2a;
+            border: 1px solid #00ff00;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .connected {
+            border-color: #00ff00;
+            background: #1a3a1a;
+        }
+        
+        .disconnected {
+            border-color: #ff4444;
+            background: #3a1a1a;
+            color: #ff4444;
+        }
+        
+        .debug-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .debug-section {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .debug-section h3 {
+            color: #00ffff;
+            margin-top: 0;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+        }
+        
+        .axis-row, .button-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #333;
+        }
+        
+        .axis-row:last-child, .button-row:last-child {
+            border-bottom: none;
+        }
+        
+        .axis-name, .button-name {
+            font-weight: bold;
+            min-width: 120px;
+        }
+        
+        .axis-value {
+            font-family: monospace;
+            background: #1a1a1a;
+            padding: 4px 8px;
+            border-radius: 4px;
+            min-width: 80px;
+            text-align: right;
+        }
+        
+        .button-state {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+            min-width: 80px;
+            text-align: center;
+        }
+        
+        .button-pressed {
+            background: #00ff00;
+            color: #000;
+            box-shadow: 0 0 10px #00ff00;
+        }
+        
+        .button-released {
+            background: #333;
+            color: #888;
+        }
+        
+        .robot-mapping {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .robot-mapping h3 {
+            color: #ffff00;
+            margin-top: 0;
+        }
+        
+        .mapping-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid #333;
+        }
+        
+        .mapping-row:last-child {
+            border-bottom: none;
+        }
+        
+        .joint-name {
+            font-weight: bold;
+            color: #ffffff;
+        }
+        
+        .joint-value {
+            font-family: monospace;
+            background: #1a1a1a;
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: #00ff00;
+        }
+        
+        .joint-active {
+            background: #00ff00;
+            color: #000;
+            box-shadow: 0 0 5px #00ff00;
+        }
+        
+        .instructions {
+            background: #2a2a2a;
+            border: 1px solid #ffff00;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .instructions h3 {
+            color: #ffff00;
+            margin-top: 0;
+        }
+        
+        .instructions ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin: 8px 0;
+        }
+        
+        .log {
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 15px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px 0;
+        }
+        
+        .log-info { color: #00ff00; }
+        .log-warn { color: #ffff00; }
+        .log-error { color: #ff4444; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎮 Stadia Controller Debug Tool</h1>
+            <p>SO101 Robot Mapping Test - Based on your pro2robot documentation</p>
+        </div>
+        
+        <div class="status">
+            <div class="status-box" id="connectionStatus">
+                <h3>Connection Status</h3>
+                <div id="statusText">❌ No gamepad detected</div>
+                <div id="gamepadInfo"></div>
+            </div>
+            
+            <div class="status-box">
+                <h3>Controls</h3>
+                <button onclick="startDebug()" style="background: #00ff00; color: #000; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;">Start Debug</button>
+                <button onclick="clearLog()" style="background: #ff4444; color: #fff; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-left: 10px;">Clear Log</button>
+            </div>
+        </div>
+        
+        <div class="debug-grid">
+            <div class="debug-section">
+                <h3>📊 Axes (Analog Sticks & Triggers)</h3>
+                <div id="axesDebug">
+                    <div class="axis-row">
+                        <span class="axis-name">Left Stick X (Wrist Roll):</span>
+                        <span class="axis-value" id="axis0">0.000</span>
+                    </div>
+                    <div class="axis-row">
+                        <span class="axis-name">Left Stick Y (Wrist Flex):</span>
+                        <span class="axis-value" id="axis1">0.000</span>
+                    </div>
+                    <div class="axis-row">
+                        <span class="axis-name">Right Stick X (Shoulder Pan):</span>
+                        <span class="axis-value" id="axis2">0.000</span>
+                    </div>
+                    <div class="axis-row">
+                        <span class="axis-name">Right Stick Y (Shoulder Lift):</span>
+                        <span class="axis-value" id="axis3">0.000</span>
+                    </div>
+                    <div class="axis-row">
+                        <span class="axis-name">L2 Trigger (Close Gripper):</span>
+                        <span class="axis-value" id="axis4">-1.000</span>
+                    </div>
+                    <div class="axis-row">
+                        <span class="axis-name">R2 Trigger (Open Gripper):</span>
+                        <span class="axis-value" id="axis5">-1.000</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="debug-section">
+                <h3>🔲 Buttons</h3>
+                <div id="buttonsDebug">
+                    <div class="button-row">
+                        <span class="button-name">A (Face Bottom):</span>
+                        <span class="button-state button-released" id="button0">Released</span>
+                    </div>
+                    <div class="button-row">
+                        <span class="button-name">B (Face Right):</span>
+                        <span class="button-state button-released" id="button1">Released</span>
+                    </div>
+                    <div class="button-row">
+                        <span class="button-name">X (Face Left):</span>
+                        <span class="button-state button-released" id="button2">Released</span>
+                    </div>
+                    <div class="button-row">
+                        <span class="button-name">Y (Face Top):</span>
+                        <span class="button-state button-released" id="button3">Released</span>
+                    </div>
+                    <div class="button-row">
+                        <span class="button-name">L1 (Elbow Down):</span>
+                        <span class="button-state button-released" id="button4">Released</span>
+                    </div>
+                    <div class="button-row">
+                        <span class="button-name">R1 (Elbow Up):</span>
+                        <span class="button-state button-released" id="button5">Released</span>
+                    </div>
+                    <div class="button-row">
+                        <span class="button-name">L2 (Trigger Button):</span>
+                        <span class="button-state button-released" id="button6">Released</span>
+                    </div>
+                    <div class="button-row">
+                        <span class="button-name">R2 (Trigger Button):</span>
+                        <span class="button-state button-released" id="button7">Released</span>
+                    </div>
+                    <div class="button-row">
+                        <span class="button-name">D-Pad Up:</span>
+                        <span class="button-state button-released" id="button12">Released</span>
+                    </div>
+                    <div class="button-row">
+                        <span class="button-name">D-Pad Down:</span>
+                        <span class="button-state button-released" id="button13">Released</span>
+                    </div>
+                    <div class="button-row">
+                        <span class="button-name">D-Pad Left:</span>
+                        <span class="button-state button-released" id="button14">Released</span>
+                    </div>
+                    <div class="button-row">
+                        <span class="button-name">D-Pad Right:</span>
+                        <span class="button-state button-released" id="button15">Released</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="robot-mapping">
+            <h3>🤖 SO101 Robot Joint Mapping</h3>
+            <div class="mapping-row">
+                <span class="joint-name">Shoulder Pan (Base Rotation):</span>
+                <span class="joint-value" id="joint-shoulder-pan">0.000</span>
+            </div>
+            <div class="mapping-row">
+                <span class="joint-name">Shoulder Lift (Elevation):</span>
+                <span class="joint-value" id="joint-shoulder-lift">0.000</span>
+            </div>
+            <div class="mapping-row">
+                <span class="joint-name">Elbow Flex:</span>
+                <span class="joint-value" id="joint-elbow-flex">0.000</span>
+            </div>
+            <div class="mapping-row">
+                <span class="joint-name">Wrist Flex:</span>
+                <span class="joint-value" id="joint-wrist-flex">0.000</span>
+            </div>
+            <div class="mapping-row">
+                <span class="joint-name">Wrist Roll:</span>
+                <span class="joint-value" id="joint-wrist-roll">0.000</span>
+            </div>
+            <div class="mapping-row">
+                <span class="joint-name">Gripper:</span>
+                <span class="joint-value" id="joint-gripper">0.000</span>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h3>📋 Test Instructions</h3>
+            <ul>
+                <li><strong>Connect your Stadia controller</strong> via Bluetooth to your Mac</li>
+                <li><strong>Click "Start Debug"</strong> and press any button on the controller</li>
+                <li><strong>Test each control:</strong>
+                    <ul>
+                        <li>Move left stick → Should control wrist (roll/flex)</li>
+                        <li>Move right stick → Should control shoulder (pan/lift)</li>
+                        <li>Press L1/R1 → Should control elbow (down/up)</li>
+                        <li>Press L2/R2 → Should control gripper (close/open)</li>
+                        <li>Press face buttons → Alternative wrist controls</li>
+                        <li>Press D-pad → Alternative shoulder controls</li>
+                    </ul>
+                </li>
+                <li><strong>Check the mapping</strong> matches your SO101 documentation</li>
+            </ul>
+        </div>
+        
+        <div class="debug-section">
+            <h3>📝 Debug Log</h3>
+            <div class="log" id="debugLog"></div>
+        </div>
+    </div>
+
+    <script>
+        let debugActive = false;
+        let animationFrame;
+        let lastGamepadState = null;
+        
+        // Deadzone and threshold settings from your docs
+        const DEADZONE = 0.15;
+        const TRIGGER_THRESHOLD = 0.05;
+        
+        // SO101 Robot mapping based on your documentation
+        const robotMapping = {
+            // Analog axes
+            'axis_0': { joint: 'wrist_roll', scale: 1.0, desc: 'Left Stick X → Wrist Roll' },
+            'axis_1': { joint: 'wrist_flex', scale: -1.0, desc: 'Left Stick Y → Wrist Flex (inverted)' },
+            'axis_2': { joint: 'shoulder_pan', scale: 1.0, desc: 'Right Stick X → Shoulder Pan' },
+            'axis_3': { joint: 'shoulder_lift', scale: -1.0, desc: 'Right Stick Y → Shoulder Lift (inverted)' },
+            // Triggers removed from gripper mapping
+            
+            // Digital buttons
+            'button_4': { joint: 'elbow_flex', value: -1.0, desc: 'L1 → Elbow Down' },
+            'button_5': { joint: 'elbow_flex', value: 1.0, desc: 'R1 → Elbow Up' },
+            
+            // Face buttons (new mapping)
+            'button_0': { joint: 'gripper', value: -1.0, desc: 'A → Close Gripper' },
+            'button_1': { joint: 'gripper', value: 1.0, desc: 'B → Open Gripper' },
+            'button_2': { joint: 'take_photo', value: 1.0, desc: 'X → Take Photo' },
+            'button_3': { joint: 'end_episode', value: 1.0, desc: 'Y → End Episode' },
+            
+            // D-pad
+            'button_12': { joint: 'shoulder_lift', value: 1.0, desc: 'D-Up → Shoulder Up' },
+            'button_13': { joint: 'shoulder_lift', value: -1.0, desc: 'D-Down → Shoulder Down' },
+            'button_14': { joint: 'shoulder_pan', value: -1.0, desc: 'D-Left → Shoulder Left' },
+            'button_15': { joint: 'shoulder_pan', value: 1.0, desc: 'D-Right → Shoulder Right' }
+        };
+        
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('debugLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${timestamp}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function clearLog() {
+            document.getElementById('debugLog').innerHTML = '';
+        }
+        
+        function applyDeadzone(value) {
+            if (Math.abs(value) < DEADZONE) return 0;
+            const sign = value > 0 ? 1 : -1;
+            return sign * (Math.abs(value) - DEADZONE) / (1.0 - DEADZONE);
+        }
+        
+        function updateRobotJoints(gamepad) {
+            const joints = {
+                'shoulder_pan': 0,
+                'shoulder_lift': 0,
+                'elbow_flex': 0,
+                'wrist_flex': 0,
+                'wrist_roll': 0,
+                'gripper': 0,
+                'take_photo': 0,
+                'end_episode': 0
+            };
+            
+            // Process analog axes
+            gamepad.axes.forEach((value, index) => {
+                const key = `axis_${index}`;
+                const mapping = robotMapping[key];
+                if (!mapping || !('scale' in mapping)) return;
+                
+                let processedValue = value;
+                
+                // Apply deadzone for sticks (0-3)
+                if (index < 4) {
+                    processedValue = applyDeadzone(value);
+                }
+                
+                // Handle triggers (4-5) - convert [-1,1] to [0,1]
+                if (index >= 4) {
+                    processedValue = (value + 1) / 2;
+                    if (processedValue < TRIGGER_THRESHOLD) processedValue = 0;
+                }
+                
+                if (Math.abs(processedValue) > 0) {
+                    const command = processedValue * mapping.scale;
+                    const joint = mapping.joint;
+                    
+                    // Accumulate gripper commands
+                    if (joint === 'gripper') {
+                        joints[joint] += command;
+                    } else {
+                        joints[joint] = command;
+                    }
+                }
+            });
+            
+            // Process digital buttons
+            gamepad.buttons.forEach((button, index) => {
+                if (!button.pressed) return;
+                
+                const key = `button_${index}`;
+                const mapping = robotMapping[key];
+                if (!mapping || !('value' in mapping)) return;
+                
+                joints[mapping.joint] = mapping.value;
+            });
+            
+            // Clamp gripper
+            joints.gripper = Math.max(-1, Math.min(1, joints.gripper));
+            
+            // Update display
+            Object.keys(joints).forEach(joint => {
+                const element = document.getElementById(`joint-${joint.replace('_', '-')}`);
+                if (element) {
+                    const value = joints[joint];
+                    element.textContent = value.toFixed(3);
+                    element.className = Math.abs(value) > 0.01 ? 'joint-value joint-active' : 'joint-value';
+                }
+            });
+            
+            return joints;
+        }
+        
+        function checkGamepad() {
+            const gamepads = navigator.getGamepads();
+            const gamepad = Array.from(gamepads).find(gp => gp !== null);
+            
+            const statusDiv = document.getElementById('connectionStatus');
+            const statusText = document.getElementById('statusText');
+            const gamepadInfo = document.getElementById('gamepadInfo');
+            
+            if (!gamepad) {
+                statusDiv.className = 'status-box disconnected';
+                statusText.textContent = '❌ No gamepad detected';
+                gamepadInfo.innerHTML = '';
+                return null;
+            }
+            
+            // Update connection status
+            statusDiv.className = 'status-box connected';
+            statusText.textContent = '✅ Gamepad connected';
+            
+            const isStadia = gamepad.id.toLowerCase().includes('stadia') || 
+                           gamepad.id.toLowerCase().includes('google');
+            
+            gamepadInfo.innerHTML = `
+                <div><strong>Name:</strong> ${gamepad.id}</div>
+                <div><strong>Type:</strong> ${isStadia ? '🎮 Stadia Controller' : '🎮 ' + gamepad.id.split('(')[0]}</div>
+                <div><strong>Buttons:</strong> ${gamepad.buttons.length}</div>
+                <div><strong>Axes:</strong> ${gamepad.axes.length}</div>
+                <div><strong>Timestamp:</strong> ${gamepad.timestamp}</div>
+            `;
+            
+            if (isStadia) {
+                log('Stadia Controller detected! Perfect for SO101 control.', 'info');
+            } else {
+                log(`Non-Stadia controller detected: ${gamepad.id}. Mapping may not be perfect.`, 'warn');
+            }
+            
+            return gamepad;
+        }
+        
+        function updateDisplay(gamepad) {
+            if (!gamepad) return;
+            
+            // Update axes
+            gamepad.axes.forEach((value, index) => {
+                const element = document.getElementById(`axis${index}`);
+                if (element) {
+                    element.textContent = value.toFixed(3);
+                    
+                    // Apply deadzone visualization
+                    if (index < 4) { // Sticks
+                        const processed = applyDeadzone(value);
+                        if (Math.abs(processed) > 0) {
+                            element.style.background = '#00ff00';
+                            element.style.color = '#000';
+                        } else {
+                            element.style.background = '#1a1a1a';
+                            element.style.color = '#00ff00';
+                        }
+                    } else { // Triggers
+                        const processed = (value + 1) / 2;
+                        if (processed > TRIGGER_THRESHOLD) {
+                            element.style.background = '#00ff00';
+                            element.style.color = '#000';
+                        } else {
+                            element.style.background = '#1a1a1a';
+                            element.style.color = '#00ff00';
+                        }
+                    }
+                }
+            });
+            
+            // Update buttons - show ALL buttons to debug
+            for (let index = 0; index < gamepad.buttons.length; index++) {
+                const element = document.getElementById(`button${index}`);
+                if (element && gamepad.buttons[index]) {
+                    const pressed = gamepad.buttons[index].pressed;
+                    element.textContent = pressed ? 'PRESSED' : 'Released';
+                    element.className = pressed ? 'button-state button-pressed' : 'button-state button-released';
+                    
+                    // Log when buttons are pressed for debugging
+                    if (pressed && (!lastGamepadState || !lastGamepadState.buttons || !lastGamepadState.buttons[index])) {
+                        log(`Button ${index} pressed!`, 'info');
+                    }
+                }
+            }
+            
+            // Update robot joints
+            const joints = updateRobotJoints(gamepad);
+            
+            // Log significant changes
+            if (lastGamepadState && lastGamepadState.joints) {
+                const changes = [];
+                Object.keys(joints).forEach(joint => {
+                    const current = joints[joint];
+                    const last = lastGamepadState.joints[joint] || 0;
+                    if (Math.abs(current - last) > 0.1) {
+                        changes.push(`${joint}: ${last.toFixed(2)} → ${current.toFixed(2)}`);
+                    }
+                });
+                
+                if (changes.length > 0) {
+                    log(`Joint changes: ${changes.join(', ')}`);
+                }
+            }
+            
+            lastGamepadState = { 
+                joints: { ...joints },
+                buttons: gamepad.buttons.map(b => b.pressed),
+                axes: [...gamepad.axes]
+            };
+        }
+        
+        function debugLoop() {
+            if (!debugActive) return;
+            
+            const gamepad = checkGamepad();
+            if (gamepad) {
+                updateDisplay(gamepad);
+            }
+            
+            animationFrame = requestAnimationFrame(debugLoop);
+        }
+        
+        function startDebug() {
+            if (debugActive) {
+                debugActive = false;
+                cancelAnimationFrame(animationFrame);
+                log('Debug stopped', 'warn');
+                document.querySelector('button[onclick="startDebug()"]').textContent = 'Start Debug';
+                return;
+            }
+            
+            debugActive = true;
+            log('Starting Stadia Controller debug session...', 'info');
+            log('Press any button on your controller to activate it!', 'info');
+            
+            // Check for Gamepad API support
+            if (!navigator.getGamepads) {
+                log('Gamepad API not supported in this browser!', 'error');
+                return;
+            }
+            
+            document.querySelector('button[onclick="startDebug()"]').textContent = 'Stop Debug';
+            debugLoop();
+        }
+        
+        // Listen for gamepad events
+        window.addEventListener('gamepadconnected', (e) => {
+            log(`Gamepad connected: ${e.gamepad.id}`, 'info');
+            
+            const isStadia = e.gamepad.id.toLowerCase().includes('stadia') || 
+                           e.gamepad.id.toLowerCase().includes('google');
+            
+            if (isStadia) {
+                log('🎉 Perfect! Stadia Controller ready for SO101 control!', 'info');
+            } else {
+                log('⚠️  Non-Stadia controller detected. Button mapping may differ.', 'warn');
+            }
+        });
+        
+        window.addEventListener('gamepaddisconnected', (e) => {
+            log(`Gamepad disconnected: ${e.gamepad.id}`, 'warn');
+        });
+        
+        // Initialize
+        log('Stadia Controller Debug Tool initialized', 'info');
+        log('Based on SO101 robot mapping from your documentation', 'info');
+        checkGamepad();
+    </script>
+</body>
+</html>

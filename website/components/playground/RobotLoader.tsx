@@ -16,6 +16,8 @@ import ChatControlButton from "../playground/controlButtons/ChatControlButton";
 import LeaderControlButton from "../playground/controlButtons/LeaderControlButton";
 import RecordButton from "./controlButtons/RecordButton";
 import RecordControl from "./recordControl/RecordControl";
+import { GamepadControlButton } from "./controlButtons/GamepadControlButton";
+import { GamepadControlPanel } from "./gamepadControl/GamepadControlPanel";
 import {
   getPanelStateFromLocalStorage,
   setPanelStateToLocalStorage,
@@ -48,7 +50,7 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
   const [jointDetails, setJointDetails] = useState<JointDetails[]>([]);
   const [showControlPanel, setShowControlPanel] = useState(() => {
     const stored = getPanelStateFromLocalStorage("keyboardControl", robotName);
-    return stored !== null ? stored : window.innerWidth >= 900;
+    return stored !== null ? stored : (typeof window !== 'undefined' && window.innerWidth >= 900);
   });
   const [showLeaderControl, setShowLeaderControl] = useState(() => {
     return getPanelStateFromLocalStorage("leaderControl", robotName) ?? false;
@@ -58,6 +60,9 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
   });
   const [showRecordControl, setShowRecordControl] = useState(() => {
     return getPanelStateFromLocalStorage("recordControl", robotName) ?? false;
+  });
+  const [showGamepadControl, setShowGamepadControl] = useState(() => {
+    return getPanelStateFromLocalStorage("gamepadControl", robotName) ?? false;
   });
   const config = robotConfigMap[robotName];
 
@@ -109,6 +114,11 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
     setShowControlPanel((prev) => {
       const newState = !prev;
       setPanelStateToLocalStorage("keyboardControl", newState, robotName);
+      // Close gamepad panel if opening keyboard
+      if (newState) {
+        setShowGamepadControl(false);
+        setPanelStateToLocalStorage("gamepadControl", false, robotName);
+      }
       return newState;
     });
   };
@@ -137,6 +147,19 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
     });
   };
 
+  const toggleGamepadControl = () => {
+    setShowGamepadControl((prev) => {
+      const newState = !prev;
+      setPanelStateToLocalStorage("gamepadControl", newState, robotName);
+      // Close keyboard panel if opening gamepad
+      if (newState) {
+        setShowControlPanel(false);
+        setPanelStateToLocalStorage("keyboardControl", false, robotName);
+      }
+      return newState;
+    });
+  };
+
   const hideControlPanel = () => {
     setShowControlPanel(false);
     setPanelStateToLocalStorage("keyboardControl", false, robotName);
@@ -155,6 +178,11 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
   const hideRecordControl = () => {
     setShowRecordControl(false);
     setPanelStateToLocalStorage("recordControl", false, robotName);
+  };
+
+  const hideGamepadControl = () => {
+    setShowGamepadControl(false);
+    setPanelStateToLocalStorage("gamepadControl", false, robotName);
   };
 
   return (
@@ -193,6 +221,7 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
         disconnectRobot={disconnectRobot}
         keyboardControlMap={keyboardControlMap}
         compoundMovements={compoundMovements}
+        gamepadActive={showGamepadControl}
       />
       <ChatControl
         show={showChatControl}
@@ -244,6 +273,18 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
         }}
       />
 
+      {/* Gamepad Control overlay */}
+      {showGamepadControl && (
+        <GamepadControlPanel
+          onClose={hideGamepadControl}
+          updateJointsDegrees={updateJointsDegrees}
+          jointStates={jointStates}
+          isConnected={isConnected}
+          connectRobot={connectRobot}
+          disconnectRobot={disconnectRobot}
+        />
+      )}
+
       <div className="absolute bottom-5 left-0 right-0">
         <div className="flex justify-center items-center">
           <div className="flex gap-2 max-w-md">
@@ -254,6 +295,10 @@ export default function RobotLoader({ robotName }: RobotLoaderProps) {
             <KeyboardControlButton
               showControlPanel={showControlPanel}
               onToggleControlPanel={toggleControlPanel}
+            />
+            <GamepadControlButton
+              isActive={showGamepadControl}
+              onClick={toggleGamepadControl}
             />
             <ChatControlButton
               showControlPanel={showChatControl}
