@@ -51,7 +51,7 @@ export const robotConfigMap: { [key: string]: RobotConfig } = {
     // urdfUrl: "https://huggingface.co/datasets/bambot/robot-URDFs/resolve/main/URDF/so_arm100.urdf",
     // urdfUrl: "https://hf-mirror.com/datasets/bambot/robot-URDFs/resolve/main/URDF/so_arm100.urdf",
     image: "/so-arm100.jpg",
-    assembleLink: "https://huggingface.co/docs/lerobot/so101",
+    assembleLink: "/assemble/so-101",
     camera: { position: [-30, 10, 30], fov: 12 },
     orbitTarget: [1, 2, 0],
     keyboardControlMap: {
