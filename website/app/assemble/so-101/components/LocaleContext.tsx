@@ -20,7 +20,7 @@ const translations = {
     steps: "Steps",
     assembleTitle: "Assemble SO-101",
     assembleDescription:
-      "Assemble and calibrate your SO-101 (SO-ARM100) without leaving the browser.",
+      "Assemble and calibrate your SO-101 (SO-ARM100) without leaving the browser. (tested on Chrome)",
     // SourceParts.tsx
     sourceTheParts: "Source the parts",
     sourceReadme:
@@ -79,8 +79,7 @@ const translations = {
     calibrationResultDesc:
       "Here is the calibration file for your robot. It is LeRobot compatible.",
     congratulations: "🎉 Congratulations!",
-    congratulationsDesc:
-      "You have successfully assembled and calibrated it.",
+    congratulationsDesc: "You have successfully assembled and calibrated it.",
     goToControlPage: "Play with your robot",
   },
   zh: {
@@ -92,7 +91,7 @@ const translations = {
     openNavigation: "打开导航",
     steps: "步骤",
     assembleTitle: "组装 SO-101",
-    assembleDescription: "在浏览器中组装和校准您的 SO-101 (SO-ARM100)。",
+    assembleDescription: "在浏览器中组装和校准您的 SO-101 (SO-ARM100)。(已在 Chrome 上测试)",
     // SourceParts.tsx
     sourceTheParts: "采购零件",
     sourceReadme: "其中包含物料清单、采购链接和3D打印说明。",
@@ -147,8 +146,7 @@ const translations = {
     downloadJson: "下载json",
     calibrationResultDesc: "这是您的机器人的校准文件。它与LeRobot兼容。",
     congratulations: "🎉 恭喜！",
-    congratulationsDesc:
-      "您的机器人组装和校准成功！",
+    congratulationsDesc: "您的机器人组装和校准成功！",
     goToControlPage: "控制您的机器人",
   },
 };
