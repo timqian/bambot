@@ -103,7 +103,7 @@ function SO101AssemblyContent() {
     <div className="min-h-screen bg-zinc-900">
       {/* Sidebar Toggle Button */}
       {!isSidebarOpen && (
-        <div className="fixed top-32 left-5 sm:left-10 z-50">
+        <div className="fixed top-20 left-5 sm:left-10 z-50">
           <GlassButton
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             icon={<RiMenu2Line className="w-5 h-5" />}
@@ -233,7 +233,7 @@ function SO101AssemblyContent() {
           </div>
 
 
-          <h1 className="text-4xl font-bold text-white mb-2">
+          <h1 className="text-4xl font-bold text-white mb-2 pt-16 lg:pt-0">
             {t.assembleTitle}
           </h1>
           <p className="text-zinc-400">{t.assembleDescription}</p>
