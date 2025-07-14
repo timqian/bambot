@@ -26,7 +26,7 @@ console.log(position); // 1122
 
 ## Documentations
 
-https://deepwiki.com/timqian/bambot/4.1-feetech.js-sdk
+https://deepwiki.com/timqian/bambot/5.1-sdk-overview-and-api
 
 
 ## Example usage:
