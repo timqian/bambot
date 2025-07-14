@@ -121,7 +121,7 @@ export const robotConfigMap: { [key: string]: RobotConfig } = {
     - "t" and "5" for rotating jaw
     `,
   },
-  "bambot-v0": {
+  "bambot-b0": {
     urdfUrl: "/URDFs/bambot_v0.urdf",
     image: "/bambot_v0.jpg",
     assembleLink: "https://github.com/timqian/bambot/tree/main/hardware",
@@ -172,10 +172,10 @@ export const robotConfigMap: { [key: string]: RobotConfig } = {
       L_Wrist_Roll: 180,
       L_Jaw: 180,
     },
-    systemPrompt: `You can help control the bambot-v0 robot by pressing keyboard keys. Use the keyPress tool to simulate key presses. Each key will be held down for 1 second by default. If the user describes roughly wanting to make it longer or shorter, adjust the duration accordingly.
+    systemPrompt: `You can help control the bambot-b0 robot by pressing keyboard keys. Use the keyPress tool to simulate key presses. Each key will be held down for 1 second by default. If the user describes roughly wanting to make it longer or shorter, adjust the duration accordingly.
     `,
   },
-  "bambot-v0-base": {
+  "bambot-b0-base": {
     urdfUrl: "/URDFs/bambot_v0_base.urdf",
     image: "/bambot_v0_base.png",
     assembleLink: "https://github.com/timqian/bambot/tree/main/hardware",
@@ -186,7 +186,7 @@ export const robotConfigMap: { [key: string]: RobotConfig } = {
       back_wheel: 14,
       right_wheel: 15,
     },
-    systemPrompt: `You can help control the bambot-v0-base robot by pressing keyboard keys. Use the keyPress tool to simulate key presses. Each key will be held down for 1 second by default.
+    systemPrompt: `You can help control the bambot-b0-base robot by pressing keyboard keys. Use the keyPress tool to simulate key presses. Each key will be held down for 1 second by default.
     The robot can be controlled with the following keys: 
     - "ArrowUp" to move forward
     - "ArrowDown" to move backward
@@ -319,8 +319,7 @@ export const robotConfigMap: { [key: string]: RobotConfig } = {
       right_elbow_joint: 22,
       right_wrist_roll_joint: 23,
     },
-    urdfInitJointAngles: {
-    },
+    urdfInitJointAngles: {},
     systemPrompt: `You can help control the unitree-go2 robot by pressing keyboard keys. Use the keyPress tool to simulate key presses. Each key will be held down for 1 second by default. If the user describes roughly wanting to make it longer or shorter, adjust the duration accordingly.`,
   },
 };
