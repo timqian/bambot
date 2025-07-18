@@ -1,0 +1,56 @@
+🐧 DIAGNOSTIC SÉRIE LINUX POUR BAMBOT
+======================================
+Date: dim. 06 juil. 2025 20:12:31 CEST
+
+1. VÉRIFICATION UTILISATEUR ET GROUPES
+======================================
+ℹ️ Utilisateur actuel: rtx
+ℹ️ Groupes de l'utilisateur: dialout adm cdrom sudo dip plugdev users lpadmin rtx
+✅ L'utilisateur est dans le groupe 'dialout'
+
+2. DÉTECTION DES PÉRIPHÉRIQUES USB SÉRIE
+========================================
+✅ Périphériques USB série détectés:
+    Bus 001 Device 011: ID 1a86:55d3 QinHeng Electronics USB Single Serial
+
+3. VÉRIFICATION DES DEVICES SÉRIE
+=================================
+✅ Devices série trouvés:
+    crwxrwxrwx 1 root dialout 166, 0 juil.  6 19:22 /dev/ttyACM0
+✅ Accès en écriture à /dev/ttyACM0
+
+4. VÉRIFICATION DES DRIVERS
+===========================
+✅ Module usbserial chargé
+✅ Module ch341 chargé
+
+5. INFORMATIONS SYSTÈME
+======================
+ℹ️ Version du kernel: 6.11.0-29-generic
+ℹ️ Distribution: Ubuntu 24.04.2 LTS
+
+6. MESSAGES KERNEL (nécessite sudo)
+===================================
+ℹ️ Messages kernel récents pour USB/série:
+    [ 5547.049315] ipheth 1-1.4:4.2: Apple iPhone USB Ethernet now disconnected
+    [ 6272.890977] usbcore: registered new interface driver usbserial_generic
+    [ 6272.890990] usbserial: USB Serial support registered for generic
+    [ 6272.892316] usbcore: registered new interface driver ch341
+    [ 6272.892334] usbserial: USB Serial support registered for ch341-uart
+
+7. SOLUTIONS RECOMMANDÉES
+=========================
+ÉTAPE 3: Tester l'API Web Serial
+1. Ouvrir Chrome/Chromium
+2. Aller sur chrome://flags/
+3. Activer 'Experimental Web Platform features'
+4. Redémarrer le navigateur
+5. Tester avec le fichier debug HTML
+
+ÉTAPE 4: Test manuel
+echo 'test' > /dev/ttyACM0  # Test d'écriture
+timeout 2 cat /dev/ttyACM0  # Test de lecture
+
+🔧 Diagnostic terminé!
+Fichier de sortie: /home/rtx/pro2robot/resources/bambot/diagnostic-output.txt
+Si le problème persiste, exécutez ce script après chaque modification.

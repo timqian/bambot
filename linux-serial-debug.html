@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linux Serial Debug Tool</title>
+    <style>
+        body { 
+            font-family: monospace; 
+            line-height: 1.6; 
+            padding: 20px; 
+            background: #0a0a0a;
+            color: #00ff00;
+        }
+        .container { max-width: 1000px; margin: auto; }
+        .section { 
+            border: 1px solid #333; 
+            padding: 15px; 
+            margin-bottom: 20px; 
+            border-radius: 5px; 
+            background: #1a1a1a;
+        }
+        h2 { margin-top: 0; color: #ff6b6b; }
+        .warning { 
+            background: #331a00; 
+            border: 1px solid #ff6b00; 
+            padding: 10px; 
+            border-radius: 5px; 
+            color: #ffaa00;
+            margin: 10px 0;
+        }
+        .error { 
+            background: #330000; 
+            border: 1px solid #ff0000; 
+            padding: 10px; 
+            border-radius: 5px; 
+            color: #ff6666;
+            margin: 10px 0;
+        }
+        .solution { 
+            background: #001a33; 
+            border: 1px solid #0066ff; 
+            padding: 10px; 
+            border-radius: 5px; 
+            color: #66aaff;
+            margin: 10px 0;
+        }
+        button { 
+            padding: 8px 15px; 
+            margin-right: 10px; 
+            cursor: pointer; 
+            background: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            margin-bottom: 10px;
+        }
+        button:hover { background: #0088ff; }
+        pre { 
+            background-color: #000; 
+            padding: 10px; 
+            border: 1px solid #333; 
+            border-radius: 3px; 
+            white-space: pre-wrap; 
+            word-wrap: break-word;
+            color: #00ff00;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        code {
+            background: #2a2a2a;
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #ffaa00;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐧 Linux Serial API Debug Tool</h1>
+        
+        <div class="error">
+            <h3>⚠️ Problème identifié : Linux vs macOS</h3>
+            <p>L'API Web Serial fonctionne sur macOS mais pas sur Linux. Voici les causes principales :</p>
+        </div>
+
+        <div class="section">
+            <h2>1. Permissions utilisateur Linux</h2>
+            <div class="warning">
+                <strong>Problème principal :</strong> Sur Linux, l'utilisateur doit faire partie du groupe <code>dialout</code> pour accéder aux ports série.
+            </div>
+            
+            <button id="checkUserGroups">Check User Groups</button>
+            <button id="checkDevicePermissions">Check Device Permissions</button>
+            
+            <div class="solution">
+                <h4>Solutions :</h4>
+                <p>1. Ajouter l'utilisateur au groupe dialout :</p>
+                <code>sudo usermod -a -G dialout $USER</code><br><br>
+                <p>2. Redémarrer la session ou faire :</p>
+                <code>newgrp dialout</code><br><br>
+                <p>3. Vérifier les permissions du device :</p>
+                <code>ls -la /dev/ttyUSB* /dev/ttyACM*</code>
+            </div>
+            
+            <pre id="permissionsOutput">Cliquez sur les boutons pour diagnostiquer...</pre>
+        </div>
+
+        <div class="section">
+            <h2>2. Détection des périphériques USB</h2>
+            <button id="listUsbDevices">List USB Devices</button>
+            <button id="listSerialDevices">List Serial Devices</button>
+            <button id="checkDrivers">Check Drivers</button>
+            
+            <div class="warning">
+                <strong>Différence Linux/macOS :</strong> Linux nécessite des drivers spécifiques pour certains chips série (CH340, FTDI, etc.)
+            </div>
+            
+            <pre id="usbOutput">En attente des résultats...</pre>
+        </div>
+
+        <div class="section">
+            <h2>3. Test d'accès direct aux ports</h2>
+            <button id="testDirectAccess">Test Direct Access</button>
+            <button id="simulateSerialAccess">Simulate Serial Access</button>
+            
+            <div class="solution">
+                <h4>Test manuel Linux :</h4>
+                <p>1. Lister les ports série disponibles :</p>
+                <code>ls /dev/tty{USB,ACM}*</code><br><br>
+                <p>2. Tester l'accès direct :</p>
+                <code>echo "test" > /dev/ttyUSB0</code><br><br>
+                <p>3. Vérifier les logs système :</p>
+                <code>dmesg | grep -i usb | tail -10</code>
+            </div>
+            
+            <pre id="accessOutput">En attente...</pre>
+        </div>
+
+        <div class="section">
+            <h2>4. Configuration du navigateur Linux</h2>
+            <button id="checkBrowserFlags">Check Browser Flags</button>
+            <button id="testWebSerialFlags">Test Web Serial Flags</button>
+            
+            <div class="warning">
+                <strong>Chrome/Chromium Linux :</strong> Certaines distributions Linux désactivent par défaut l'API Web Serial
+            </div>
+            
+            <div class="solution">
+                <h4>Activer Web Serial sur Linux :</h4>
+                <p>1. Chrome flags à activer :</p>
+                <code>chrome://flags/#enable-experimental-web-platform-features</code><br><br>
+                <p>2. Démarrer Chrome avec les bonnes options :</p>
+                <code>google-chrome --enable-experimental-web-platform-features --enable-web-serial-api</code><br><br>
+                <p>3. Pour Chromium :</p>
+                <code>chromium --enable-experimental-web-platform-features</code>
+            </div>
+            
+            <pre id="browserOutput">En attente...</pre>
+        </div>
+
+        <div class="section">
+            <h2>5. Test de l'API Web Serial avec debug</h2>
+            <button id="runFullLinuxTest">Run Full Linux Test</button>
+            <button id="tryPortRequest">Try Port Request (Linux)</button>
+            
+            <pre id="fullTestOutput">Prêt pour le test complet...</pre>
+        </div>
+
+        <div class="section">
+            <h2>6. Solutions alternatives pour Linux</h2>
+            <div class="solution">
+                <h4>Si Web Serial ne fonctionne toujours pas :</h4>
+                <p>1. <strong>WebUSB API</strong> (peut fonctionner quand Web Serial échoue)</p>
+                <p>2. <strong>Serveur local</strong> avec accès série natif</p>
+                <p>3. <strong>AppImage/Electron</strong> avec permissions série</p>
+                <p>4. <strong>Proxification</strong> via websocket vers un daemon série</p>
+            </div>
+            
+            <button id="testWebUSB">Test WebUSB Alternative</button>
+            <button id="checkAlternatives">Check Alternative Methods</button>
+            
+            <pre id="alternativesOutput">En attente...</pre>
+        </div>
+    </div>
+
+    <script>
+        // Linux-specific debugging functions
+        
+        function log(message, element = 'fullTestOutput') {
+            const output = document.getElementById(element);
+            const timestamp = new Date().toLocaleTimeString();
+            output.textContent += `[${timestamp}] ${message}\n`;
+            console.log(`[LINUX-SERIAL] ${message}`);
+        }
+
+        // Check user groups
+        document.getElementById('checkUserGroups').onclick = () => {
+            const output = document.getElementById('permissionsOutput');
+            let result = '=== USER GROUPS CHECK ===\n\n';
+            
+            result += 'Running in browser - cannot directly check system groups\n';
+            result += 'Browser environment detected\n\n';
+            
+            result += 'Manual check required:\n';
+            result += '1. Open terminal and run: groups\n';
+            result += '2. Check if "dialout" is in the list\n';
+            result += '3. If not, run: sudo usermod -a -G dialout $USER\n';
+            result += '4. Log out and log back in\n\n';
+            
+            result += 'Common Linux groups for serial access:\n';
+            result += '- dialout (most common)\n';
+            result += '- uucp (older systems)\n';
+            result += '- serial (some distributions)\n';
+            
+            output.textContent = result;
+            log('User groups check completed', 'permissionsOutput');
+        };
+
+        // Check device permissions
+        document.getElementById('checkDevicePermissions').onclick = () => {
+            const output = document.getElementById('permissionsOutput');
+            let result = output.textContent + '\n=== DEVICE PERMISSIONS ===\n\n';
+            
+            result += 'Manual commands to run in terminal:\n\n';
+            result += '1. List USB serial devices:\n';
+            result += '   ls -la /dev/ttyUSB* /dev/ttyACM* 2>/dev/null\n\n';
+            
+            result += '2. Check USB devices:\n';
+            result += '   lsusb | grep -i "serial\\|uart\\|ch340\\|ftdi\\|cp210"\n\n';
+            
+            result += '3. Check kernel messages:\n';
+            result += '   dmesg | grep -i "usb\\|serial" | tail -10\n\n';
+            
+            result += '4. Check if device is detected:\n';
+            result += '   udevadm info --name=/dev/ttyUSB0 --attribute-walk\n\n';
+            
+            result += 'Expected output should show:\n';
+            result += '- Device owned by root:dialout\n';
+            result += '- Permissions: crw-rw---- (660)\n';
+            result += '- Your user should be in dialout group\n';
+            
+            output.textContent = result;
+        };
+
+        // List USB devices
+        document.getElementById('listUsbDevices').onclick = () => {
+            const output = document.getElementById('usbOutput');
+            let result = '=== USB DEVICES (requires manual check) ===\n\n';
+            
+            result += 'Run these commands in terminal to debug:\n\n';
+            
+            result += '1. List all USB devices:\n';
+            result += '   lsusb\n\n';
+            
+            result += '2. Find serial/UART devices:\n';
+            result += '   lsusb | grep -E "(Serial|UART|CH340|FTDI|CP210|Prolific)"\n\n';
+            
+            result += '3. Detailed USB info:\n';
+            result += '   lsusb -v | grep -A 10 -B 5 "bInterfaceClass.*3"\n\n';
+            
+            result += '4. Check for specific vendor IDs:\n';
+            result += '   # FTDI: 0403\n';
+            result += '   # CH340: 1a86\n';
+            result += '   # CP210x: 10c4\n';
+            result += '   # Arduino: 2341\n';
+            result += '   lsusb | grep -E "(0403|1a86|10c4|2341)"\n\n';
+            
+            result += 'Common issues on Linux:\n';
+            result += '- Missing driver (install linux-modules-extra)\n';
+            result += '- Device not recognized\n';
+            result += '- Permission denied\n';
+            
+            output.textContent = result;
+        };
+
+        // List serial devices
+        document.getElementById('listSerialDevices').onclick = () => {
+            const output = document.getElementById('usbOutput');
+            let result = output.textContent + '\n=== SERIAL DEVICES ===\n\n';
+            
+            result += 'Commands to check serial devices:\n\n';
+            
+            result += '1. List serial devices:\n';
+            result += '   ls /dev/tty{USB,ACM,S}* 2>/dev/null\n\n';
+            
+            result += '2. Check device details:\n';
+            result += '   for dev in /dev/ttyUSB* /dev/ttyACM*; do\n';
+            result += '     [ -e "$dev" ] && echo "$dev: $(ls -la $dev)"\n';
+            result += '   done\n\n';
+            
+            result += '3. Check if device responds:\n';
+            result += '   stty -F /dev/ttyUSB0 115200\n';
+            result += '   echo "test" > /dev/ttyUSB0\n\n';
+            
+            result += '4. Monitor device activity:\n';
+            result += '   sudo dmesg -w | grep -i "usb\\|serial"\n\n';
+            
+            result += 'Device types:\n';
+            result += '- /dev/ttyUSB* : USB serial adapters\n';
+            result += '- /dev/ttyACM* : CDC ACM devices (Arduino)\n';
+            result += '- /dev/ttyS* : Hardware serial ports\n';
+            
+            output.textContent = result;
+        };
+
+        // Check drivers
+        document.getElementById('checkDrivers').onclick = () => {
+            const output = document.getElementById('usbOutput');
+            let result = output.textContent + '\n=== DRIVER CHECK ===\n\n';
+            
+            result += 'Check if required drivers are loaded:\n\n';
+            
+            result += '1. Common USB serial drivers:\n';
+            result += '   lsmod | grep -E "(usbserial|ch341|ftdi_sio|cp210x|pl2303)"\n\n';
+            
+            result += '2. Load missing drivers (if needed):\n';
+            result += '   sudo modprobe usbserial\n';
+            result += '   sudo modprobe ch341      # for CH340/CH341\n';
+            result += '   sudo modprobe ftdi_sio   # for FTDI chips\n';
+            result += '   sudo modprobe cp210x     # for CP210x chips\n\n';
+            
+            result += '3. Check kernel version compatibility:\n';
+            result += '   uname -r\n';
+            result += '   # Some USB serial chips need newer kernels\n\n';
+            
+            result += '4. Install additional drivers (Ubuntu/Debian):\n';
+            result += '   sudo apt update\n';
+            result += '   sudo apt install linux-modules-extra-$(uname -r)\n\n';
+            
+            result += 'Driver status meanings:\n';
+            result += '- Driver loaded: Device should work\n';
+            result += '- Driver missing: Install kernel modules\n';
+            result += '- Driver present but not working: Permission issue\n';
+            
+            output.textContent = result;
+        };
+
+        // Test direct access
+        document.getElementById('testDirectAccess').onclick = () => {
+            const output = document.getElementById('accessOutput');
+            let result = '=== DIRECT ACCESS TEST ===\n\n';
+            
+            result += 'Browser cannot directly access serial devices.\n';
+            result += 'Manual terminal tests required:\n\n';
+            
+            result += '1. Test if device exists and is accessible:\n';
+            result += '   ls -la /dev/ttyUSB0\n';
+            result += '   # Should show: crw-rw---- root dialout\n\n';
+            
+            result += '2. Test write permission:\n';
+            result += '   echo "test" > /dev/ttyUSB0\n';
+            result += '   # If "Permission denied": not in dialout group\n\n';
+            
+            result += '3. Test read permission:\n';
+            result += '   timeout 2 cat /dev/ttyUSB0\n';
+            result += '   # Should not give permission error\n\n';
+            
+            result += '4. Test with screen (if installed):\n';
+            result += '   screen /dev/ttyUSB0 115200\n';
+            result += '   # Ctrl+A, K to exit\n\n';
+            
+            result += 'Expected errors and solutions:\n';
+            result += '- "No such file": Device not detected\n';
+            result += '- "Permission denied": User not in dialout group\n';
+            result += '- "Device busy": Already in use by another app\n';
+            
+            output.textContent = result;
+        };
+
+        // Check browser flags
+        document.getElementById('checkBrowserFlags').onclick = () => {
+            const output = document.getElementById('browserOutput');
+            let result = '=== BROWSER FLAGS CHECK ===\n\n';
+            
+            result += `Browser: ${navigator.userAgent}\n\n`;
+            
+            result += 'Web Serial API support:\n';
+            result += `navigator.serial: ${!!navigator.serial}\n`;
+            result += `Secure context: ${window.isSecureContext}\n`;
+            result += `Protocol: ${window.location.protocol}\n\n`;
+            
+            if (!navigator.serial) {
+                result += '❌ Web Serial API not available!\n\n';
+                result += 'Solutions for Linux Chrome/Chromium:\n\n';
+                
+                result += '1. Enable experimental features:\n';
+                result += '   chrome://flags/#enable-experimental-web-platform-features\n';
+                result += '   Set to "Enabled"\n\n';
+                
+                result += '2. Start browser with flags:\n';
+                result += '   google-chrome --enable-experimental-web-platform-features\n';
+                result += '   # or for Chromium:\n';
+                result += '   chromium --enable-experimental-web-platform-features\n\n';
+                
+                result += '3. Additional flags to try:\n';
+                result += '   --enable-web-serial-api\n';
+                result += '   --enable-features=WebSerial\n\n';
+                
+                result += '4. Check Chrome version:\n';
+                result += '   Web Serial requires Chrome 89+ on Linux\n';
+            } else {
+                result += '✅ Web Serial API is available!\n';
+                result += 'The issue might be permissions or device detection.\n';
+            }
+            
+            output.textContent = result;
+        };
+
+        // Run full Linux test
+        document.getElementById('runFullLinuxTest').onclick = async () => {
+            const output = document.getElementById('fullTestOutput');
+            output.textContent = '=== FULL LINUX DIAGNOSTIC ===\n\n';
+            
+            log('Starting full Linux diagnostic...', 'fullTestOutput');
+            
+            // Test 1: API availability
+            log('Test 1: Web Serial API availability', 'fullTestOutput');
+            if (!navigator.serial) {
+                log('❌ Web Serial API not available', 'fullTestOutput');
+                log('Enable chrome://flags/#enable-experimental-web-platform-features', 'fullTestOutput');
+                return;
+            } else {
+                log('✅ Web Serial API available', 'fullTestOutput');
+            }
+            
+            // Test 2: Try to get existing ports
+            log('Test 2: Checking existing ports', 'fullTestOutput');
+            try {
+                const ports = await navigator.serial.getPorts();
+                log(`Found ${ports.length} existing port(s)`, 'fullTestOutput');
+                
+                if (ports.length === 0) {
+                    log('No ports found - need user interaction', 'fullTestOutput');
+                } else {
+                    ports.forEach((port, index) => {
+                        const info = port.getInfo();
+                        log(`Port ${index + 1}: VID=0x${(info.usbVendorId || 0).toString(16).padStart(4, '0')} PID=0x${(info.usbProductId || 0).toString(16).padStart(4, '0')}`, 'fullTestOutput');
+                    });
+                }
+            } catch (error) {
+                log(`❌ Error getting ports: ${error.message}`, 'fullTestOutput');
+            }
+            
+            // Test 3: System information
+            log('Test 3: System information', 'fullTestOutput');
+            log(`Platform: ${navigator.platform}`, 'fullTestOutput');
+            log(`User Agent: ${navigator.userAgent}`, 'fullTestOutput');
+            log(`Secure Context: ${window.isSecureContext}`, 'fullTestOutput');
+            
+            // Test 4: Linux-specific checks
+            log('Test 4: Linux-specific diagnostics', 'fullTestOutput');
+            log('Manual checks required:', 'fullTestOutput');
+            log('1. Run: groups | grep dialout', 'fullTestOutput');
+            log('2. Run: ls -la /dev/ttyUSB* /dev/ttyACM*', 'fullTestOutput');
+            log('3. Run: lsusb | grep -i serial', 'fullTestOutput');
+            log('4. Run: dmesg | grep -i usb | tail -5', 'fullTestOutput');
+            
+            log('Diagnostic completed - check terminal commands above', 'fullTestOutput');
+        };
+
+        // Try port request
+        document.getElementById('tryPortRequest').onclick = async () => {
+            const output = document.getElementById('fullTestOutput');
+            
+            log('Attempting port request with Linux-optimized filters...', 'fullTestOutput');
+            
+            try {
+                if (!navigator.serial) {
+                    log('❌ Web Serial API not available', 'fullTestOutput');
+                    return;
+                }
+                
+                // Linux-optimized filters
+                const port = await navigator.serial.requestPort({
+                    filters: [
+                        // CH340/CH341 (very common on Linux)
+                        { usbVendorId: 0x1a86 },
+                        // FTDI (common)
+                        { usbVendorId: 0x0403 },
+                        // CP210x (Silicon Labs)
+                        { usbVendorId: 0x10c4 },
+                        // Arduino
+                        { usbVendorId: 0x2341 },
+                        // Prolific
+                        { usbVendorId: 0x067b }
+                    ]
+                });
+                
+                if (port) {
+                    const info = port.getInfo();
+                    log(`✅ Port selected successfully!`, 'fullTestOutput');
+                    log(`VID: 0x${(info.usbVendorId || 0).toString(16).padStart(4, '0')}`, 'fullTestOutput');
+                    log(`PID: 0x${(info.usbProductId || 0).toString(16).padStart(4, '0')}`, 'fullTestOutput');
+                    
+                    // Test opening the port
+                    try {
+                        await port.open({ baudRate: 115200 });
+                        log(`✅ Port opened successfully at 115200 baud`, 'fullTestOutput');
+                        await port.close();
+                        log(`✅ Port closed successfully`, 'fullTestOutput');
+                    } catch (openError) {
+                        log(`❌ Error opening port: ${openError.message}`, 'fullTestOutput');
+                    }
+                }
+                
+            } catch (error) {
+                if (error.name === 'NotFoundError') {
+                    log('❌ No ports found or user cancelled', 'fullTestOutput');
+                    log('Common Linux issues:', 'fullTestOutput');
+                    log('- User not in dialout group', 'fullTestOutput');
+                    log('- Device not detected by kernel', 'fullTestOutput');
+                    log('- Missing USB serial drivers', 'fullTestOutput');
+                } else {
+                    log(`❌ Error requesting port: ${error.message}`, 'fullTestOutput');
+                }
+            }
+        };
+
+        // Test WebUSB alternative
+        document.getElementById('testWebUSB').onclick = async () => {
+            const output = document.getElementById('alternativesOutput');
+            let result = '=== WebUSB Alternative Test ===\n\n';
+            
+            if (!navigator.usb) {
+                result += '❌ WebUSB not available\n';
+            } else {
+                result += '✅ WebUSB available\n';
+                result += 'WebUSB might work even when Web Serial fails on Linux\n\n';
+                
+                try {
+                    const devices = await navigator.usb.getDevices();
+                    result += `Found ${devices.length} USB device(s)\n`;
+                    
+                    if (devices.length > 0) {
+                        devices.forEach((device, index) => {
+                            result += `Device ${index + 1}: VID=0x${device.vendorId.toString(16).padStart(4, '0')} PID=0x${device.productId.toString(16).padStart(4, '0')}\n`;
+                        });
+                    }
+                } catch (error) {
+                    result += `Error accessing USB devices: ${error.message}\n`;
+                }
+            }
+            
+            output.textContent = result;
+        };
+
+        // Check alternatives
+        document.getElementById('checkAlternatives').onclick = () => {
+            const output = document.getElementById('alternativesOutput');
+            let result = output.textContent + '\n=== ALTERNATIVE SOLUTIONS ===\n\n';
+            
+            result += '1. Local Serial Server:\n';
+            result += '   - Create Node.js/Python server with serial access\n';
+            result += '   - Expose via WebSocket to browser\n';
+            result += '   - Works around browser limitations\n\n';
+            
+            result += '2. Electron App:\n';
+            result += '   - Package as Electron app\n';
+            result += '   - Direct serial access via Node.js\n';
+            result += '   - No browser restrictions\n\n';
+            
+            result += '3. Chrome App (deprecated but works):\n';
+            result += '   - Use Chrome Apps API\n';
+            result += '   - Direct serial port access\n';
+            result += '   - Limited browser support\n\n';
+            
+            result += '4. Native Bridge:\n';
+            result += '   - Native messaging host\n';
+            result += '   - Browser extension + native app\n';
+            result += '   - Complex but robust\n\n';
+            
+            result += 'Recommended for Linux: Local Serial Server\n';
+            result += 'Example: serialport-websocket bridge\n';
+            
+            output.textContent = result;
+        };
+
+        // Initialize
+        console.log('Linux Serial Debug Tool loaded');
+        
+        // Show initial Linux-specific message
+        setTimeout(() => {
+            log('Linux Serial Debug Tool initialized', 'fullTestOutput');
+            log('Known issue: Web Serial API has limited Linux support', 'fullTestOutput');
+            log('Start with "Check Browser Flags" then "Run Full Linux Test"', 'fullTestOutput');
+        }, 500);
+    </script>
+</body>
+</html>

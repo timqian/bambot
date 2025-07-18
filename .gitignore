@@ -3,3 +3,7 @@ nativeAPP/
 software
 playground/public/URDF/lekiwi/
 .DS_Store
+node_modules/
+
+.task/
+**bun.lockb

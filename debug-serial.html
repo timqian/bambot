@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Serial API Debug Tool</title>
+    <style>
+        body { 
+            font-family: monospace; 
+            line-height: 1.6; 
+            padding: 20px; 
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+        .container { max-width: 900px; margin: auto; }
+        .section { 
+            border: 1px solid #333; 
+            padding: 15px; 
+            margin-bottom: 20px; 
+            border-radius: 5px; 
+            background: #2a2a2a;
+        }
+        h2 { margin-top: 0; color: #ffff00; }
+        button { 
+            padding: 8px 15px; 
+            margin-right: 10px; 
+            cursor: pointer; 
+            background: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 3px;
+        }
+        button:hover { background: #0088ff; }
+        button:disabled { background: #666; cursor: not-allowed; }
+        pre { 
+            background-color: #000; 
+            padding: 10px; 
+            border: 1px solid #333; 
+            border-radius: 3px; 
+            white-space: pre-wrap; 
+            word-wrap: break-word;
+            color: #00ff00;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .status { font-weight: bold; }
+        .success { color: #00ff00; }
+        .error { color: #ff0000; }
+        .warning { color: #ffaa00; }
+        .info { color: #00aaff; }
+        .debug-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .debug-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Web Serial API Debug Tool</h1>
+        
+        <div class="section">
+            <h2>1. API Support Check</h2>
+            <button id="checkApiSupport">Check API Support</button>
+            <pre id="apiSupportOutput">Cliquez sur 'Check API Support' pour commencer...</pre>
+        </div>
+
+        <div class="debug-grid">
+            <div class="section">
+                <h2>2. Port Enumeration</h2>
+                <button id="listPorts">List Available Ports</button>
+                <button id="requestPort">Request Port (User Action)</button>
+                <pre id="portListOutput">En attente...</pre>
+            </div>
+
+            <div class="section">
+                <h2>3. System Information</h2>
+                <button id="getSystemInfo">Get System Info</button>
+                <pre id="systemInfoOutput">En attente...</pre>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>4. Permission & Security Analysis</h2>
+            <button id="checkPermissions">Check Permissions</button>
+            <button id="testSecurityContext">Test Security Context</button>
+            <pre id="permissionsOutput">En attente...</pre>
+        </div>
+
+        <div class="section">
+            <h2>5. Port Connection Test</h2>
+            <button id="advancedPortTest">Advanced Port Test</button>
+            <button id="filterTest">Test Port Filters</button>
+            <pre id="connectionTestOutput">En attente...</pre>
+        </div>
+
+        <div class="section">
+            <h2>6. Real-time Debug Log</h2>
+            <button id="clearLog">Clear Log</button>
+            <button id="exportLog">Export Log</button>
+            <pre id="debugLog">Debug log will appear here...</pre>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let debugLog = document.getElementById('debugLog');
+        let logEntries = [];
+
+        // Enhanced logging function
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const colorClass = type === 'error' ? 'error' : 
+                              type === 'warning' ? 'warning' : 
+                              type === 'success' ? 'success' : 'info';
+            
+            const logEntry = `[${timestamp}] ${message}`;
+            logEntries.push(logEntry);
+            
+            debugLog.innerHTML = `<span class="${colorClass}">${logEntry}</span>\n` + debugLog.innerHTML;
+            
+            // Limit log entries
+            if (logEntries.length > 100) {
+                logEntries = logEntries.slice(0, 100);
+            }
+            
+            console.log(`[SERIAL-DEBUG] ${message}`);
+        }
+
+        // Clear log
+        document.getElementById('clearLog').onclick = () => {
+            debugLog.innerHTML = '';
+            logEntries = [];
+            log('Log cleared', 'info');
+        };
+
+        // Export log
+        document.getElementById('exportLog').onclick = () => {
+            const logContent = logEntries.join('\n');
+            const blob = new Blob([logContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `serial-debug-${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+            log('Log exported', 'success');
+        };
+
+        // 1. API Support Check
+        document.getElementById('checkApiSupport').onclick = () => {
+            const output = document.getElementById('apiSupportOutput');
+            let result = '=== WEB SERIAL API SUPPORT CHECK ===\n\n';
+            
+            log('Starting API support check...', 'info');
+            
+            try {
+                // Check basic API availability
+                result += `navigator.serial exists: ${!!navigator.serial}\n`;
+                result += `navigator.serial type: ${typeof navigator.serial}\n`;
+                
+                if (navigator.serial) {
+                    result += `navigator.serial.requestPort: ${typeof navigator.serial.requestPort}\n`;
+                    result += `navigator.serial.getPorts: ${typeof navigator.serial.getPorts}\n`;
+                    
+                    // Check for event listeners
+                    if (navigator.serial.addEventListener) {
+                        result += `Event listeners supported: true\n`;
+                        
+                        // Add connect/disconnect listeners
+                        navigator.serial.addEventListener('connect', (event) => {
+                            log(`Port connected: ${event.port}`, 'success');
+                        });
+                        
+                        navigator.serial.addEventListener('disconnect', (event) => {
+                            log(`Port disconnected: ${event.port}`, 'warning');
+                        });
+                        
+                        result += `Connect/disconnect listeners added\n`;
+                    } else {
+                        result += `Event listeners supported: false\n`;
+                    }
+                } else {
+                    result += '\n❌ Web Serial API not available!\n';
+                    result += 'Possible causes:\n';
+                    result += '- Browser not supported (Chrome/Edge required)\n';
+                    result += '- HTTPS required (except localhost)\n';
+                    result += '- Feature flag disabled\n';
+                }
+                
+                // Browser detection
+                const userAgent = navigator.userAgent;
+                result += `\nBrowser: ${userAgent}\n`;
+                
+                // Secure context check
+                result += `Secure context: ${window.isSecureContext}\n`;
+                result += `Protocol: ${window.location.protocol}\n`;
+                result += `Host: ${window.location.host}\n`;
+                
+                log('API support check completed', 'success');
+                
+            } catch (error) {
+                result += `\n❌ Error during API check: ${error.message}\n`;
+                log(`API check error: ${error.message}`, 'error');
+            }
+            
+            output.textContent = result;
+        };
+
+        // 2. Port Enumeration
+        document.getElementById('listPorts').onclick = async () => {
+            const output = document.getElementById('portListOutput');
+            let result = '=== AVAILABLE PORTS ===\n\n';
+            
+            log('Listing available ports...', 'info');
+            
+            try {
+                if (!navigator.serial) {
+                    result += '❌ Web Serial API not available\n';
+                    log('Web Serial API not available', 'error');
+                    output.textContent = result;
+                    return;
+                }
+                
+                const ports = await navigator.serial.getPorts();
+                result += `Found ${ports.length} port(s)\n\n`;
+                
+                if (ports.length === 0) {
+                    result += '⚠️  No ports found. This could mean:\n';
+                    result += '- No devices connected\n';
+                    result += '- Ports not yet granted permission\n';
+                    result += '- Device drivers not installed\n';
+                    result += '- Port used by another application\n\n';
+                    result += 'Try clicking "Request Port" to manually select a port.\n';
+                    log('No ports found in getPorts()', 'warning');
+                } else {
+                    for (let i = 0; i < ports.length; i++) {
+                        const port = ports[i];
+                        result += `Port ${i + 1}:\n`;
+                        
+                        // Get port info
+                        const info = port.getInfo();
+                        result += `  Vendor ID: ${info.usbVendorId || 'N/A'}\n`;
+                        result += `  Product ID: ${info.usbProductId || 'N/A'}\n`;
+                        result += `  Connected: ${port.readable !== null}\n`;
+                        
+                        if (info.usbVendorId) {
+                            result += `  Vendor ID (hex): 0x${info.usbVendorId.toString(16).padStart(4, '0')}\n`;
+                        }
+                        if (info.usbProductId) {
+                            result += `  Product ID (hex): 0x${info.usbProductId.toString(16).padStart(4, '0')}\n`;
+                        }
+                        
+                        result += '\n';
+                        log(`Found port: VID=0x${(info.usbVendorId || 0).toString(16)} PID=0x${(info.usbProductId || 0).toString(16)}`, 'success');
+                    }
+                }
+                
+            } catch (error) {
+                result += `❌ Error listing ports: ${error.message}\n`;
+                log(`Error listing ports: ${error.message}`, 'error');
+            }
+            
+            output.textContent = result;
+        };
+
+        // Request port with user interaction
+        document.getElementById('requestPort').onclick = async () => {
+            const output = document.getElementById('portListOutput');
+            
+            log('Requesting port selection from user...', 'info');
+            
+            try {
+                if (!navigator.serial) {
+                    output.textContent += '\n❌ Web Serial API not available\n';
+                    log('Web Serial API not available for requestPort', 'error');
+                    return;
+                }
+                
+                // Try to request a port with filters
+                const port = await navigator.serial.requestPort({
+                    filters: [
+                        // Common FTDI chips
+                        { usbVendorId: 0x0403 },
+                        // CH340/CH341 chips
+                        { usbVendorId: 0x1a86 },
+                        // CP210x chips
+                        { usbVendorId: 0x10c4 },
+                        // Arduino
+                        { usbVendorId: 0x2341 },
+                        // Common serial chips
+                        { usbVendorId: 0x067b },
+                        // Generic serial devices
+                        { usbVendorId: 0x16d0 }
+                    ]
+                });
+                
+                if (port) {
+                    const info = port.getInfo();
+                    let result = '\n✅ PORT SELECTED BY USER:\n';
+                    result += `Vendor ID: 0x${(info.usbVendorId || 0).toString(16).padStart(4, '0')}\n`;
+                    result += `Product ID: 0x${(info.usbProductId || 0).toString(16).padStart(4, '0')}\n`;
+                    result += `Connected: ${port.readable !== null}\n`;
+                    
+                    output.textContent += result;
+                    log(`User selected port: VID=0x${(info.usbVendorId || 0).toString(16)} PID=0x${(info.usbProductId || 0).toString(16)}`, 'success');
+                    
+                    // Now try to get all ports again
+                    setTimeout(() => {
+                        document.getElementById('listPorts').click();
+                    }, 1000);
+                }
+                
+            } catch (error) {
+                if (error.name === 'NotFoundError') {
+                    output.textContent += '\n⚠️  User cancelled port selection\n';
+                    log('User cancelled port selection', 'warning');
+                } else {
+                    output.textContent += `\n❌ Error requesting port: ${error.message}\n`;
+                    log(`Error requesting port: ${error.message}`, 'error');
+                }
+            }
+        };
+
+        // 3. System Information
+        document.getElementById('getSystemInfo').onclick = () => {
+            const output = document.getElementById('systemInfoOutput');
+            let result = '=== SYSTEM INFORMATION ===\n\n';
+            
+            log('Gathering system information...', 'info');
+            
+            try {
+                // Browser info
+                result += `User Agent: ${navigator.userAgent}\n`;
+                result += `Platform: ${navigator.platform}\n`;
+                result += `Language: ${navigator.language}\n`;
+                result += `Cookie Enabled: ${navigator.cookieEnabled}\n`;
+                result += `Online: ${navigator.onLine}\n\n`;
+                
+                // Security context
+                result += `Secure Context: ${window.isSecureContext}\n`;
+                result += `Origin: ${window.location.origin}\n`;
+                result += `Protocol: ${window.location.protocol}\n`;
+                result += `Host: ${window.location.host}\n`;
+                result += `Pathname: ${window.location.pathname}\n\n`;
+                
+                // Feature detection
+                result += `WebUSB: ${!!navigator.usb}\n`;
+                result += `WebHID: ${!!navigator.hid}\n`;
+                result += `Bluetooth: ${!!navigator.bluetooth}\n`;
+                result += `Geolocation: ${!!navigator.geolocation}\n`;
+                result += `Service Worker: ${!!navigator.serviceWorker}\n\n`;
+                
+                // Chrome-specific flags (if available)
+                if (window.chrome) {
+                    result += `Chrome detected: true\n`;
+                    result += `Chrome runtime: ${!!window.chrome.runtime}\n`;
+                }
+                
+                log('System information gathered', 'success');
+                
+            } catch (error) {
+                result += `❌ Error getting system info: ${error.message}\n`;
+                log(`Error getting system info: ${error.message}`, 'error');
+            }
+            
+            output.textContent = result;
+        };
+
+        // 4. Permissions Check
+        document.getElementById('checkPermissions').onclick = async () => {
+            const output = document.getElementById('permissionsOutput');
+            let result = '=== PERMISSIONS CHECK ===\n\n';
+            
+            log('Checking permissions...', 'info');
+            
+            try {
+                // Check if Permissions API is available
+                if (!navigator.permissions) {
+                    result += '⚠️  Permissions API not available\n';
+                    log('Permissions API not available', 'warning');
+                } else {
+                    result += '✅ Permissions API available\n';
+                    
+                    // Try to query serial permission (may not be supported)
+                    try {
+                        const permission = await navigator.permissions.query({ name: 'serial' });
+                        result += `Serial permission state: ${permission.state}\n`;
+                        log(`Serial permission: ${permission.state}`, 'info');
+                    } catch (e) {
+                        result += `Serial permission query not supported: ${e.message}\n`;
+                        log(`Serial permission query not supported: ${e.message}`, 'warning');
+                    }
+                }
+                
+                // Check document state
+                result += `\nDocument state: ${document.readyState}\n`;
+                result += `Document focused: ${document.hasFocus()}\n`;
+                result += `Page visible: ${!document.hidden}\n`;
+                
+                // Check for user activation
+                if (navigator.userActivation) {
+                    result += `User activation: ${navigator.userActivation.isActive}\n`;
+                    result += `Has been active: ${navigator.userActivation.hasBeenActive}\n`;
+                }
+                
+                log('Permissions check completed', 'success');
+                
+            } catch (error) {
+                result += `❌ Error checking permissions: ${error.message}\n`;
+                log(`Error checking permissions: ${error.message}`, 'error');
+            }
+            
+            output.textContent = result;
+        };
+
+        // Security context test
+        document.getElementById('testSecurityContext').onclick = () => {
+            const output = document.getElementById('permissionsOutput');
+            let result = output.textContent + '\n=== SECURITY CONTEXT TEST ===\n\n';
+            
+            log('Testing security context...', 'info');
+            
+            try {
+                // Check various security features
+                result += `Secure Context: ${window.isSecureContext}\n`;
+                result += `Cross Origin Isolated: ${window.crossOriginIsolated || false}\n`;
+                
+                // Check CSP
+                const metaTags = document.querySelectorAll('meta[http-equiv="Content-Security-Policy"]');
+                result += `CSP meta tags: ${metaTags.length}\n`;
+                
+                // Check if we're in an iframe
+                result += `In iframe: ${window !== window.top}\n`;
+                
+                // Check protocol restrictions
+                const protocol = window.location.protocol;
+                result += `Protocol: ${protocol}\n`;
+                
+                if (protocol === 'http:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                    result += '⚠️  HTTP on non-localhost may block Web Serial API\n';
+                    log('HTTP on non-localhost detected - may block Web Serial API', 'warning');
+                }
+                
+                if (protocol === 'file:') {
+                    result += '⚠️  File protocol may have restrictions\n';
+                    log('File protocol detected - may have restrictions', 'warning');
+                }
+                
+                log('Security context test completed', 'success');
+                
+            } catch (error) {
+                result += `❌ Error testing security context: ${error.message}\n`;
+                log(`Error testing security context: ${error.message}`, 'error');
+            }
+            
+            output.textContent = result;
+        };
+
+        // 5. Advanced Port Test
+        document.getElementById('advancedPortTest').onclick = async () => {
+            const output = document.getElementById('connectionTestOutput');
+            let result = '=== ADVANCED PORT TEST ===\n\n';
+            
+            log('Starting advanced port test...', 'info');
+            
+            try {
+                if (!navigator.serial) {
+                    result += '❌ Web Serial API not available\n';
+                    output.textContent = result;
+                    return;
+                }
+                
+                // Test 1: Check available ports
+                result += 'Test 1: Getting available ports...\n';
+                const ports = await navigator.serial.getPorts();
+                result += `Found ${ports.length} ports\n\n`;
+                
+                // Test 2: Test various baud rates
+                result += 'Test 2: Common baud rates for serial devices:\n';
+                const baudRates = [9600, 19200, 38400, 57600, 115200, 250000, 500000, 1000000];
+                baudRates.forEach(rate => {
+                    result += `  ${rate} bps - commonly used for ${getBaudRateUsage(rate)}\n`;
+                });
+                result += '\n';
+                
+                // Test 3: Try to request port with specific filters
+                result += 'Test 3: Testing port request with various filters...\n';
+                
+                // Common serial chip vendor IDs
+                const commonVendors = [
+                    { id: 0x0403, name: 'FTDI (FT232, FT2232, etc.)' },
+                    { id: 0x1a86, name: 'QinHeng Electronics (CH340, CH341)' },
+                    { id: 0x10c4, name: 'Silicon Labs (CP210x)' },
+                    { id: 0x2341, name: 'Arduino' },
+                    { id: 0x067b, name: 'Prolific (PL2303)' },
+                    { id: 0x16d0, name: 'MCS (various serial chips)' },
+                    { id: 0x04d8, name: 'Microchip' },
+                    { id: 0x239a, name: 'Adafruit' }
+                ];
+                
+                commonVendors.forEach(vendor => {
+                    result += `  0x${vendor.id.toString(16).padStart(4, '0')}: ${vendor.name}\n`;
+                });
+                
+                log('Advanced port test completed', 'success');
+                
+            } catch (error) {
+                result += `❌ Error in advanced test: ${error.message}\n`;
+                log(`Error in advanced test: ${error.message}`, 'error');
+            }
+            
+            output.textContent = result;
+        };
+
+        // Filter test
+        document.getElementById('filterTest').onclick = async () => {
+            const output = document.getElementById('connectionTestOutput');
+            let result = output.textContent + '\n=== PORT FILTER TEST ===\n\n';
+            
+            log('Testing port filters...', 'info');
+            
+            try {
+                if (!navigator.serial) {
+                    result += '❌ Web Serial API not available\n';
+                    output.textContent = result;
+                    return;
+                }
+                
+                result += 'Attempting to request port with comprehensive filters...\n';
+                result += 'This will open the port selection dialog.\n\n';
+                
+                const port = await navigator.serial.requestPort({
+                    filters: [
+                        // FTDI
+                        { usbVendorId: 0x0403, usbProductId: 0x6001 }, // FT232R
+                        { usbVendorId: 0x0403, usbProductId: 0x6014 }, // FT232H
+                        // CH340/CH341
+                        { usbVendorId: 0x1a86, usbProductId: 0x7523 }, // CH340
+                        { usbVendorId: 0x1a86, usbProductId: 0x5523 }, // CH341
+                        // CP210x
+                        { usbVendorId: 0x10c4, usbProductId: 0xea60 }, // CP2102
+                        { usbVendorId: 0x10c4, usbProductId: 0xea70 }, // CP2105
+                        // Arduino
+                        { usbVendorId: 0x2341 }, // Any Arduino
+                        // Generic catch-all
+                        { usbVendorId: 0x067b }, // Prolific
+                        { usbVendorId: 0x16d0 }  // MCS
+                    ]
+                });
+                
+                if (port) {
+                    const info = port.getInfo();
+                    result += `✅ Port selected!\n`;
+                    result += `VID: 0x${(info.usbVendorId || 0).toString(16).padStart(4, '0')}\n`;
+                    result += `PID: 0x${(info.usbProductId || 0).toString(16).padStart(4, '0')}\n`;
+                    
+                    log(`Port selected with filter: VID=0x${(info.usbVendorId || 0).toString(16)} PID=0x${(info.usbProductId || 0).toString(16)}`, 'success');
+                }
+                
+            } catch (error) {
+                if (error.name === 'NotFoundError') {
+                    result += '⚠️  No matching ports found or user cancelled\n';
+                    log('No matching ports found or user cancelled', 'warning');
+                } else {
+                    result += `❌ Error testing filters: ${error.message}\n`;
+                    log(`Error testing filters: ${error.message}`, 'error');
+                }
+            }
+            
+            output.textContent = result;
+        };
+
+        // Helper function
+        function getBaudRateUsage(rate) {
+            switch (rate) {
+                case 9600: return 'basic Arduino/microcontroller';
+                case 19200: return 'legacy devices';
+                case 38400: return 'GPS modules';
+                case 57600: return 'Bluetooth modules';
+                case 115200: return 'Arduino/ESP32 default';
+                case 250000: return '3D printers (Marlin)';
+                case 500000: return 'high-speed devices';
+                case 1000000: return 'Feetech servos (default)';
+                default: return 'various applications';
+            }
+        }
+
+        // Initialize
+        log('Serial API Debug Tool loaded', 'success');
+        log('Click buttons above to start debugging', 'info');
+        
+        // Auto-run basic checks
+        setTimeout(() => {
+            document.getElementById('checkApiSupport').click();
+        }, 500);
+    </script>
+</body>
+</html>
